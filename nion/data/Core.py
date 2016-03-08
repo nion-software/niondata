@@ -22,36 +22,57 @@ from nion.ui import Geometry
 def arange(data):
     return numpy.amax(data) - numpy.amin(data)
 
-def column(data, start, stop):
-    start_0 = start if start is not None else 0
-    stop_0 = stop if stop is not None else data_shape(data)[0]
-    start_1 = start if start is not None else 0
-    stop_1 = stop if stop is not None else data_shape(data)[1]
-    return numpy.meshgrid(numpy.linspace(start_1, stop_1, data_shape(data)[1]), numpy.linspace(start_0, stop_0, data_shape(data)[0]), sparse=True)[0]
+def column(data_and_metadata, start, stop):
+    def calculate_data():
+        start_0 = start if start is not None else 0
+        stop_0 = stop if stop is not None else data_shape(data_and_metadata)[0]
+        start_1 = start if start is not None else 0
+        stop_1 = stop if stop is not None else data_shape(data_and_metadata)[1]
+        return numpy.meshgrid(numpy.linspace(start_1, stop_1, data_shape(data_and_metadata)[1]), numpy.linspace(start_0, stop_0, data_shape(data_and_metadata)[0]), sparse=True)[0]
 
-def row(data, start, stop):
-    start_0 = start if start is not None else 0
-    stop_0 = stop if stop is not None else data_shape(data)[0]
-    start_1 = start if start is not None else 0
-    stop_1 = stop if stop is not None else data_shape(data)[1]
-    return numpy.meshgrid(numpy.linspace(start_1, stop_1, data_shape(data)[1]), numpy.linspace(start_0, stop_0, data_shape(data)[0]), sparse=True)[1]
+    return DataAndMetadata.DataAndMetadata(calculate_data,
+                                           data_and_metadata.data_shape_and_dtype,
+                                           data_and_metadata.intensity_calibration,
+                                           data_and_metadata.dimensional_calibrations,
+                                           data_and_metadata.metadata, datetime.datetime.utcnow())
 
-def radius(data, normalize):
-    start_0 = -1 if normalize else -data_shape(data)[0] * 0.5
-    stop_0 = -start_0
-    start_1 = -1 if normalize else -data_shape(data)[1] * 0.5
-    stop_1 = -start_1
-    icol, irow = numpy.meshgrid(numpy.linspace(start_1, stop_1, data_shape(data)[1]), numpy.linspace(start_0, stop_0, data_shape(data)[0]), sparse=True)
-    return numpy.sqrt(icol * icol + irow * irow)
+def row(data_and_metadata, start, stop):
+    def calculate_data():
+        start_0 = start if start is not None else 0
+        stop_0 = stop if stop is not None else data_shape(data_and_metadata)[0]
+        start_1 = start if start is not None else 0
+        stop_1 = stop if stop is not None else data_shape(data_and_metadata)[1]
+        return numpy.meshgrid(numpy.linspace(start_1, stop_1, data_shape(data_and_metadata)[1]), numpy.linspace(start_0, stop_0, data_shape(data_and_metadata)[0]), sparse=True)[1]
+
+    return DataAndMetadata.DataAndMetadata(calculate_data,
+                                           data_and_metadata.data_shape_and_dtype,
+                                           data_and_metadata.intensity_calibration,
+                                           data_and_metadata.dimensional_calibrations,
+                                           data_and_metadata.metadata, datetime.datetime.utcnow())
+
+def radius(data_and_metadata, normalize=True):
+    def calculate_data():
+        start_0 = -1 if normalize else -data_shape(data_and_metadata)[0] * 0.5
+        stop_0 = -start_0
+        start_1 = -1 if normalize else -data_shape(data_and_metadata)[1] * 0.5
+        stop_1 = -start_1
+        icol, irow = numpy.meshgrid(numpy.linspace(start_1, stop_1, data_shape(data_and_metadata)[1]), numpy.linspace(start_0, stop_0, data_shape(data_and_metadata)[0]), sparse=True)
+        return numpy.sqrt(icol * icol + irow * irow)
+
+    return DataAndMetadata.DataAndMetadata(calculate_data,
+                                           data_and_metadata.data_shape_and_dtype,
+                                           data_and_metadata.intensity_calibration,
+                                           data_and_metadata.dimensional_calibrations,
+                                           data_and_metadata.metadata, datetime.datetime.utcnow())
 
 def take_item(data, key):
     return data[key]
 
-def data_shape(data):
-    return Image.spatial_shape_from_data(data)
+def data_shape(data_and_metadata):
+    return data_and_metadata.data_shape
 
 def astype(data, dtype):
-    return data.astype(str_to_dtype(dtype))
+    return data.astype(dtype)
 
 dtype_map = {int: "int", float: "float", complex: "complex", numpy.int16: "int16", numpy.int32: "int32",
     numpy.int64: "int64", numpy.uint8: "uint8", numpy.uint16: "uint16", numpy.uint32: "uint32", numpy.uint64: "uint64",
@@ -480,7 +501,7 @@ def function_pick(data_and_metadata, position):
                                            data_and_metadata.metadata, datetime.datetime.utcnow())
 
 
-def function_concatenate(*args, axis=0):
+def function_concatenate(data_and_metadata_list, axis=0):
     """Concatenate multiple data_and_metadatas.
 
     concatenate((a, b, c), 1)
@@ -492,8 +513,6 @@ def function_concatenate(*args, axis=0):
 
     Keeps dimensional calibration in axis dimension.
     """
-    data_and_metadata_list = tuple(args)
-
     partial_shape = data_and_metadata_list[0].data_shape
 
     def calculate_data():

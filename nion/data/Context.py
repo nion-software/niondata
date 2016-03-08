@@ -26,7 +26,7 @@ def context():
 
     # functions changing size or type of array
     g["data_shape"] = Core.data_shape
-    g["astype"] = Core.astype
+    g["astype"] = functools.partial(Core.function_array, Core.astype)
     g["concatenate"] = Core.function_concatenate
     g["reshape"] = Core.function_reshape
     g["data_slice"] = DataAndMetadata.function_data_slice
@@ -36,6 +36,7 @@ def context():
     g["pick"] = Core.function_pick
     g["project"] = Core.function_project
     g["resample_image"] = Core.function_resample_2d
+    g["newaxis"] = numpy.newaxis
 
     # functions generating arrays
     g["column"] = Core.column
@@ -128,7 +129,8 @@ def context():
     g["normalized_interval"] = Core.function_make_interval
 
     class ContextObject:
-        pass
+        def __init__(self):
+            self.g = g
     ctx = ContextObject()
     for k, v in g.items():
         setattr(ctx, k, v)
