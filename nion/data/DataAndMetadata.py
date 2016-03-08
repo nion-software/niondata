@@ -21,7 +21,7 @@ from nion.data import Image
 _ = gettext.gettext
 
 
-class DataAndMetadata(object):
+class DataAndMetadata:
     """Represent the ability to calculate data and provide immediate calibrations."""
 
     def __init__(self, data_fn, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp):
@@ -289,7 +289,7 @@ class DataAndMetadata(object):
         return function_data_slice(self, key_to_list(key))
 
 
-class ScalarAndMetadata(object):
+class ScalarAndMetadata:
     """Represent the ability to calculate data and provide immediate calibrations."""
 
     def __init__(self, value_fn, calibration, metadata, timestamp):
@@ -304,6 +304,13 @@ class ScalarAndMetadata(object):
         metadata = dict()
         timestamp = datetime.datetime.utcnow()
         return cls(lambda: value, calibration, metadata, timestamp)
+
+    @classmethod
+    def from_value_fn(cls, value_fn):
+        calibration = Calibration.Calibration()
+        metadata = dict()
+        timestamp = datetime.datetime.utcnow()
+        return cls(value_fn, calibration, metadata, timestamp)
 
     @property
     def value(self):
