@@ -27,8 +27,8 @@ class DataAndMetadata:
     def __init__(self, data_fn, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp):
         self.data_fn = data_fn
         self.data_shape_and_dtype = data_shape_and_dtype
-        self.intensity_calibration = intensity_calibration
-        self.dimensional_calibrations = dimensional_calibrations
+        self.intensity_calibration = copy.deepcopy(intensity_calibration)
+        self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
         self.timestamp = timestamp
         self.metadata = copy.deepcopy(metadata)
 
