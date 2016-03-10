@@ -717,6 +717,7 @@ def function_histogram(data_and_metadata, bins):
 
 def function_line_profile(data_and_metadata, vector, integration_width):
     integration_width = int(integration_width)
+    assert integration_width > 0  # leave this here for test_evaluation_error_recovers_gracefully
 
     data_shape = data_and_metadata.data_shape
     data_dtype = data_and_metadata.data_dtype
