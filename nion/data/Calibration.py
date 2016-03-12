@@ -21,6 +21,12 @@ class Calibration(object):
         self.__scale = float(scale) if scale else None
         self.__units = str(units) if units else None
 
+    def __repr__(self):
+        if self.__units:
+            return "x {} + {} {}".format(self.__scale, self.__offset, self.__units)
+        else:
+            return "x {} + {}".format(self.__scale, self.__offset)
+
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return self.offset == other.offset and self.scale == other.scale and self.units == other.units
@@ -108,6 +114,26 @@ class Calibration(object):
 
     def convert_from_calibrated_size(self, size):
         return size / self.scale
+
+    def convert_calibrated_value_to_str(self, calibrated_value, include_units=True, calibrated_value_range=None, samples=None):
+        units_str = (" " + self.units) if include_units and self.__units else ""
+        if hasattr(calibrated_value, 'dtype') and not calibrated_value.shape:  # convert NumPy types to Python scalar types
+            calibrated_value = numpy.asscalar(calibrated_value)
+        if isinstance(calibrated_value, integer_types) or isinstance(calibrated_value, float):
+            if calibrated_value_range and samples:
+                calibrated_value0 = calibrated_value_range[0]
+                calibrated_value1 = calibrated_value_range[1]
+                precision = int(max(-math.floor(math.log10(abs(calibrated_value0 - calibrated_value1)/samples + numpy.nextafter(0,1))), 0)) + 1
+                result = (u"{0:0." + u"{0:d}".format(precision) + "f}{1:s}").format(calibrated_value, units_str)
+            else:
+                result = u"{0:g}{1:s}".format(calibrated_value, units_str)
+        elif isinstance(calibrated_value, complex):
+            result = u"{0:g}{1:s}".format(calibrated_value, units_str)
+        elif isinstance(calibrated_value, numpy.ndarray) and numpy.ndim(calibrated_value) == 1 and calibrated_value.shape[0] in (3, 4) and calibrated_value.dtype == numpy.uint8:
+            result = u", ".join([u"{0:d}".format(v) for v in calibrated_value])
+        else:
+            result = None
+        return result
 
     def convert_to_calibrated_value_str(self, value, include_units=True, value_range=None, samples=None):
         units_str = (" " + self.units) if include_units and self.__units else ""
