@@ -115,8 +115,9 @@ class Calibration(object):
     def convert_from_calibrated_size(self, size):
         return size / self.scale
 
-    def convert_calibrated_value_to_str(self, calibrated_value, include_units=True, calibrated_value_range=None, samples=None):
-        units_str = (" " + self.units) if include_units and self.__units else ""
+    def convert_calibrated_value_to_str(self, calibrated_value, include_units=True, calibrated_value_range=None, samples=None, units=None):
+        units = units if units is not None else self.units
+        units_str = (" " + units) if include_units and self.__units else ""
         if hasattr(calibrated_value, 'dtype') and not calibrated_value.shape:  # convert NumPy types to Python scalar types
             calibrated_value = numpy.asscalar(calibrated_value)
         if isinstance(calibrated_value, integer_types) or isinstance(calibrated_value, float):
@@ -135,8 +136,7 @@ class Calibration(object):
             result = None
         return result
 
-    def convert_to_calibrated_value_str(self, value, include_units=True, value_range=None, samples=None):
-        units_str = (" " + self.units) if include_units and self.__units else ""
+    def convert_to_calibrated_value_str(self, value, include_units=True, value_range=None, samples=None, display_inverted=False):
         if hasattr(value, 'dtype') and not value.shape:  # convert NumPy types to Python scalar types
             value = numpy.asscalar(value)
         if isinstance(value, integer_types) or isinstance(value, float):
@@ -144,12 +144,18 @@ class Calibration(object):
             if value_range and samples:
                 calibrated_value0 = self.convert_to_calibrated_value(value_range[0])
                 calibrated_value1 = self.convert_to_calibrated_value(value_range[1])
-                precision = int(max(-math.floor(math.log10(abs(calibrated_value0 - calibrated_value1)/samples + numpy.nextafter(0,1))), 0)) + 1
-                result = (u"{0:0." + u"{0:d}".format(precision) + "f}{1:s}").format(calibrated_value, units_str)
+                if display_inverted and self.units.startswith("1/") and abs(calibrated_value) > 1e-13:
+                    return self.convert_calibrated_value_to_str(1 / calibrated_value, include_units, (1/ calibrated_value1, 1/ calibrated_value0), samples, units=self.units[2:])
+                else:
+                    return self.convert_calibrated_value_to_str(calibrated_value, include_units, (calibrated_value0, calibrated_value1), samples)
             else:
-                result = u"{0:g}{1:s}".format(calibrated_value, units_str)
+                if display_inverted and self.units.startswith("1/") and abs(calibrated_value) > 1e-13:
+                    return self.convert_calibrated_value_to_str(1 / calibrated_value, include_units, units=self.units[2:])
+                else:
+                    return self.convert_calibrated_value_to_str(calibrated_value, include_units)
         elif isinstance(value, complex):
-            result = u"{0:g}{1:s}".format(self.convert_to_calibrated_value(value), units_str)
+            calibrated_value = self.convert_to_calibrated_value(value)
+            return self.convert_calibrated_value_to_str(calibrated_value, include_units)
         elif isinstance(value, numpy.ndarray) and numpy.ndim(value) == 1 and value.shape[0] in (3, 4) and value.dtype == numpy.uint8:
             result = u", ".join([u"{0:d}".format(v) for v in value])
         else:
