@@ -33,14 +33,16 @@ class DataAndMetadata:
         self.metadata = copy.deepcopy(metadata)
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None):
         data_shape_and_dtype = Image.spatial_shape_from_data(data), data.dtype
-        intensity_calibration = Calibration.Calibration()
-        dimensional_calibrations = list()
-        for _ in data_shape_and_dtype[0]:
-            dimensional_calibrations.append(Calibration.Calibration())
-        metadata = dict()
-        timestamp = datetime.datetime.utcnow()
+        intensity_calibration = intensity_calibration if intensity_calibration is not None else Calibration.Calibration()
+        if dimensional_calibrations is None:
+            dimensional_calibrations = list()
+            for _ in data_shape_and_dtype[0]:
+                dimensional_calibrations.append(Calibration.Calibration())
+            assert len(dimensional_calibrations) == len(data_shape_and_dtype[0])
+        metadata = metadata if metadata is not None else dict()
+        timestamp = timestamp if not timestamp else datetime.datetime.utcnow()
         return cls(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp)
 
     @classmethod
