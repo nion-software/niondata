@@ -400,6 +400,34 @@ def function_transpose_flip(data_and_metadata, transpose=False, flip_v=False, fl
                                            data_and_metadata.metadata, datetime.datetime.utcnow())
 
 
+def function_invert(data_and_metadata):
+    def calculate_data():
+        data = data_and_metadata.data
+        if not Image.is_data_valid(data):
+            return None
+        if Image.is_shape_and_dtype_rgb_type(data.shape, data.dtype):
+            if Image.is_data_rgba(data):
+                inverted = 255 - data[:]
+                inverted[...,3] = data[...,3]
+                return inverted
+            else:
+                return 255 - data[:]
+        else:
+            return -data[:]
+
+    data_shape = data_and_metadata.data_shape
+    data_dtype = data_and_metadata.data_dtype
+
+    if not Image.is_shape_and_dtype_valid(data_shape, data_dtype):
+        return None
+
+    dimensional_calibrations = data_and_metadata.dimensional_calibrations
+
+    return DataAndMetadata.DataAndMetadata(calculate_data, (data_shape, data_dtype),
+                                           data_and_metadata.intensity_calibration, dimensional_calibrations,
+                                           data_and_metadata.metadata, datetime.datetime.utcnow())
+
+
 def function_crop(data_and_metadata, bounds):
     data_shape = data_and_metadata.data_shape
     data_dtype = data_and_metadata.data_dtype

@@ -91,6 +91,7 @@ def context():
     g["sqrt"] = functools.partial(Core.function_array, numpy.sqrt)
     g["square"] = functools.partial(Core.function_array, numpy.square)
     g["nan_to_num"] = functools.partial(Core.function_array, numpy.nan_to_num)
+    g["invert"] = Core.function_invert
 
     # complex numbers
     g["angle"] = functools.partial(Core.function_array, numpy.angle)
