@@ -24,13 +24,19 @@ _ = gettext.gettext
 class DataAndMetadata:
     """Represent the ability to calculate data and provide immediate calibrations."""
 
-    def __init__(self, data_fn, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp):
+    def __init__(self, data_fn, data_shape_and_dtype, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None):
         self.data_fn = data_fn
         self.data_shape_and_dtype = data_shape_and_dtype
-        self.intensity_calibration = copy.deepcopy(intensity_calibration)
+        self.intensity_calibration = copy.deepcopy(intensity_calibration) if intensity_calibration else Calibration.Calibration()
+        if dimensional_calibrations is None:
+            dimensional_calibrations = list()
+            for _ in data_shape_and_dtype[0]:
+                dimensional_calibrations.append(Calibration.Calibration())
+        else:
+            dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
         self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
-        self.timestamp = timestamp
-        self.metadata = copy.deepcopy(metadata)
+        self.timestamp = timestamp if not timestamp else datetime.datetime.utcnow()
+        self.metadata = copy.copy(metadata) if metadata is not None else dict()
 
     @classmethod
     def from_data(cls, data, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None):
@@ -40,8 +46,8 @@ class DataAndMetadata:
             dimensional_calibrations = list()
             for _ in data_shape_and_dtype[0]:
                 dimensional_calibrations.append(Calibration.Calibration())
-            assert len(dimensional_calibrations) == len(data_shape_and_dtype[0])
-        metadata = metadata if metadata is not None else dict()
+        assert len(dimensional_calibrations) == len(data_shape_and_dtype[0])
+        metadata = copy.copy(metadata) if metadata is not None else dict()
         timestamp = timestamp if not timestamp else datetime.datetime.utcnow()
         return cls(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp)
 
@@ -365,7 +371,7 @@ def list_to_key(l):
         else:
             key.append(slice(d.get("start"), d.get("stop"), d.get("step")))
     if len(key) == 1:
-        return key[0]
+        return [key[0]]
     return key
 
 
@@ -395,10 +401,10 @@ def function_data_slice(data_and_metadata, key):
         return None
 
     def non_ellipses_count(slices):
-        return sum(1 if isinstance(slice, type(Ellipsis)) else 0 for slice in slices)
+        return sum(1 if not isinstance(slice, type(Ellipsis)) else 0 for slice in slices)
 
     def normalize_slice(index: int, s: slice, shape: List[int], ellipse_count: int):
-        size = shape[index]
+        size = shape[index] if index < len(shape) else 1
         collapsible = False
         if isinstance(s, type(Ellipsis)):
             # for the ellipse, return a full slice for each ellipse dimension

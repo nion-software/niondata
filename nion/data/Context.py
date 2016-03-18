@@ -28,10 +28,13 @@ def context():
     g["data_shape"] = Core.data_shape
     g["astype"] = functools.partial(Core.function_array, Core.astype)
     g["concatenate"] = Core.function_concatenate
+    g["hstack"] = Core.function_hstack
+    g["vstack"] = Core.function_vstack
     g["reshape"] = Core.function_reshape
     g["data_slice"] = DataAndMetadata.function_data_slice
     g["item"] = Core.take_item
     g["crop"] = Core.function_crop
+    g["crop_1d"] = Core.function_crop_interval
     g["slice_sum"] = Core.function_slice_sum
     g["pick"] = Core.function_pick
     g["project"] = Core.function_project
@@ -42,6 +45,7 @@ def context():
     g["column"] = Core.column
     g["row"] = Core.row
     g["radius"] = Core.radius
+    g["full"] = Core.full
 
     # functions taking array and producing scalars
     g["amin"] = functools.partial(Core.function_scalar, numpy.amin)

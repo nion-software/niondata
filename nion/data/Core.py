@@ -65,6 +65,19 @@ def radius(data_and_metadata, normalize=True):
                                            data_and_metadata.dimensional_calibrations,
                                            data_and_metadata.metadata, datetime.datetime.utcnow())
 
+def full(shape, fill_value, dtype=None):
+    """Generate a constant valued image with the given shape.
+
+    full(4, shape(4, 5))
+    full(0, data_shape(b))
+    """
+    dtype = dtype if dtype else numpy.float64
+
+    def calculate_data():
+        return numpy.full(shape, DataAndMetadata.extract_data(fill_value), dtype)
+
+    return DataAndMetadata.DataAndMetadata(calculate_data, (shape, dtype))
+
 def take_item(data, key):
     return data[key]
 
@@ -467,6 +480,42 @@ def function_crop(data_and_metadata, bounds):
                                            data_and_metadata.metadata, datetime.datetime.utcnow())
 
 
+def function_crop_interval(data_and_metadata, interval):
+    data_shape = data_and_metadata.data_shape
+    data_dtype = data_and_metadata.data_dtype
+
+    def calculate_data():
+        data = data_and_metadata.data
+        if not Image.is_data_valid(data):
+            return None
+        data_shape = data_and_metadata.data_shape
+        interval_int = int(data_shape[0] * interval[0]), int(data_shape[0] * interval[1])
+        return data[interval_int[0]:interval_int[1]].copy()
+
+    dimensional_calibrations = data_and_metadata.dimensional_calibrations
+
+    if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
+        return None
+
+    interval_int = int(data_shape[0] * interval[0]), int(data_shape[0] * interval[1])
+
+    if Image.is_shape_and_dtype_rgb_type(data_shape, data_dtype):
+        data_shape_and_dtype = (interval_int[1] - interval_int[0], ) + (data_shape[-1], ), data_dtype
+    else:
+        data_shape_and_dtype = (interval_int[1] - interval_int[0], ), data_dtype
+
+    cropped_dimensional_calibrations = list()
+    dimensional_calibration = dimensional_calibrations[0]
+    cropped_calibration = Calibration.Calibration(
+        dimensional_calibration.offset + data_shape[0] * interval_int[0] * dimensional_calibration.scale,
+        dimensional_calibration.scale, dimensional_calibration.units)
+    cropped_dimensional_calibrations.append(cropped_calibration)
+
+    return DataAndMetadata.DataAndMetadata(calculate_data, data_shape_and_dtype,
+                                           data_and_metadata.intensity_calibration, cropped_dimensional_calibrations,
+                                           data_and_metadata.metadata, datetime.datetime.utcnow())
+
+
 def function_slice_sum(data_and_metadata, slice_center, slice_width):
     slice_center = int(slice_center)
     slice_width = int(slice_width)
@@ -541,6 +590,9 @@ def function_concatenate(data_and_metadata_list, axis=0):
 
     Keeps dimensional calibration in axis dimension.
     """
+    if len(data_and_metadata_list) < 1:
+        return None
+
     partial_shape = data_and_metadata_list[0].data_shape
 
     def calculate_data():
@@ -549,9 +601,6 @@ def function_concatenate(data_and_metadata_list, axis=0):
         if all([data_and_metadata.data_shape[1:] == partial_shape[1:] for data_and_metadata in data_and_metadata_list]):
             data_list = list(data_and_metadata.data for data_and_metadata in data_and_metadata_list)
             return numpy.concatenate(data_list, axis)
-        return None
-
-    if len(data_and_metadata_list) < 1:
         return None
 
     if any([data_and_metadata.data is None for data_and_metadata in data_and_metadata_list]):
@@ -568,6 +617,75 @@ def function_concatenate(data_and_metadata_list, axis=0):
             dimensional_calibrations.append(dimensional_calibration)
 
     new_shape = [sum([data_and_metadata.data_shape[0] for data_and_metadata in data_and_metadata_list]), ] + list(partial_shape[1:])
+
+    intensity_calibration = data_and_metadata_list[0].intensity_calibration
+
+    return DataAndMetadata.DataAndMetadata(calculate_data, (new_shape, data_and_metadata_list[0].data_dtype), intensity_calibration, dimensional_calibrations, dict(),
+                                           datetime.datetime.utcnow())
+
+
+def function_hstack(data_and_metadata_list):
+    """Stack multiple data_and_metadatas along axis 1.
+
+    hstack((a, b, c))
+
+    Function is called by passing a tuple of the list of source items, which matches the
+    form of the numpy function of the same name.
+
+    Keeps intensity calibration of first source item.
+
+    Keeps dimensional calibration in axis dimension.
+    """
+    if len(data_and_metadata_list) < 1:
+        return None
+
+    partial_shape = data_and_metadata_list[0].data_shape
+
+    if len(partial_shape) >= 2:
+        return function_concatenate(data_and_metadata_list, 1)
+    else:
+        return function_concatenate(data_and_metadata_list, 0)
+
+
+def function_vstack(data_and_metadata_list):
+    """Stack multiple data_and_metadatas along axis 0.
+
+    hstack((a, b, c))
+
+    Function is called by passing a tuple of the list of source items, which matches the
+    form of the numpy function of the same name.
+
+    Keeps intensity calibration of first source item.
+
+    Keeps dimensional calibration in axis dimension.
+    """
+    if len(data_and_metadata_list) < 1:
+        return None
+
+    partial_shape = data_and_metadata_list[0].data_shape
+
+    if len(partial_shape) >= 2:
+        return function_concatenate(data_and_metadata_list, 0)
+
+    def calculate_data():
+        if any([data_and_metadata.data is None for data_and_metadata in data_and_metadata_list]):
+            return None
+        if all([data_and_metadata.data_shape[0] == partial_shape[0] for data_and_metadata in data_and_metadata_list]):
+            data_list = list(data_and_metadata.data for data_and_metadata in data_and_metadata_list)
+            return numpy.vstack(data_list)
+        return None
+
+    if any([data_and_metadata.data is None for data_and_metadata in data_and_metadata_list]):
+        return None
+
+    if any([data_and_metadata.data_shape[0] != partial_shape[0] is None for data_and_metadata in data_and_metadata_list]):
+        return None
+
+    dimensional_calibrations = list()
+    dimensional_calibrations.append(Calibration.Calibration())
+    dimensional_calibrations.append(data_and_metadata_list[0].dimensional_calibrations[0])
+
+    new_shape = [len(data_and_metadata_list), ] + list(partial_shape)
 
     intensity_calibration = data_and_metadata_list[0].intensity_calibration
 

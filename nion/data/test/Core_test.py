@@ -56,6 +56,29 @@ class TestCore(unittest.TestCase):
         self.assertAlmostEqual(ifft.dimensional_calibrations[0].offset, 0.0)
         self.assertAlmostEqual(ifft.dimensional_calibrations[1].offset, 0.0)
 
+    def test_concatenate_works_with_1d_inputs(self):
+        src_data1 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float)
+        src_data2 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float)
+        dimensional_calibrations = [Calibration.Calibration(offset=3)]
+        a1 = DataAndMetadata.DataAndMetadata.from_data(src_data1, dimensional_calibrations=dimensional_calibrations)
+        a2 = DataAndMetadata.DataAndMetadata.from_data(src_data2, dimensional_calibrations=dimensional_calibrations)
+        c0 = Core.function_concatenate([a1, a2], 0)
+        self.assertEqual(tuple(c0.data.shape), tuple(c0.data_shape))
+        self.assertTrue(numpy.array_equal(c0.data, numpy.concatenate([src_data1, src_data2], 0)))
+
+    def test_vstack_and_hstack_work_with_1d_inputs(self):
+        src_data1 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float)
+        src_data2 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float)
+        dimensional_calibrations = [Calibration.Calibration(offset=3)]
+        a1 = DataAndMetadata.DataAndMetadata.from_data(src_data1, dimensional_calibrations=dimensional_calibrations)
+        a2 = DataAndMetadata.DataAndMetadata.from_data(src_data2, dimensional_calibrations=dimensional_calibrations)
+        vstack = Core.function_vstack([a1, a2])
+        self.assertEqual(tuple(vstack.data.shape), tuple(vstack.data_shape))
+        self.assertTrue(numpy.array_equal(vstack.data, numpy.vstack([src_data1, src_data2])))
+        hstack = Core.function_hstack([a1, a2])
+        self.assertEqual(tuple(hstack.data.shape), tuple(hstack.data_shape))
+        self.assertTrue(numpy.array_equal(hstack.data, numpy.hstack([src_data1, src_data2])))
+
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
     unittest.main()
