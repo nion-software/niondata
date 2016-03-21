@@ -693,7 +693,7 @@ def function_vstack(data_and_metadata_list):
                                            datetime.datetime.utcnow())
 
 
-def function_project(data_and_metadata):
+def function_sum(data_and_metadata, axis=None):
     data_shape = data_and_metadata.data_shape
     data_dtype = data_and_metadata.data_dtype
 
@@ -716,7 +716,7 @@ def function_project(data_and_metadata):
                 rgba_image[:,3] = numpy.average(data[...,3], 0)
                 return rgba_image
         else:
-            return numpy.sum(data, 0)
+            return numpy.sum(data, axis)
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 

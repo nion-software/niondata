@@ -37,7 +37,7 @@ def context():
     g["crop_1d"] = Core.function_crop_interval
     g["slice_sum"] = Core.function_slice_sum
     g["pick"] = Core.function_pick
-    g["project"] = Core.function_project
+    g["sum"] = Core.function_sum
     g["resample_image"] = Core.function_resample_2d
     g["newaxis"] = numpy.newaxis
 
