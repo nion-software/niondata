@@ -19,9 +19,6 @@ from nion.data import Image
 from nion.ui import Geometry
 
 
-def arange(data):
-    return numpy.amax(data) - numpy.amin(data)
-
 def column(data_and_metadata, start, stop):
     def calculate_data():
         start_0 = start if start is not None else 0

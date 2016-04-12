@@ -50,7 +50,7 @@ def context():
     # functions taking array and producing scalars
     g["amin"] = functools.partial(Core.function_scalar, numpy.amin)
     g["amax"] = functools.partial(Core.function_scalar, numpy.amax)
-    g["arange"] = functools.partial(Core.function_scalar, numpy.arange)
+    g["ptp"] = functools.partial(Core.function_scalar, numpy.ptp)
     g["median"] = functools.partial(Core.function_scalar, numpy.median)
     g["average"] = functools.partial(Core.function_scalar, numpy.average)
     g["mean"] = functools.partial(Core.function_scalar, numpy.mean)
