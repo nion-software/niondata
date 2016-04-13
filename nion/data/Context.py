@@ -8,6 +8,9 @@ import numpy
 from nion.data import Core
 from nion.data import DataAndMetadata
 
+
+registered_functions = dict()
+
 def context():
     g = dict()
 
@@ -132,6 +135,9 @@ def context():
     g["normalized_point"] = Core.function_make_point
     g["normalized_size"] = Core.function_make_size
     g["normalized_interval"] = Core.function_make_interval
+
+    for k, v in registered_functions.items():
+        g[k] = v
 
     class ContextObject:
         def __init__(self):
