@@ -150,6 +150,11 @@ class DataAndMetadata:
         data_shape_and_dtype = self.data_shape_and_dtype
         return Image.is_shape_and_dtype_complex_type(*data_shape_and_dtype) if data_shape_and_dtype else False
 
+    @property
+    def is_data_bool(self):
+        data_shape_and_dtype = self.data_shape_and_dtype
+        return Image.is_shape_and_dtype_bool(*data_shape_and_dtype) if data_shape_and_dtype else False
+
     def get_data_value(self, pos):
         data = self.data
         if self.is_data_1d:

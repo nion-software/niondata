@@ -157,6 +157,7 @@ def dimensional_shape_from_shape_and_dtype(shape, dtype):
 def spatial_shape_from_data(data):
     return dimensional_shape_from_shape_and_dtype(data.shape, data.dtype)
 
+
 def is_shape_and_dtype_rgb(shape, dtype):
     if shape is None or dtype is None:
         return False
@@ -211,6 +212,14 @@ def is_data_scalar_type(data):
     return data is not None and is_shape_and_dtype_scalar_type(data.shape, data.dtype)
 
 
+def is_shape_and_dtype_bool(shape, dtype):
+    if shape is None or dtype is None:
+        return False
+    return dtype == numpy.bool and len(shape) > 1
+def is_data_bool(data):
+    return data is not None and is_shape_and_dtype_bool(data.shape, data.dtype)
+
+
 def is_shape_and_dtype_valid(shape, dtype):
     if shape is None or dtype is None:
         return False
@@ -219,6 +228,7 @@ def is_shape_and_dtype_valid(shape, dtype):
     return len(shape) > 0 and functools.reduce(lambda x, y: x * y, shape) > 0
 def is_data_valid(data):
     return data is not None and is_shape_and_dtype_valid(data.shape, data.dtype)
+
 
 def is_shape_and_dtype_1d(shape, dtype):
     if shape is None or dtype is None or not is_shape_and_dtype_valid(shape, dtype):
