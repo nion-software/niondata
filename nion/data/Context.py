@@ -7,6 +7,7 @@ import numpy
 # local libraries
 from nion.data import Core
 from nion.data import DataAndMetadata
+from nion.data import RGB
 
 
 registered_functions = dict()
@@ -105,6 +106,15 @@ def context():
     g["real"] = functools.partial(Core.function_array, numpy.real)
     g["imag"] = functools.partial(Core.function_array, numpy.imag)
     g["conj"] = functools.partial(Core.function_array, numpy.conj)
+
+    # rgb
+    g["red"] = lambda d: RGB.function_rgb_channel(d, 2)
+    g["green"] = lambda d: RGB.function_rgb_channel(d, 1)
+    g["blue"] = lambda d: RGB.function_rgb_channel(d, 0)
+    g["alpha"] = lambda d: RGB.function_rgb_channel(d, 3)
+    g["luminance"] = lambda d: RGB.function_rgb_linear_combine(d, 0.2126, 0.7152, 0.0722)
+    g["rgb"] = RGB.function_rgb
+    g["rgba"] = RGB.function_rgba
 
     # ffts
     g["fft"] = Core.function_fft

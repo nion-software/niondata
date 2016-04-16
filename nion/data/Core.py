@@ -1,7 +1,6 @@
 # standard libraries
 import datetime
 import math
-import numbers
 
 # third party libraries
 import numpy
