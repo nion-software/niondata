@@ -74,6 +74,31 @@ def full(shape, fill_value, dtype=None):
 
     return DataAndMetadata.DataAndMetadata(calculate_data, (shape, dtype))
 
+def arange(start, stop=None, step=None):
+    if stop is None:
+        start = 0
+        stop = start
+    if step is None:
+        step = 1
+    def calculate_data():
+        return numpy.linspace(int(start), int(stop), int(step))
+    return DataAndMetadata.DataAndMetadata(calculate_data, ((math.ceil((stop - start) / step),), numpy.int))
+
+def linspace(start, stop, num, endpoint=True):
+    def calculate_data():
+        return numpy.linspace(start, stop, num, endpoint)
+    return DataAndMetadata.DataAndMetadata(calculate_data, ((num, ), numpy.float))
+
+def logspace(start, stop, num, endpoint=True, base=10.0):
+    def calculate_data():
+        return numpy.logspace(start, stop, num, endpoint, base)
+    return DataAndMetadata.DataAndMetadata(calculate_data, ((num, ), numpy.float))
+
+def apply_dist(data_and_metadata, mean, stddev, dist, fn):
+    def calculate_data():
+        return getattr(dist(loc=mean, scale=stddev), fn)(data_and_metadata.data)
+    return DataAndMetadata.DataAndMetadata(calculate_data, (data_and_metadata.data_shape, numpy.float))
+
 def take_item(data, key):
     return data[key]
 

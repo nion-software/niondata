@@ -3,6 +3,7 @@ import functools
 
 # third party libraries
 import numpy
+import scipy.stats
 
 # local libraries
 from nion.data import Core
@@ -50,6 +51,19 @@ def context():
     g["row"] = Core.row
     g["radius"] = Core.radius
     g["full"] = Core.full
+    g["arange"] = Core.arange
+    g["linspace"] = Core.linspace
+    g["logspace"] = Core.logspace
+    g["gammapdf"] = lambda d, a, m, s: Core.apply_dist(d, m, s, functools.partial(scipy.stats.gamma, a), 'pdf')
+    g["gammalogpdf"] = lambda d, a, m, s: Core.apply_dist(d, m, s, functools.partial(scipy.stats.gamma, a), 'logpdf')
+    g["gammacdf"] = lambda d, a, m, s: Core.apply_dist(d, m, s, functools.partial(scipy.stats.gamma, a), 'cdf')
+    g["gammalogcdf"] = lambda d, a, m, s: Core.apply_dist(d, m, s, functools.partial(scipy.stats.gamma, a), 'logcdf')
+    g["normpdf"] = lambda d, m, s: Core.apply_dist(d, m, s, scipy.stats.norm, 'pdf')
+    g["normlogpdf"] = lambda d, m, s: Core.apply_dist(d, m, s, scipy.stats.norm, 'logpdf')
+    g["normcdf"] = lambda d, m, s: Core.apply_dist(d, m, s, scipy.stats.norm, 'cdf')
+    g["normlogcdf"] = lambda d, m, s: Core.apply_dist(d, m, s, scipy.stats.norm, 'logcdf')
+
+    # g["normpdf"] = Core.normpdf
 
     # functions taking array and producing scalars
     g["amin"] = functools.partial(Core.function_scalar, numpy.amin)
