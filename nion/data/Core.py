@@ -1,6 +1,8 @@
 # standard libraries
+import collections
 import datetime
 import math
+import numbers
 
 # third party libraries
 import numpy
@@ -402,11 +404,11 @@ def function_transpose_flip(data_and_metadata, transpose=False, flip_v=False, fl
         if transpose:
             if Image.is_shape_and_dtype_rgb_type(data.shape, data.dtype):
                 data = numpy.transpose(data, [1, 0, 2])
-            else:
+            elif len(data_and_metadata.data_shape) == 2:
                 data = numpy.transpose(data, [1, 0])
-        if flip_h:
+        if flip_h and len(data_and_metadata.data_shape) == 2:
             data = numpy.fliplr(data)
-        if flip_v:
+        if flip_v and len(data_and_metadata.data_shape) == 2:
             data = numpy.flipud(data)
         if id(data) == data_id:  # ensure real data, not a view
             data = data.copy()
@@ -746,7 +748,19 @@ def function_sum(data_and_metadata, axis=None):
 
     data_shape_and_dtype = data_shape[1:], data_dtype
 
-    dimensional_calibrations = dimensional_calibrations[1:]
+    new_dimensional_calibrations = list()
+
+    if isinstance(axis, numbers.Integral):
+        for index, dimensional_calibration in enumerate(dimensional_calibrations):
+            if index != axis:
+                new_dimensional_calibrations.append(dimensional_calibration)
+    elif isinstance(axis, collections.Sequence):
+        axes = tuple(axis)
+        for index, dimensional_calibration in enumerate(dimensional_calibrations):
+            if not index in axes:
+                new_dimensional_calibrations.append(dimensional_calibration)
+
+    dimensional_calibrations = new_dimensional_calibrations
 
     return DataAndMetadata.DataAndMetadata(calculate_data, data_shape_and_dtype,
                                            data_and_metadata.intensity_calibration, dimensional_calibrations,
