@@ -580,6 +580,8 @@ def function_pick(data_and_metadata, position):
         if not Image.is_data_valid(data):
             return None
         data_shape = data_and_metadata.data_shape
+        if len(data_shape) != 3:
+            return None
         position_f = Geometry.FloatPoint.make(position)
         position_i = Geometry.IntPoint(y=position_f.y * data_shape[1], x=position_f.x * data_shape[2])
         if position_i.y >= 0 and position_i.y < data_shape[1] and position_i.x >= 0 and position_i.x < data_shape[2]:
@@ -590,6 +592,9 @@ def function_pick(data_and_metadata, position):
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
     if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
+        return None
+
+    if len(data_shape) != 3:
         return None
 
     data_shape_and_dtype = data_shape[:-2], data_dtype
