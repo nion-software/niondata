@@ -7,6 +7,7 @@ import logging
 import numbers
 import operator
 import re
+import threading
 
 # typing
 from typing import List
@@ -25,6 +26,9 @@ class DataAndMetadata:
     """Represent the ability to calculate data and provide immediate calibrations."""
 
     def __init__(self, data_fn, data_shape_and_dtype, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None):
+        self.__data_lock = threading.RLock()
+        self.__data_valid = False
+        self.__data = None
         self.data_fn = data_fn
         self.data_shape_and_dtype = data_shape_and_dtype
         self.intensity_calibration = copy.deepcopy(intensity_calibration) if intensity_calibration else Calibration.Calibration()
@@ -84,7 +88,11 @@ class DataAndMetadata:
 
     @property
     def data(self):
-        return self.data_fn()
+        with self.__data_lock:
+            if not self.__data_valid:
+                self.__data = self.data_fn()
+                self.__data_valid = True
+        return self.__data
 
     @property
     def data_shape(self):
