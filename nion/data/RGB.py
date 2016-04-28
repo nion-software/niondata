@@ -4,10 +4,8 @@
 import numpy
 
 # local libraries
-from nion.data import Calibration
 from nion.data import DataAndMetadata
 from nion.data import Image
-from nion.ui import Geometry
 
 def function_rgb_channel(data_and_metadata, channel):
     def calculate_data():

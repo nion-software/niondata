@@ -17,7 +17,7 @@ import scipy.signal
 from nion.data import Calibration
 from nion.data import DataAndMetadata
 from nion.data import Image
-from nion.ui import Geometry
+from nion.utils import Geometry
 
 
 def column(data_and_metadata, start, stop):
