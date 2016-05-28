@@ -114,6 +114,7 @@ def context():
     g["square"] = functools.partial(Core.function_array, numpy.square)
     g["nan_to_num"] = functools.partial(Core.function_array, numpy.nan_to_num)
     g["invert"] = Core.function_invert
+    g["absolute"] = functools.partial(Core.function_array, numpy.absolute)
 
     # complex numbers
     g["angle"] = functools.partial(Core.function_array, numpy.angle)
