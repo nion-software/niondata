@@ -167,13 +167,13 @@ class DataAndMetadata:
         data = self.data
         if self.is_data_1d:
             if data is not None:
-                return data[pos[0]]
+                return data[int(pos[0])]
         elif self.is_data_2d:
             if data is not None:
-                return data[pos[0], pos[1]]
+                return data[int(pos[0]), int(pos[1])]
         elif self.is_data_3d:
             if data is not None:
-                return data[pos[0], pos[1], pos[2]]
+                return data[int(pos[0]), int(pos[1]), int(pos[2])]
         return None
 
     @property
