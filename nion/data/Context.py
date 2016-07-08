@@ -36,6 +36,7 @@ def context():
     g["hstack"] = Core.function_hstack
     g["vstack"] = Core.function_vstack
     g["reshape"] = Core.function_reshape
+    g["rescale"] = Core.function_rescale
     g["data_slice"] = DataAndMetadata.function_data_slice
     g["item"] = Core.take_item
     g["crop"] = Core.function_crop

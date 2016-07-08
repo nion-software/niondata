@@ -836,6 +836,40 @@ def function_reshape(data_and_metadata, shape):
                                            data_and_metadata.metadata, datetime.datetime.utcnow())
 
 
+def function_rescale(data_and_metadata, data_range=None):
+    """Rescale data and update intensity calibration.
+
+    rescale(a, (0.0, 1.0))
+    """
+    data_range = data_range if data_range is not None else (0.0, 1.0)
+
+    def calculate_data():
+        data = data_and_metadata.data
+        if not Image.is_data_valid(data):
+            return None
+        data_ptp = numpy.ptp(data)
+        data_ptp_i = 1.0 / data_ptp if data_ptp != 0.0 else 1.0
+        data_min = numpy.amin(data)
+        data_span = data_range[1] - data_range[0]
+        if data_span == 1.0 and data_range[0] == 0.0:
+            return (data - data_min) * data_ptp_i
+        else:
+            m = data_span * data_ptp_i
+            return (data - data_min) * m + data_range[0]
+
+    data_shape = data_and_metadata.data_shape
+    data_dtype = data_and_metadata.data_dtype
+
+    if not Image.is_shape_and_dtype_valid(data_shape, data_dtype):
+        return None
+
+    intensity_calibration = Calibration.Calibration()
+
+    return DataAndMetadata.DataAndMetadata(calculate_data, (data_shape, data_dtype),
+                                           intensity_calibration, data_and_metadata.dimensional_calibrations,
+                                           data_and_metadata.metadata, datetime.datetime.utcnow())
+
+
 def function_resample_2d(data_and_metadata, shape):
     height = int(shape[0])
     width = int(shape[1])
