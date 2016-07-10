@@ -812,7 +812,7 @@ def function_reshape(data_and_metadata, shape):
         for dimension in shape:
             if dimension == -1:
                 new_dimensional_calibrations.append(Calibration.Calibration())
-                new_dimensions.append(total_old_pixels / total_new_pixels)
+                new_dimensions.append(int(total_old_pixels / total_new_pixels))
             else:
                 new_dimensional_calibrations.append(dimensional_calibrations[index])
                 new_dimensions.append(dimension)
@@ -1029,7 +1029,7 @@ def function_make_interval(start, end):
     return start, end
 
 def function_make_shape(*args):
-    return tuple(args)
+    return tuple([int(arg) for arg in args])
 
 # generic functions
 
