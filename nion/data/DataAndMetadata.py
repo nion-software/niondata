@@ -8,6 +8,7 @@ import numbers
 import operator
 import re
 import threading
+import warnings
 
 # typing
 from typing import List
@@ -30,6 +31,8 @@ class DataAndMetadata:
         self.__data_valid = False
         self.__data = None
         self.data_fn = data_fn
+        if data_shape_and_dtype is not None and not all([type(data_shape_item) == int for data_shape_item in data_shape_and_dtype[0]]):
+            warnings.warn('using a non-integer shape in DataAndMetadata', DeprecationWarning, stacklevel=2)
         self.data_shape_and_dtype = data_shape_and_dtype
         self.intensity_calibration = copy.deepcopy(intensity_calibration) if intensity_calibration else Calibration.Calibration()
         if dimensional_calibrations is None:
