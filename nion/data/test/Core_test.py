@@ -79,6 +79,11 @@ class TestCore(unittest.TestCase):
         self.assertEqual(tuple(hstack.data.shape), tuple(hstack.data_shape))
         self.assertTrue(numpy.array_equal(hstack.data, numpy.hstack([src_data1, src_data2])))
 
+    def test_sum_over_two_axes_returns_correct_shape(self):
+        src = DataAndMetadata.DataAndMetadata.from_data(numpy.ones((16, 4, 4)))
+        dst = Core.function_sum(src, (1, 2))
+        self.assertEqual(dst.data_shape, dst.data.shape)
+
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
     unittest.main()

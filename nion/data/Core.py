@@ -751,7 +751,15 @@ def function_sum(data_and_metadata, axis=None):
     if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
         return None
 
-    data_shape_and_dtype = data_shape[1:], data_dtype
+    if axis is None:
+        new_data_shape = data_shape[1:]
+    else:
+        data_shape_l = list(data_shape)
+        for axis_index in reversed(sorted(axis)):
+            del data_shape_l[axis_index]
+        new_data_shape = tuple(data_shape_l)
+
+    data_shape_and_dtype = new_data_shape, data_dtype
 
     new_dimensional_calibrations = list()
 
