@@ -754,6 +754,8 @@ def function_sum(data_and_metadata, axis=None):
     if axis is None:
         new_data_shape = data_shape[1:]
     else:
+        if isinstance(axis, numbers.Integral):
+            axis = (axis, )
         data_shape_l = list(data_shape)
         for axis_index in reversed(sorted(axis)):
             del data_shape_l[axis_index]
