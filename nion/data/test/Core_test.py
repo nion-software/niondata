@@ -84,6 +84,14 @@ class TestCore(unittest.TestCase):
         dst = Core.function_sum(src, (1, 2))
         self.assertEqual(dst.data_shape, dst.data.shape)
 
+    def test_fourier_filter_gives_sensible_units(self):
+        dimensional_calibrations = [Calibration.Calibration(units="mm"), Calibration.Calibration(units="mm")]
+        src = DataAndMetadata.DataAndMetadata.from_data(numpy.ones((32, 32)), dimensional_calibrations=dimensional_calibrations)
+        dst = Core.function_ifft(Core.function_fft(src))
+        self.assertEqual(dst.dimensional_calibrations[0].units, "mm")
+        self.assertEqual(dst.dimensional_calibrations[1].units, "mm")
+
+
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
     unittest.main()

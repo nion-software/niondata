@@ -191,8 +191,14 @@ def function_ifft(data_and_metadata):
 
     data_shape_and_dtype = data_shape, data_dtype
 
+    def remove_one_slash(s):
+        if s.startswith("1/"):
+            return s[2:]
+        else:
+            return "1/" + s
+
     dimensional_calibrations = [Calibration.Calibration(0.0, 1.0 / (dimensional_calibration.scale * data_shape_n),
-                                                        "1/" + dimensional_calibration.units) for
+                                                        remove_one_slash(dimensional_calibration.units)) for
         dimensional_calibration, data_shape_n in zip(src_dimensional_calibrations, data_shape)]
 
     return DataAndMetadata.DataAndMetadata(calculate_data, data_shape_and_dtype, Calibration.Calibration(),
