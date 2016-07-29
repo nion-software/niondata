@@ -842,10 +842,13 @@ def function_reshape(data_and_metadata, shape):
                 new_dimensional_calibrations.append(dimensional_calibration)
                 new_dimensions.append(dimension)
     else:
+        new_dimensions = shape
         for _ in range(len(shape)):
             new_dimensional_calibrations.append(Calibration.Calibration())
 
     data_shape_and_dtype = new_dimensions, data_dtype
+
+    assert len(new_dimensions) == len(new_dimensional_calibrations)
 
     return DataAndMetadata.DataAndMetadata(calculate_data, data_shape_and_dtype,
                                            data_and_metadata.intensity_calibration, new_dimensional_calibrations,

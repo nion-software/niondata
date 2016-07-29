@@ -41,19 +41,13 @@ class DataAndMetadata:
             dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
         self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
         self.timestamp = timestamp if not timestamp else datetime.datetime.utcnow()
-        self.metadata = copy.copy(metadata) if metadata is not None else dict()
+        self.metadata = copy.deepcopy(metadata) if metadata is not None else dict()
+        dimensional_shape = Image.dimensional_shape_from_shape_and_dtype(data_shape_and_dtype[0], data_shape_and_dtype[1]) if data_shape_and_dtype is not None else ()
+        assert len(dimensional_calibrations) == len(dimensional_shape)
 
     @classmethod
     def from_data(cls, data, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None):
-        data_shape_and_dtype = Image.spatial_shape_from_data(data), data.dtype
-        intensity_calibration = intensity_calibration if intensity_calibration is not None else Calibration.Calibration()
-        if dimensional_calibrations is None:
-            dimensional_calibrations = list()
-            for _ in data_shape_and_dtype[0]:
-                dimensional_calibrations.append(Calibration.Calibration())
-        assert len(dimensional_calibrations) == len(data_shape_and_dtype[0])
-        metadata = copy.copy(metadata) if metadata is not None else dict()
-        timestamp = timestamp if not timestamp else datetime.datetime.utcnow()
+        data_shape_and_dtype = Image.dimensional_shape_from_data(data), data.dtype
         return cls(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp)
 
     @classmethod
@@ -61,7 +55,7 @@ class DataAndMetadata:
         if d is None:
             return None
         data = numpy.loads(base64.b64decode(d["data"].encode('utf-8')))
-        data_shape_and_dtype = Image.spatial_shape_from_data(data), data.dtype
+        data_shape_and_dtype = Image.dimensional_shape_from_data(data), data.dtype
         intensity_calibration = Calibration.from_rpc_dict(d.get("intensity_calibration"))
         if "dimensional_calibrations" in d:
             dimensional_calibrations = [Calibration.from_rpc_dict(dc) for dc in d.get("dimensional_calibrations")]
