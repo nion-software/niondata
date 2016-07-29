@@ -8,10 +8,8 @@ import numbers
 import operator
 import re
 import threading
+import typing
 import warnings
-
-# typing
-from typing import List
 
 # third party libraries
 import numpy
@@ -31,7 +29,7 @@ class DataAndMetadata:
         self.__data_valid = False
         self.__data = None
         self.data_fn = data_fn
-        if data_shape_and_dtype is not None and not all([type(data_shape_item) == int for data_shape_item in data_shape_and_dtype[0]]):
+        if data_shape_and_dtype is not None and data_shape_and_dtype[0] is not None and not all([type(data_shape_item) == int for data_shape_item in data_shape_and_dtype[0]]):
             warnings.warn('using a non-integer shape in DataAndMetadata', DeprecationWarning, stacklevel=2)
         self.data_shape_and_dtype = data_shape_and_dtype
         self.intensity_calibration = copy.deepcopy(intensity_calibration) if intensity_calibration else Calibration.Calibration()
@@ -419,7 +417,7 @@ def function_data_slice(data_and_metadata, key):
     def non_ellipses_count(slices):
         return sum(1 if not isinstance(slice, type(Ellipsis)) else 0 for slice in slices)
 
-    def normalize_slice(index: int, s: slice, shape: List[int], ellipse_count: int):
+    def normalize_slice(index: int, s: slice, shape: typing.List[int], ellipse_count: int):
         size = shape[index] if index < len(shape) else 1
         collapsible = False
         if isinstance(s, type(Ellipsis)):
@@ -444,7 +442,7 @@ def function_data_slice(data_and_metadata, key):
         return [(collapsible, slice(s_start, s_stop, s_step))]
 
     ellipse_count = len(data_and_metadata.data_shape) - non_ellipses_count(slices)
-    normalized_slices = list()  # type: List[(bool, slice)]
+    normalized_slices = list()  # type: typing.List[(bool, slice)]
     for index, s in enumerate(slices):
         normalized_slices.extend(normalize_slice(index, s, data_and_metadata.data_shape, ellipse_count))
 
