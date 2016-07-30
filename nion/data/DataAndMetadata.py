@@ -47,7 +47,7 @@ class DataAndMetadata:
 
     @classmethod
     def from_data(cls, data, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None):
-        data_shape_and_dtype = Image.dimensional_shape_from_data(data), data.dtype
+        data_shape_and_dtype = data.shape, data.dtype
         return cls(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp)
 
     @classmethod
