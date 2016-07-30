@@ -84,12 +84,27 @@ class TestCore(unittest.TestCase):
         dst = Core.function_sum(src, (1, 2))
         self.assertEqual(dst.data_shape, dst.data.shape)
 
-    def test_fourier_filter_gives_sensible_units(self):
+    def test_fourier_filter_gives_sensible_units_when_source_has_units(self):
         dimensional_calibrations = [Calibration.Calibration(units="mm"), Calibration.Calibration(units="mm")]
         src = DataAndMetadata.DataAndMetadata.from_data(numpy.ones((32, 32)), dimensional_calibrations=dimensional_calibrations)
         dst = Core.function_ifft(Core.function_fft(src))
         self.assertEqual(dst.dimensional_calibrations[0].units, "mm")
         self.assertEqual(dst.dimensional_calibrations[1].units, "mm")
+
+    def test_fourier_filter_gives_sensible_units_when_source_has_no_units(self):
+        src = DataAndMetadata.DataAndMetadata.from_data(numpy.ones((32, 32)))
+        dst = Core.function_ifft(Core.function_fft(src))
+        self.assertEqual(dst.dimensional_calibrations[0].units, "")
+        self.assertEqual(dst.dimensional_calibrations[1].units, "")
+
+    def test_fourier_mask_works_with_all_dimensions(self):
+        dimension_list = [(32, 32), (31, 30), (30, 31), (31, 31), (32, 31), (31, 32)]
+        for h, w in dimension_list:
+            data = DataAndMetadata.DataAndMetadata.from_data(numpy.random.randn(h, w))
+            mask = DataAndMetadata.DataAndMetadata.from_data((numpy.random.randn(h, w) > 0).astype(numpy.float))
+            fft = Core.function_fft(data)
+            masked_data = Core.function_ifft(Core.function_fourier_mask(fft, mask)).data
+            self.assertAlmostEqual(numpy.sum(numpy.imag(masked_data)), 0)
 
 
 if __name__ == '__main__':

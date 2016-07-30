@@ -137,6 +137,7 @@ def context():
     g["ifft"] = Core.function_ifft
     g["autocorrelate"] = Core.function_autocorrelate
     g["crosscorrelate"] = Core.function_crosscorrelate
+    g["fourier_mask"] = Core.function_fourier_mask
 
     # filters
     g["sobel"] = Core.function_sobel

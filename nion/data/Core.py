@@ -274,6 +274,44 @@ def function_crosscorrelate(*args):
                                            datetime.datetime.utcnow())
 
 
+def function_fourier_mask(data_and_metadata, mask_data_and_metadata):
+
+    def calculate_data():
+        data = data_and_metadata.data
+        mask_data = mask_data_and_metadata.data
+        if data is None or mask_data is None:
+            return None
+        if Image.is_data_2d(data) and Image.is_data_2d(mask_data):
+            try:
+                y_half = data.shape[0] // 2
+                y_half_p1 = y_half + 1
+                y_half_m1 = y_half - 1
+                y_low = 0 if data.shape[0] % 2 == 0 else None
+                x_half = data.shape[1] // 2
+                x_half_p1 = x_half + 1
+                x_half_m1 = x_half - 1
+                x_low = 0 if data.shape[1] % 2 == 0 else None
+                fourier_mask_data = numpy.empty_like(mask_data)
+                fourier_mask_data[y_half_p1:, x_half_p1:] = mask_data[y_half_p1:, x_half_p1:]
+                fourier_mask_data[y_half_p1:, x_half_m1:x_low:-1] = mask_data[y_half_p1:, x_half_m1:x_low:-1]
+                fourier_mask_data[y_half_m1:y_low:-1, x_half_m1:x_low:-1] = mask_data[y_half_p1:, x_half_p1:]
+                fourier_mask_data[y_half_m1:y_low:-1, x_half_p1:] = mask_data[y_half_p1:, x_half_m1:x_low:-1]
+                fourier_mask_data[0, :] = 1
+                fourier_mask_data[:, 0] = 1
+                fourier_mask_data[y_half, :] = 1
+                fourier_mask_data[:, x_half] = 1
+                return data * fourier_mask_data
+            except Exception as e:
+                print(e)
+                raise
+        return None
+
+    return DataAndMetadata.DataAndMetadata(calculate_data, data_and_metadata.data_shape_and_dtype,
+                                           data_and_metadata.intensity_calibration,
+                                           data_and_metadata.dimensional_calibrations, data_and_metadata.metadata,
+                                           datetime.datetime.utcnow())
+
+
 def function_sobel(data_and_metadata):
     def calculate_data():
         data = data_and_metadata.data
