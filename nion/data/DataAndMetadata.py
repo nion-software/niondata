@@ -47,7 +47,7 @@ class DataAndMetadata:
 
     @classmethod
     def from_data(cls, data, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None):
-        data_shape_and_dtype = data.shape, data.dtype
+        data_shape_and_dtype = (data.shape, data.dtype) if data is not None else None
         return cls(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp)
 
     @classmethod
