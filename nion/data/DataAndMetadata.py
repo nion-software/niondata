@@ -67,6 +67,15 @@ class DataMetadata:
     def get_dimensional_calibration(self, index):
         return self.dimensional_calibrations[index]
 
+    def _set_intensity_calibration(self, intensity_calibration):
+        self.intensity_calibration = copy.deepcopy(intensity_calibration)
+
+    def _set_dimensional_calibrations(self, dimensional_calibrations):
+        self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
+
+    def _set_metadata(self, metadata):
+        self.metadata = copy.deepcopy(metadata)
+
     @property
     def is_data_1d(self):
         data_shape_and_dtype = self.data_shape_and_dtype
@@ -156,6 +165,8 @@ class DataAndMetadata:
         self.__data_lock = threading.RLock()
         self.__data_valid = data is not None
         self.__data = data
+        self.__data_ref_count = 0
+        self.unloadable = False
         self.data_fn = data_fn
         assert isinstance(metadata, dict) if metadata is not None else True
         self.__data_metadata = DataMetadata(data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp)
@@ -202,26 +213,34 @@ class DataAndMetadata:
 
     @property
     def data(self):
-        with self.__data_lock:
-            if not self.__data_valid:
-                self.__data = self.data_fn()
-                self.__data_valid = True
-        return self.__data
+        self.increment_data_ref_count()
+        try:
+            return self.__data
+        finally:
+            self.decrement_data_ref_count()
 
     @property
     def data_if_loaded(self):
         return self.__data
 
-    def load_data(self):
+    def increment_data_ref_count(self):
         with self.__data_lock:
-            if not self.__data_valid:
+            initial_count = self.__data_ref_count
+            self.__data_ref_count += 1
+            if initial_count == 0 and not self.__data_valid:
                 self.__data = self.data_fn()
                 self.__data_valid = True
+        return initial_count+1
 
-    def unload_data(self):
+    def decrement_data_ref_count(self):
         with self.__data_lock:
-            self.__data = None
-            self.__data_valid = False
+            assert self.__data_ref_count > 0
+            self.__data_ref_count -= 1
+            final_count = self.__data_ref_count
+            if final_count == 0 and self.unloadable:
+                self.__data = None
+                self.__data_valid = False
+        return final_count
 
     @property
     def data_shape_and_dtype(self):
@@ -254,6 +273,23 @@ class DataAndMetadata:
     @property
     def metadata(self):
         return self.__data_metadata.metadata
+
+    def _set_data(self, data):
+        self.__data = data
+        self.__data_valid = True
+
+    def _add_data_ref_count(self, data_ref_count: int) -> None:
+        with self.__data_lock:
+            self.__data_ref_count += data_ref_count
+
+    def _set_intensity_calibration(self, intensity_calibration):
+        self.__data_metadata._set_intensity_calibration(intensity_calibration)
+
+    def _set_dimensional_calibrations(self, dimensional_calibrations):
+        self.__data_metadata._set_dimensional_calibrations(dimensional_calibrations)
+
+    def _set_metadata(self, metadata):
+        self.__data_metadata._set_metadata(metadata)
 
     @property
     def timestamp(self):
