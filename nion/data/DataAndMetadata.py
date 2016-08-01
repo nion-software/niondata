@@ -21,17 +21,13 @@ from nion.data import Image
 _ = gettext.gettext
 
 
-class DataAndMetadata:
-    """Represent the ability to calculate data and provide immediate calibrations."""
+class DataMetadata:
+    """A class describing data metadata, including size, data type, calibrations, the metadata dict, and the creation timestamp."""
 
-    def __init__(self, data_fn, data_shape_and_dtype, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None):
-        self.__data_lock = threading.RLock()
-        self.__data_valid = False
-        self.__data = None
-        self.data_fn = data_fn
+    def __init__(self, data_shape_and_dtype, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None):
         if data_shape_and_dtype is not None and data_shape_and_dtype[0] is not None and not all([type(data_shape_item) == int for data_shape_item in data_shape_and_dtype[0]]):
             warnings.warn('using a non-integer shape in DataAndMetadata', DeprecationWarning, stacklevel=2)
-        self.data_shape_and_dtype = data_shape_and_dtype
+        self.data_shape_and_dtype = (tuple(data_shape_and_dtype[0]), numpy.dtype(data_shape_and_dtype[1])) if data_shape_and_dtype is not None else None
         self.intensity_calibration = copy.deepcopy(intensity_calibration) if intensity_calibration else Calibration.Calibration()
         if dimensional_calibrations is None:
             dimensional_calibrations = list()
@@ -43,51 +39,9 @@ class DataAndMetadata:
         self.timestamp = timestamp if not timestamp else datetime.datetime.utcnow()
         self.metadata = copy.deepcopy(metadata) if metadata is not None else dict()
         dimensional_shape = Image.dimensional_shape_from_shape_and_dtype(data_shape_and_dtype[0], data_shape_and_dtype[1]) if data_shape_and_dtype is not None else ()
+
+        assert isinstance(self.metadata, dict)
         assert len(dimensional_calibrations) == len(dimensional_shape)
-
-    @classmethod
-    def from_data(cls, data, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None):
-        data_shape_and_dtype = (data.shape, data.dtype) if data is not None else None
-        return cls(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp)
-
-    @classmethod
-    def from_rpc_dict(cls, d):
-        if d is None:
-            return None
-        data = numpy.loads(base64.b64decode(d["data"].encode('utf-8')))
-        data_shape_and_dtype = Image.dimensional_shape_from_data(data), data.dtype
-        intensity_calibration = Calibration.from_rpc_dict(d.get("intensity_calibration"))
-        if "dimensional_calibrations" in d:
-            dimensional_calibrations = [Calibration.from_rpc_dict(dc) for dc in d.get("dimensional_calibrations")]
-        else:
-            dimensional_calibrations = None
-        metadata = d.get("metadata")
-        timestamp = datetime.datetime(*list(map(int, re.split('[^\d]', d.get("timestamp"))))) if "timestamp" in d else None
-        return DataAndMetadata(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp)
-
-    @property
-    def rpc_dict(self):
-        d = dict()
-        data = self.data
-        if data is not None:
-            d["data"] = base64.b64encode(numpy.ndarray.dumps(data)).decode('utf=8')
-        if self.intensity_calibration:
-            d["intensity_calibration"] = self.intensity_calibration.rpc_dict
-        if self.dimensional_calibrations:
-            d["dimensional_calibrations"] = [dimensional_calibration.rpc_dict for dimensional_calibration in self.dimensional_calibrations]
-        if self.timestamp:
-            d["timestamp"] = self.timestamp.isoformat()
-        if self.metadata:
-            d["metadata"] = copy.copy(self.metadata)
-        return d
-
-    @property
-    def data(self):
-        with self.__data_lock:
-            if not self.__data_valid:
-                self.__data = self.data_fn()
-                self.__data_valid = True
-        return self.__data
 
     @property
     def data_shape(self):
@@ -158,6 +112,199 @@ class DataAndMetadata:
         data_shape_and_dtype = self.data_shape_and_dtype
         return Image.is_shape_and_dtype_bool(*data_shape_and_dtype) if data_shape_and_dtype else False
 
+    @property
+    def size_and_data_format_as_string(self):
+        try:
+            dimensional_shape = self.dimensional_shape
+            data_dtype = self.data_dtype
+            if dimensional_shape is not None and data_dtype is not None:
+                spatial_shape_str = " x ".join([str(d) for d in dimensional_shape])
+                if len(dimensional_shape) == 1:
+                    spatial_shape_str += " x 1"
+                dtype_names = {
+                    numpy.int8: _("Integer (8-bit)"),
+                    numpy.int16: _("Integer (16-bit)"),
+                    numpy.int32: _("Integer (32-bit)"),
+                    numpy.int64: _("Integer (64-bit)"),
+                    numpy.uint8: _("Unsigned Integer (8-bit)"),
+                    numpy.uint16: _("Unsigned Integer (16-bit)"),
+                    numpy.uint32: _("Unsigned Integer (32-bit)"),
+                    numpy.uint64: _("Unsigned Integer (64-bit)"),
+                    numpy.float32: _("Real (32-bit)"),
+                    numpy.float64: _("Real (64-bit)"),
+                    numpy.complex64: _("Complex (2 x 32-bit)"),
+                    numpy.complex128: _("Complex (2 x 64-bit)"),
+                }
+                if self.is_data_rgb_type:
+                    data_size_and_data_format_as_string = _("RGB (8-bit)") if self.is_data_rgb else _("RGBA (8-bit)")
+                else:
+                    if not self.data_dtype.type in dtype_names:
+                        logging.debug("Unknown dtype %s", self.data_dtype.type)
+                    data_size_and_data_format_as_string = dtype_names[self.data_dtype.type] if self.data_dtype.type in dtype_names else _("Unknown Data Type")
+                return "{0}, {1}".format(spatial_shape_str, data_size_and_data_format_as_string)
+            return _("No Data")
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            raise
+
+
+class DataAndMetadata:
+    """A class encapsulating a data future and metadata about the data."""
+
+    def __init__(self, data_fn, data_shape_and_dtype, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None, data=None):
+        self.__data_lock = threading.RLock()
+        self.__data_valid = data is not None
+        self.__data = data
+        self.data_fn = data_fn
+        assert isinstance(metadata, dict) if metadata is not None else True
+        self.__data_metadata = DataMetadata(data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp)
+
+    @classmethod
+    def from_data(cls, data, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None):
+        data_shape_and_dtype = (data.shape, data.dtype) if data is not None else None
+        return cls(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data)
+
+    @classmethod
+    def from_rpc_dict(cls, d):
+        if d is None:
+            return None
+        data = numpy.loads(base64.b64decode(d["data"].encode('utf-8')))
+        data_shape_and_dtype = Image.dimensional_shape_from_data(data), data.dtype
+        intensity_calibration = Calibration.Calibration.from_rpc_dict(d.get("intensity_calibration"))
+        if "dimensional_calibrations" in d:
+            dimensional_calibrations = [Calibration.Calibration.from_rpc_dict(dc) for dc in d.get("dimensional_calibrations")]
+        else:
+            dimensional_calibrations = None
+        metadata = d.get("metadata")
+        timestamp = datetime.datetime(*list(map(int, re.split('[^\d]', d.get("timestamp"))))) if "timestamp" in d else None
+        return DataAndMetadata(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp)
+
+    @property
+    def rpc_dict(self):
+        d = dict()
+        data = self.data
+        if data is not None:
+            d["data"] = base64.b64encode(numpy.ndarray.dumps(data)).decode('utf=8')
+        if self.intensity_calibration:
+            d["intensity_calibration"] = self.intensity_calibration.rpc_dict
+        if self.dimensional_calibrations:
+            d["dimensional_calibrations"] = [dimensional_calibration.rpc_dict for dimensional_calibration in self.dimensional_calibrations]
+        if self.timestamp:
+            d["timestamp"] = self.timestamp.isoformat()
+        if self.metadata:
+            d["metadata"] = copy.copy(self.metadata)
+        return d
+
+    @property
+    def is_data_valid(self) -> bool:
+        return self.__data_valid
+
+    @property
+    def data(self):
+        with self.__data_lock:
+            if not self.__data_valid:
+                self.__data = self.data_fn()
+                self.__data_valid = True
+        return self.__data
+
+    @property
+    def data_if_loaded(self):
+        return self.__data
+
+    def load_data(self):
+        with self.__data_lock:
+            if not self.__data_valid:
+                self.__data = self.data_fn()
+                self.__data_valid = True
+
+    def unload_data(self):
+        with self.__data_lock:
+            self.__data = None
+            self.__data_valid = False
+
+    @property
+    def data_shape_and_dtype(self):
+        return self.__data_metadata.data_shape_and_dtype
+
+    @property
+    def data_metadata(self):
+        return self.__data_metadata
+
+    @property
+    def data_shape(self):
+        return self.__data_metadata.data_shape
+
+    @property
+    def data_dtype(self):
+        return self.__data_metadata.data_dtype
+
+    @property
+    def dimensional_shape(self):
+        return self.__data_metadata.dimensional_shape
+
+    @property
+    def intensity_calibration(self):
+        return self.__data_metadata.intensity_calibration
+
+    @property
+    def dimensional_calibrations(self):
+        return self.__data_metadata.dimensional_calibrations
+
+    @property
+    def metadata(self):
+        return self.__data_metadata.metadata
+
+    @property
+    def timestamp(self):
+        return self.__data_metadata.timestamp
+
+    @property
+    def is_data_1d(self):
+        return self.__data_metadata.is_data_1d
+
+    @property
+    def is_data_2d(self):
+        return self.__data_metadata.is_data_2d
+
+    @property
+    def is_data_3d(self):
+        return self.__data_metadata.is_data_3d
+
+    @property
+    def is_data_rgb(self):
+        return self.__data_metadata.is_data_rgb
+
+    @property
+    def is_data_rgba(self):
+        return self.__data_metadata.is_data_rgba
+
+    @property
+    def is_data_rgb_type(self):
+        return self.__data_metadata.is_data_rgb_type
+
+    @property
+    def is_data_scalar_type(self):
+        return self.__data_metadata.is_data_scalar_type
+
+    @property
+    def is_data_complex_type(self):
+        return self.__data_metadata.is_data_complex_type
+
+    @property
+    def is_data_bool(self):
+        return self.__data_metadata.is_data_bool
+
+    @property
+    def size_and_data_format_as_string(self):
+        return self.__data_metadata.size_and_data_format_as_string
+
+    def get_intensity_calibration(self):
+        return self.intensity_calibration
+
+    def get_dimensional_calibration(self, index):
+        return self.dimensional_calibrations[index]
+
     def get_data_value(self, pos):
         data = self.data
         if self.is_data_1d:
@@ -170,37 +317,6 @@ class DataAndMetadata:
             if data is not None:
                 return data[int(pos[0]), int(pos[1]), int(pos[2])]
         return None
-
-    @property
-    def size_and_data_format_as_string(self):
-        dimensional_shape = self.dimensional_shape
-        data_dtype = self.data_dtype
-        if dimensional_shape is not None and data_dtype is not None:
-            spatial_shape_str = " x ".join([str(d) for d in dimensional_shape])
-            if len(dimensional_shape) == 1:
-                spatial_shape_str += " x 1"
-            dtype_names = {
-                numpy.int8: _("Integer (8-bit)"),
-                numpy.int16: _("Integer (16-bit)"),
-                numpy.int32: _("Integer (32-bit)"),
-                numpy.int64: _("Integer (64-bit)"),
-                numpy.uint8: _("Unsigned Integer (8-bit)"),
-                numpy.uint16: _("Unsigned Integer (16-bit)"),
-                numpy.uint32: _("Unsigned Integer (32-bit)"),
-                numpy.uint64: _("Unsigned Integer (64-bit)"),
-                numpy.float32: _("Real (32-bit)"),
-                numpy.float64: _("Real (64-bit)"),
-                numpy.complex64: _("Complex (2 x 32-bit)"),
-                numpy.complex128: _("Complex (2 x 64-bit)"),
-            }
-            if self.is_data_rgb_type:
-                data_size_and_data_format_as_string = _("RGB (8-bit)") if self.is_data_rgb else _("RGBA (8-bit)")
-            else:
-                if not self.data_dtype.type in dtype_names:
-                    logging.debug("Unknown dtype %s", self.data_dtype.type)
-                data_size_and_data_format_as_string = dtype_names[self.data_dtype.type] if self.data_dtype.type in dtype_names else _("Unknown Data Type")
-            return "{0}, {1}".format(spatial_shape_str, data_size_and_data_format_as_string)
-        return _("No Data")
 
     def __unary_op(self, op):
         def calculate_data():
@@ -411,20 +527,25 @@ def function_data_slice(data_and_metadata, key):
     def non_ellipses_count(slices):
         return sum(1 if not isinstance(slice, type(Ellipsis)) else 0 for slice in slices)
 
+    def new_axis_count(slices):
+        return sum(1 if slice is None else 0 for slice in slices)
+
     def normalize_slice(index: int, s: slice, shape: typing.List[int], ellipse_count: int):
         size = shape[index] if index < len(shape) else 1
-        collapsible = False
+        is_collapsible = False  # if the index is fixed, it will disappear in final data
+        is_new_axis = False
         if isinstance(s, type(Ellipsis)):
             # for the ellipse, return a full slice for each ellipse dimension
             slices = list()
             for ellipse_index in range(ellipse_count):
-                slices.append((False, slice(0, shape[index + ellipse_index], 1)))
+                slices.append((False, False, slice(0, shape[index + ellipse_index], 1)))
             return slices
         elif isinstance(s, numbers.Integral):
             s = slice(s, s + 1, 1)
-            collapsible = True
+            is_collapsible = True
         elif s is None:
             s = slice(0, size, 1)
+            is_new_axis = True
         s_start = s.start
         s_stop = s.stop
         s_step = s.step
@@ -433,27 +554,41 @@ def function_data_slice(data_and_metadata, key):
         s_stop = s_stop if s_stop is not None else size
         s_stop = size + s_stop if s_stop < 0 else s_stop
         s_step = s_step if s_step is not None else 1
-        return [(collapsible, slice(s_start, s_stop, s_step))]
+        return [(is_collapsible, is_new_axis, slice(s_start, s_stop, s_step))]
 
-    ellipse_count = len(data_and_metadata.data_shape) - non_ellipses_count(slices)
-    normalized_slices = list()  # type: typing.List[(bool, slice)]
-    for index, s in enumerate(slices):
-        normalized_slices.extend(normalize_slice(index, s, data_and_metadata.data_shape, ellipse_count))
+    ellipse_count = len(data_and_metadata.data_shape) - non_ellipses_count(slices) + new_axis_count(slices)  # how many slices go into the ellipse
+    normalized_slices = list()  # type: typing.List[(bool, bool, slice)]
+    slice_index = 0
+    for s in slices:
+        new_normalized_slices = normalize_slice(slice_index, s, data_and_metadata.data_shape, ellipse_count)
+        normalized_slices.extend(new_normalized_slices)
+        for normalized_slice in new_normalized_slices:
+            if not normalized_slice[1]:
+                slice_index += 1
 
-    if any(s.start >= s.stop for c, s in normalized_slices):
+    if any(s.start >= s.stop for c, n, s in normalized_slices):
         return None
 
-    data_shape = [abs(s.start - s.stop) // s.step for c, s in normalized_slices if not c]
+    data_shape = [abs(s.start - s.stop) // s.step for c, n, s in normalized_slices if not c]
 
-    uncollapsed_data_shape = [abs(s.start - s.stop) // s.step for c, s in normalized_slices]
+    uncollapsed_data_shape = [abs(s.start - s.stop) // s.step for c, n, s in normalized_slices]
 
     cropped_dimensional_calibrations = list()
 
-    for index, dimensional_calibration in enumerate(data_and_metadata.dimensional_calibrations):
-        if not normalized_slices[index][0]:  # not collapsible
-            cropped_calibration = Calibration.Calibration(
-                dimensional_calibration.offset + uncollapsed_data_shape[index] * normalized_slices[index][1].start * dimensional_calibration.scale,
-                dimensional_calibration.scale / normalized_slices[index][1].step, dimensional_calibration.units)
+    dimensional_calibration_index = 0
+    for slice_index, dimensional_calibration in enumerate(normalized_slices):
+        normalized_slice = normalized_slices[slice_index]
+        if normalized_slice[0]:  # if_collapsible
+            dimensional_calibration_index += 1
+        else:
+            if normalized_slice[1]:  # is_newaxis
+                cropped_calibration = Calibration.Calibration()
+            else:
+                dimensional_calibration = data_and_metadata.dimensional_calibrations[dimensional_calibration_index]
+                cropped_calibration = Calibration.Calibration(
+                    dimensional_calibration.offset + uncollapsed_data_shape[slice_index] * normalized_slice[2].start * dimensional_calibration.scale,
+                    dimensional_calibration.scale / normalized_slice[2].step, dimensional_calibration.units)
+                dimensional_calibration_index += 1
             cropped_dimensional_calibrations.append(cropped_calibration)
 
     return DataAndMetadata(calculate_data,
