@@ -11,14 +11,16 @@ import threading
 import typing
 import warnings
 
-# third party libraries
 import numpy
-
-# local libraries
 from nion.data import Calibration
 from nion.data import Image
 
 _ = gettext.gettext
+
+
+ShapeType = typing.Sequence[int]
+PositionType = typing.Sequence[int]
+CalibrationListType = typing.Sequence[Calibration.Calibration]
 
 
 class DataMetadata:
@@ -44,85 +46,85 @@ class DataMetadata:
         assert len(dimensional_calibrations) == len(dimensional_shape)
 
     @property
-    def data_shape(self):
+    def data_shape(self) -> ShapeType:
         data_shape_and_dtype = self.data_shape_and_dtype
         return data_shape_and_dtype[0] if data_shape_and_dtype is not None else None
 
     @property
-    def data_dtype(self):
+    def data_dtype(self) -> numpy.dtype:
         data_shape_and_dtype = self.data_shape_and_dtype
         return data_shape_and_dtype[1] if data_shape_and_dtype is not None else None
 
     @property
-    def dimensional_shape(self):
+    def dimensional_shape(self) -> ShapeType:
         data_shape_and_dtype = self.data_shape_and_dtype
         if data_shape_and_dtype is not None:
             data_shape, data_dtype = self.data_shape_and_dtype
             return Image.dimensional_shape_from_shape_and_dtype(data_shape, data_dtype)
         return None
 
-    def get_intensity_calibration(self):
+    def get_intensity_calibration(self) -> Calibration.Calibration:
         return self.intensity_calibration
 
-    def get_dimensional_calibration(self, index):
+    def get_dimensional_calibration(self, index) -> Calibration.Calibration:
         return self.dimensional_calibrations[index]
 
-    def _set_intensity_calibration(self, intensity_calibration):
+    def _set_intensity_calibration(self, intensity_calibration: Calibration.Calibration) -> None:
         self.intensity_calibration = copy.deepcopy(intensity_calibration)
 
-    def _set_dimensional_calibrations(self, dimensional_calibrations):
+    def _set_dimensional_calibrations(self, dimensional_calibrations: CalibrationListType) -> None:
         self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
 
-    def _set_metadata(self, metadata):
+    def _set_metadata(self, metadata: dict) -> None:
         self.metadata = copy.deepcopy(metadata)
 
     @property
-    def is_data_1d(self):
+    def is_data_1d(self) -> bool:
         data_shape_and_dtype = self.data_shape_and_dtype
         return Image.is_shape_and_dtype_1d(*data_shape_and_dtype) if data_shape_and_dtype else False
 
     @property
-    def is_data_2d(self):
+    def is_data_2d(self) -> bool:
         data_shape_and_dtype = self.data_shape_and_dtype
         return Image.is_shape_and_dtype_2d(*data_shape_and_dtype) if data_shape_and_dtype else False
 
     @property
-    def is_data_3d(self):
+    def is_data_3d(self) -> bool:
         data_shape_and_dtype = self.data_shape_and_dtype
         return Image.is_shape_and_dtype_3d(*data_shape_and_dtype) if data_shape_and_dtype else False
 
     @property
-    def is_data_rgb(self):
+    def is_data_rgb(self) -> bool:
         data_shape_and_dtype = self.data_shape_and_dtype
         return Image.is_shape_and_dtype_rgb(*data_shape_and_dtype) if data_shape_and_dtype else False
 
     @property
-    def is_data_rgba(self):
+    def is_data_rgba(self) -> bool:
         data_shape_and_dtype = self.data_shape_and_dtype
         return Image.is_shape_and_dtype_rgba(*data_shape_and_dtype) if data_shape_and_dtype else False
 
     @property
-    def is_data_rgb_type(self):
+    def is_data_rgb_type(self) -> bool:
         data_shape_and_dtype = self.data_shape_and_dtype
         return (Image.is_shape_and_dtype_rgb(*data_shape_and_dtype) or Image.is_shape_and_dtype_rgba(*data_shape_and_dtype)) if data_shape_and_dtype else False
 
     @property
-    def is_data_scalar_type(self):
+    def is_data_scalar_type(self) -> bool:
         data_shape_and_dtype = self.data_shape_and_dtype
         return Image.is_shape_and_dtype_scalar_type(*data_shape_and_dtype) if data_shape_and_dtype else False
 
     @property
-    def is_data_complex_type(self):
+    def is_data_complex_type(self) -> bool:
         data_shape_and_dtype = self.data_shape_and_dtype
         return Image.is_shape_and_dtype_complex_type(*data_shape_and_dtype) if data_shape_and_dtype else False
 
     @property
-    def is_data_bool(self):
+    def is_data_bool(self) -> bool:
         data_shape_and_dtype = self.data_shape_and_dtype
         return Image.is_shape_and_dtype_bool(*data_shape_and_dtype) if data_shape_and_dtype else False
 
     @property
-    def size_and_data_format_as_string(self):
+    def size_and_data_format_as_string(self) -> str:
         try:
             dimensional_shape = self.dimensional_shape
             data_dtype = self.data_dtype
@@ -161,7 +163,9 @@ class DataMetadata:
 class DataAndMetadata:
     """A class encapsulating a data future and metadata about the data."""
 
-    def __init__(self, data_fn, data_shape_and_dtype, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None, data=None):
+    def __init__(self, data_fn: typing.Callable[[], numpy.ndarray], data_shape_and_dtype: typing.Tuple[ShapeType, numpy.dtype],
+                 intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None, metadata: dict = None,
+                 timestamp: datetime.datetime = None, data: numpy.ndarray = None):
         self.__data_lock = threading.RLock()
         self.__data_valid = data is not None
         self.__data = data
@@ -172,7 +176,8 @@ class DataAndMetadata:
         self.__data_metadata = DataMetadata(data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp)
 
     @classmethod
-    def from_data(cls, data, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None):
+    def from_data(cls, data: numpy.ndarray, intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None,
+                  metadata: dict = None, timestamp: datetime.datetime = None):
         data_shape_and_dtype = (data.shape, data.dtype) if data is not None else None
         return cls(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data)
 
@@ -212,7 +217,7 @@ class DataAndMetadata:
         return self.__data_valid
 
     @property
-    def data(self):
+    def data(self) -> numpy.ndarray:
         self.increment_data_ref_count()
         try:
             return self.__data
@@ -220,10 +225,10 @@ class DataAndMetadata:
             self.decrement_data_ref_count()
 
     @property
-    def data_if_loaded(self):
+    def data_if_loaded(self) -> bool:
         return self.__data
 
-    def increment_data_ref_count(self):
+    def increment_data_ref_count(self) -> int:
         with self.__data_lock:
             initial_count = self.__data_ref_count
             self.__data_ref_count += 1
@@ -232,7 +237,7 @@ class DataAndMetadata:
                 self.__data_valid = True
         return initial_count+1
 
-    def decrement_data_ref_count(self):
+    def decrement_data_ref_count(self) -> int:
         with self.__data_lock:
             assert self.__data_ref_count > 0
             self.__data_ref_count -= 1
@@ -243,38 +248,38 @@ class DataAndMetadata:
         return final_count
 
     @property
-    def data_shape_and_dtype(self):
+    def data_shape_and_dtype(self) -> typing.Tuple[ShapeType, numpy.dtype]:
         return self.__data_metadata.data_shape_and_dtype
 
     @property
-    def data_metadata(self):
+    def data_metadata(self) -> DataMetadata:
         return self.__data_metadata
 
     @property
-    def data_shape(self):
+    def data_shape(self) -> ShapeType:
         return self.__data_metadata.data_shape
 
     @property
-    def data_dtype(self):
+    def data_dtype(self) -> numpy.dtype:
         return self.__data_metadata.data_dtype
 
     @property
-    def dimensional_shape(self):
+    def dimensional_shape(self) -> ShapeType:
         return self.__data_metadata.dimensional_shape
 
     @property
-    def intensity_calibration(self):
+    def intensity_calibration(self) -> Calibration.Calibration:
         return self.__data_metadata.intensity_calibration
 
     @property
-    def dimensional_calibrations(self):
+    def dimensional_calibrations(self) -> CalibrationListType:
         return self.__data_metadata.dimensional_calibrations
 
     @property
-    def metadata(self):
+    def metadata(self) -> dict:
         return self.__data_metadata.metadata
 
-    def _set_data(self, data):
+    def _set_data(self, data: numpy.ndarray) -> None:
         self.__data = data
         self.__data_valid = True
 
@@ -282,66 +287,66 @@ class DataAndMetadata:
         with self.__data_lock:
             self.__data_ref_count += data_ref_count
 
-    def _set_intensity_calibration(self, intensity_calibration):
+    def _set_intensity_calibration(self, intensity_calibration: Calibration.Calibration) -> None:
         self.__data_metadata._set_intensity_calibration(intensity_calibration)
 
-    def _set_dimensional_calibrations(self, dimensional_calibrations):
+    def _set_dimensional_calibrations(self, dimensional_calibrations: CalibrationListType) -> None:
         self.__data_metadata._set_dimensional_calibrations(dimensional_calibrations)
 
-    def _set_metadata(self, metadata):
+    def _set_metadata(self, metadata: dict) -> None:
         self.__data_metadata._set_metadata(metadata)
 
     @property
-    def timestamp(self):
+    def timestamp(self) -> datetime.datetime:
         return self.__data_metadata.timestamp
 
     @property
-    def is_data_1d(self):
+    def is_data_1d(self) -> bool:
         return self.__data_metadata.is_data_1d
 
     @property
-    def is_data_2d(self):
+    def is_data_2d(self) -> bool:
         return self.__data_metadata.is_data_2d
 
     @property
-    def is_data_3d(self):
+    def is_data_3d(self) -> bool:
         return self.__data_metadata.is_data_3d
 
     @property
-    def is_data_rgb(self):
+    def is_data_rgb(self) -> bool:
         return self.__data_metadata.is_data_rgb
 
     @property
-    def is_data_rgba(self):
+    def is_data_rgba(self) -> bool:
         return self.__data_metadata.is_data_rgba
 
     @property
-    def is_data_rgb_type(self):
+    def is_data_rgb_type(self) -> bool:
         return self.__data_metadata.is_data_rgb_type
 
     @property
-    def is_data_scalar_type(self):
+    def is_data_scalar_type(self) -> bool:
         return self.__data_metadata.is_data_scalar_type
 
     @property
-    def is_data_complex_type(self):
+    def is_data_complex_type(self) -> bool:
         return self.__data_metadata.is_data_complex_type
 
     @property
-    def is_data_bool(self):
+    def is_data_bool(self) -> bool:
         return self.__data_metadata.is_data_bool
 
     @property
-    def size_and_data_format_as_string(self):
+    def size_and_data_format_as_string(self) -> str:
         return self.__data_metadata.size_and_data_format_as_string
 
-    def get_intensity_calibration(self):
+    def get_intensity_calibration(self) -> Calibration.Calibration:
         return self.intensity_calibration
 
-    def get_dimensional_calibration(self, index):
+    def get_dimensional_calibration(self, index) -> Calibration.Calibration:
         return self.dimensional_calibrations[index]
 
-    def get_data_value(self, pos):
+    def get_data_value(self, pos: ShapeType) -> typing.Any:
         data = self.data
         if self.is_data_1d:
             if data is not None:
@@ -631,3 +636,7 @@ def function_data_slice(data_and_metadata, key):
                            (data_shape, data_and_metadata.data_dtype),
                            data_and_metadata.intensity_calibration, cropped_dimensional_calibrations,
                            data_and_metadata.metadata, datetime.datetime.utcnow())
+
+
+def new_data_and_metadata(data, intensity_calibration: Calibration.Calibration=None, dimensional_calibrations: CalibrationListType=None, metadata: dict=None, timestamp: datetime.datetime=None) -> DataAndMetadata:
+    return DataAndMetadata.from_data(data, intensity_calibration, dimensional_calibrations, metadata, timestamp)

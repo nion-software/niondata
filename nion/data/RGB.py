@@ -7,7 +7,8 @@ import numpy
 from nion.data import DataAndMetadata
 from nion.data import Image
 
-def function_rgb_channel(data_and_metadata, channel):
+
+def function_rgb_channel(data_and_metadata: DataAndMetadata.DataAndMetadata, channel: int) -> DataAndMetadata.DataAndMetadata:
     def calculate_data():
         data = data_and_metadata.data
         if channel < 0 or channel > 3:
@@ -26,12 +27,12 @@ def function_rgb_channel(data_and_metadata, channel):
     if not data_and_metadata.is_data_rgb_type:
         return None
 
-    return DataAndMetadata.DataAndMetadata(calculate_data, data_and_metadata.data_shape_and_dtype,
-                                           data_and_metadata.intensity_calibration,
-                                           data_and_metadata.dimensional_calibrations, data_and_metadata.metadata)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations,
+                                                 data_and_metadata.metadata)
 
 
-def function_rgb_linear_combine(data_and_metadata, red_weight, green_weight, blue_weight):
+def function_rgb_linear_combine(data_and_metadata: DataAndMetadata.DataAndMetadata, red_weight: float, green_weight: float,
+                                blue_weight: float) -> DataAndMetadata.DataAndMetadata:
     def calculate_data():
         data = data_and_metadata.data
         if not Image.is_data_valid(data):
@@ -46,14 +47,15 @@ def function_rgb_linear_combine(data_and_metadata, red_weight, green_weight, blu
     if not data_and_metadata.is_data_rgb_type:
         return None
 
-    return DataAndMetadata.DataAndMetadata(calculate_data, data_and_metadata.data_shape_and_dtype,
-                                           data_and_metadata.intensity_calibration,
-                                           data_and_metadata.dimensional_calibrations, data_and_metadata.metadata)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations,
+                                                 data_and_metadata.metadata)
 
 
-def function_rgb(red_data_and_metadata, green_data_and_metadata, blue_data_and_metadata):
+def function_rgb(red_data_and_metadata: DataAndMetadata.DataAndMetadata, green_data_and_metadata: DataAndMetadata.DataAndMetadata,
+                 blue_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    shape = tuple(red_data_and_metadata.data_shape)
+
     def calculate_data():
-        shape = tuple(red_data_and_metadata.data_shape)
         rgb_image = numpy.empty(shape + (3,), numpy.uint8)
         channels = (blue_data_and_metadata, green_data_and_metadata, red_data_and_metadata)
         for channel_index, channel in enumerate(channels):
@@ -73,19 +75,19 @@ def function_rgb(red_data_and_metadata, green_data_and_metadata, blue_data_and_m
                 return None
         return rgb_image
 
-    shape = tuple(red_data_and_metadata.data_shape)
-
     if tuple(green_data_and_metadata.data_shape) != shape or tuple(blue_data_and_metadata.data_shape) != shape:
         return None
 
-    return DataAndMetadata.DataAndMetadata(calculate_data, red_data_and_metadata.data_shape_and_dtype,
-                                           red_data_and_metadata.intensity_calibration,
-                                           red_data_and_metadata.dimensional_calibrations, red_data_and_metadata.metadata)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), red_data_and_metadata.intensity_calibration, red_data_and_metadata.dimensional_calibrations,
+                                                 red_data_and_metadata.metadata)
 
 
-def function_rgba(red_data_and_metadata, green_data_and_metadata, blue_data_and_metadata, alpha_data_and_metadata):
+def function_rgba(red_data_and_metadata: DataAndMetadata.DataAndMetadata, green_data_and_metadata: DataAndMetadata.DataAndMetadata,
+                  blue_data_and_metadata: DataAndMetadata.DataAndMetadata,
+                  alpha_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    shape = tuple(red_data_and_metadata.data_shape)
+
     def calculate_data():
-        shape = tuple(red_data_and_metadata.data_shape)
         rgba_image = numpy.empty(shape + (4,), numpy.uint8)
         channels = (blue_data_and_metadata, green_data_and_metadata, red_data_and_metadata, alpha_data_and_metadata)
         for channel_index, channel in enumerate(channels):
@@ -105,11 +107,9 @@ def function_rgba(red_data_and_metadata, green_data_and_metadata, blue_data_and_
                 return None
         return rgba_image
 
-    shape = tuple(red_data_and_metadata.data_shape)
-
-    if tuple(green_data_and_metadata.data_shape) != shape or tuple(blue_data_and_metadata.data_shape) != shape or tuple(alpha_data_and_metadata.data_shape) != shape:
+    if tuple(green_data_and_metadata.data_shape) != shape or tuple(blue_data_and_metadata.data_shape) != shape or tuple(
+            alpha_data_and_metadata.data_shape) != shape:
         return None
 
-    return DataAndMetadata.DataAndMetadata(calculate_data, red_data_and_metadata.data_shape_and_dtype,
-                                           red_data_and_metadata.intensity_calibration,
-                                           red_data_and_metadata.dimensional_calibrations, red_data_and_metadata.metadata)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), red_data_and_metadata.intensity_calibration, red_data_and_metadata.dimensional_calibrations,
+                                                 red_data_and_metadata.metadata)
