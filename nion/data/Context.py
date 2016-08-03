@@ -35,6 +35,7 @@ def context():
     g["concatenate"] = Core.function_concatenate
     g["hstack"] = Core.function_hstack
     g["vstack"] = Core.function_vstack
+    g["moveaxis"] = Core.function_moveaxis
     g["reshape"] = Core.function_reshape
     g["rescale"] = Core.function_rescale
     g["data_slice"] = DataAndMetadata.function_data_slice
@@ -44,6 +45,7 @@ def context():
     g["slice_sum"] = Core.function_slice_sum
     g["pick"] = Core.function_pick
     g["sum"] = Core.function_sum
+    g["sum_region"] = Core.function_sum_region
     g["resample_image"] = Core.function_resample_2d
     g["newaxis"] = numpy.newaxis
 

@@ -1,5 +1,6 @@
 # standard libraries
 import collections
+import copy
 import datetime
 import math
 import numbers
@@ -532,6 +533,8 @@ def function_crop_interval(data_and_metadata: DataAndMetadata.DataAndMetadata, i
 
 
 def function_slice_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, slice_center: int, slice_width: int) -> DataAndMetadata.DataAndMetadata:
+    signal_index = -1
+
     slice_center = int(slice_center)
     slice_width = int(slice_width)
 
@@ -546,21 +549,23 @@ def function_slice_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, slice
         slice_start = int(slice_center - slice_width * 0.5 + 0.5)
         slice_start = max(slice_start, 0)
         slice_end = slice_start + slice_width
-        slice_end = min(shape[0], slice_end)
-        return numpy.sum(data[slice_start:slice_end,:], 0)
+        slice_end = min(shape[signal_index], slice_end)
+        return numpy.sum(data[..., slice_start:slice_end], signal_index)
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
     if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
         return None
 
-    dimensional_calibrations = dimensional_calibrations[1:]
+    dimensional_calibrations = dimensional_calibrations[0:signal_index]
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, dimensional_calibrations,
                                                  data_and_metadata.metadata, datetime.datetime.utcnow())
 
 
 def function_pick(data_and_metadata: DataAndMetadata.DataAndMetadata, position: DataAndMetadata.PositionType) -> DataAndMetadata.DataAndMetadata:
+    signal_index = -1
+
     data_shape = data_and_metadata.data_shape
     data_dtype = data_and_metadata.data_dtype
 
@@ -568,15 +573,15 @@ def function_pick(data_and_metadata: DataAndMetadata.DataAndMetadata, position: 
         data = data_and_metadata.data
         if not Image.is_data_valid(data):
             return None
-        data_shape = data_and_metadata.data_shape
-        if len(data_shape) != 3:
+        dimensional_shape = data_and_metadata.dimensional_shape
+        if len(dimensional_shape) != 3:
             return None
         position_f = Geometry.FloatPoint.make(position)
-        position_i = Geometry.IntPoint(y=position_f.y * data_shape[1], x=position_f.x * data_shape[2])
-        if position_i.y >= 0 and position_i.y < data_shape[1] and position_i.x >= 0 and position_i.x < data_shape[2]:
-            return data[:, position_i[0], position_i[1]].copy()
+        position_i = Geometry.IntPoint(y=position_f.y * dimensional_shape[0], x=position_f.x * dimensional_shape[1])
+        if position_i.y >= 0 and position_i.y < dimensional_shape[0] and position_i.x >= 0 and position_i.x < dimensional_shape[1]:
+            return data[position_i[0], position_i[1], :].copy()
         else:
-            return numpy.zeros((data_shape[:-2], ), dtype=data.dtype)
+            return numpy.zeros((dimensional_shape[signal_index], ), dtype=data.dtype)
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
@@ -586,7 +591,7 @@ def function_pick(data_and_metadata: DataAndMetadata.DataAndMetadata, position: 
     if len(data_shape) != 3:
         return None
 
-    dimensional_calibrations = dimensional_calibrations[0:-2]
+    dimensional_calibrations = dimensional_calibrations[-1:]
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, dimensional_calibrations,
                                                  data_and_metadata.metadata, datetime.datetime.utcnow())
@@ -701,7 +706,18 @@ def function_vstack(data_and_metadata_list: typing.Sequence[DataAndMetadata.Data
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration, dimensional_calibrations, dict(), datetime.datetime.utcnow())
 
 
-def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: int=None) -> DataAndMetadata.DataAndMetadata:
+def function_moveaxis(data_and_metadata: DataAndMetadata.DataAndMetadata, src_axis: int, dst_axis: int) -> DataAndMetadata.DataAndMetadata:
+    data = numpy.moveaxis(data_and_metadata.data, src_axis, dst_axis)
+
+    dimensional_calibrations = copy.deepcopy(data_and_metadata.dimensional_calibrations)
+
+    dimensional_calibrations.insert(dst_axis, dimensional_calibrations.pop(src_axis))
+
+    return DataAndMetadata.new_data_and_metadata(data, data_and_metadata.intensity_calibration, dimensional_calibrations, data_and_metadata.metadata,
+                                                 datetime.datetime.utcnow())
+
+
+def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Union[int, typing.Sequence[int]]=None) -> DataAndMetadata.DataAndMetadata:
     data_shape = data_and_metadata.data_shape
     data_dtype = data_and_metadata.data_dtype
 
@@ -746,6 +762,30 @@ def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: int=N
     dimensional_calibrations = new_dimensional_calibrations
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, dimensional_calibrations,
+                                                 data_and_metadata.metadata, datetime.datetime.utcnow())
+
+
+def function_sum_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    data_shape = data_and_metadata.data_shape
+    data_dtype = data_and_metadata.data_dtype
+
+    dimensional_calibrations = data_and_metadata.dimensional_calibrations
+
+    if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
+        return None
+
+    assert len(data_and_metadata.dimensional_shape) == 3
+    assert len(mask_data_and_metadata.dimensional_shape) == 2
+
+    data = data_and_metadata.data
+    mask_data = mask_data_and_metadata.data
+
+    assert data is not None
+    assert mask_data is not None
+
+    result_data = numpy.sum(data * mask_data[..., numpy.newaxis], tuple(range(0, len(data_and_metadata.dimensional_shape) - 1)))
+
+    return DataAndMetadata.new_data_and_metadata(result_data, data_and_metadata.intensity_calibration, [data_and_metadata.dimensional_calibrations[-1]],
                                                  data_and_metadata.metadata, datetime.datetime.utcnow())
 
 

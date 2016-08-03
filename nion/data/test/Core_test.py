@@ -80,8 +80,8 @@ class TestCore(unittest.TestCase):
         self.assertTrue(numpy.array_equal(hstack.data, numpy.hstack([src_data1, src_data2])))
 
     def test_sum_over_two_axes_returns_correct_shape(self):
-        src = DataAndMetadata.DataAndMetadata.from_data(numpy.ones((16, 4, 4)))
-        dst = Core.function_sum(src, (1, 2))
+        src = DataAndMetadata.DataAndMetadata.from_data(numpy.ones((4, 4, 16)))
+        dst = Core.function_sum(src, (0, 1))
         self.assertEqual(dst.data_shape, dst.data.shape)
 
     def test_fourier_filter_gives_sensible_units_when_source_has_units(self):
@@ -105,6 +105,52 @@ class TestCore(unittest.TestCase):
             fft = Core.function_fft(data)
             masked_data = Core.function_ifft(Core.function_fourier_mask(fft, mask)).data
             self.assertAlmostEqual(numpy.sum(numpy.imag(masked_data)), 0)
+
+    def test_slice_sum_grabs_signal_index(self):
+        random_data = numpy.random.randn(3, 4, 5)
+        c0 = Calibration.Calibration(units="a")
+        c1 = Calibration.Calibration(units="b")
+        c2 = Calibration.Calibration(units="c")
+        c3 = Calibration.Calibration(units="d")
+        data = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[c1, c2, c3])  # last index is signal
+        slice = Core.function_slice_sum(data, 2, 2)
+        self.assertTrue(numpy.array_equal(numpy.sum(random_data[..., 1:3], 2), slice.data))
+        self.assertEqual(slice.dimensional_shape, random_data.shape[0:2])
+        self.assertEqual(slice.intensity_calibration, c0)
+        self.assertEqual(slice.dimensional_calibrations[0], c1)
+        self.assertEqual(slice.dimensional_calibrations[1], c2)
+
+
+    def test_pick_grabs_signal_index(self):
+        random_data = numpy.random.randn(3, 4, 5)
+        c0 = Calibration.Calibration(units="a")
+        c1 = Calibration.Calibration(units="b")
+        c2 = Calibration.Calibration(units="c")
+        c3 = Calibration.Calibration(units="d")
+        data = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[c1, c2, c3])  # last index is signal
+        pick = Core.function_pick(data, (2/3, 1/4))
+        self.assertTrue(numpy.array_equal(random_data[2, 1, :], pick.data))
+        self.assertEqual(pick.dimensional_shape, (random_data.shape[-1],))
+        self.assertEqual(pick.intensity_calibration, c0)
+        self.assertEqual(pick.dimensional_calibrations[0], c3)
+
+    def test_sum_region_produces_correct_result(self):
+        random_data = numpy.random.randn(3, 4, 5)
+        c0 = Calibration.Calibration(units="a")
+        c1 = Calibration.Calibration(units="b")
+        c2 = Calibration.Calibration(units="c")
+        c3 = Calibration.Calibration(units="d")
+        data = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[c1, c2, c3])  # last index is signal
+        mask_data = numpy.zeros((3, 4), numpy.int)
+        mask_data[0, 1] = 1
+        mask_data[2, 2] = 1
+        mask = DataAndMetadata.new_data_and_metadata(mask_data)
+        sum_region = Core.function_sum_region(data, mask)
+        self.assertTrue(numpy.array_equal(random_data[0, 1, :] + random_data[2, 2, :], sum_region.data))
+        self.assertEqual(sum_region.dimensional_shape, (random_data.shape[-1],))
+        self.assertEqual(sum_region.intensity_calibration, c0)
+        self.assertEqual(sum_region.dimensional_calibrations[0], c3)
+
 
 
 if __name__ == '__main__':
