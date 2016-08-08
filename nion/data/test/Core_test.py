@@ -112,8 +112,8 @@ class TestCore(unittest.TestCase):
         c1 = Calibration.Calibration(units="b")
         c2 = Calibration.Calibration(units="c")
         c3 = Calibration.Calibration(units="d")
-        data = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[c1, c2, c3])  # last index is signal
-        slice = Core.function_slice_sum(data, 2, 2)
+        data_and_metadata = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[c1, c2, c3])  # last index is signal
+        slice = Core.function_slice_sum(data_and_metadata, 2, 2)
         self.assertTrue(numpy.array_equal(numpy.sum(random_data[..., 1:3], 2), slice.data))
         self.assertEqual(slice.dimensional_shape, random_data.shape[0:2])
         self.assertEqual(slice.intensity_calibration, c0)
@@ -127,8 +127,8 @@ class TestCore(unittest.TestCase):
         c1 = Calibration.Calibration(units="b")
         c2 = Calibration.Calibration(units="c")
         c3 = Calibration.Calibration(units="d")
-        data = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[c1, c2, c3])  # last index is signal
-        pick = Core.function_pick(data, (2/3, 1/4))
+        data_and_metadata = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[c1, c2, c3])  # last index is signal
+        pick = Core.function_pick(data_and_metadata, (2/3, 1/4))
         self.assertTrue(numpy.array_equal(random_data[2, 1, :], pick.data))
         self.assertEqual(pick.dimensional_shape, (random_data.shape[-1],))
         self.assertEqual(pick.intensity_calibration, c0)
@@ -150,6 +150,17 @@ class TestCore(unittest.TestCase):
         self.assertEqual(sum_region.dimensional_shape, (random_data.shape[-1],))
         self.assertEqual(sum_region.intensity_calibration, c0)
         self.assertEqual(sum_region.dimensional_calibrations[0], c3)
+
+    def test_slice_sum_works_on_2d_data(self):
+        random_data = numpy.random.randn(4, 10)
+        c0 = Calibration.Calibration(units="a")
+        c1 = Calibration.Calibration(units="b")
+        c2 = Calibration.Calibration(units="c")
+        data_and_metadata = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[c1, c2])  # last index is signal
+        result = Core.function_slice_sum(data_and_metadata, 5, 3)
+        self.assertTrue(numpy.array_equal(numpy.sum(random_data[..., 4:7], -1), result.data))
+        self.assertEqual(result.intensity_calibration, data_and_metadata.intensity_calibration)
+        self.assertEqual(result.dimensional_calibrations[0], data_and_metadata.dimensional_calibrations[0])
 
 
 
