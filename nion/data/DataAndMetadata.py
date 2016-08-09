@@ -23,13 +23,45 @@ PositionType = typing.Sequence[int]
 CalibrationListType = typing.Sequence[Calibration.Calibration]
 
 
+class DataDescriptor:
+    "A class describing the layout of data."
+    def __init__(self, is_sequence: bool, collection_dimension_count: int, datum_dimension_count: int):
+        assert datum_dimension_count in (1, 2)
+        assert collection_dimension_count in (0, 1, 2)
+        self.is_sequence = is_sequence
+        self.collection_dimension_count = collection_dimension_count
+        self.datum_dimension_count = datum_dimension_count
+
+    @property
+    def expected_dimension_count(self) -> int:
+        return (1 if self.is_sequence else 0) + self.collection_dimension_count + self.datum_dimension_count
+
+    @property
+    def is_collection(self) -> bool:
+        return self.collection_dimension_count > 0
+
+
 class DataMetadata:
     """A class describing data metadata, including size, data type, calibrations, the metadata dict, and the creation timestamp."""
 
-    def __init__(self, data_shape_and_dtype, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None):
+    def __init__(self, data_shape_and_dtype, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None, data_descriptor=None):
         if data_shape_and_dtype is not None and data_shape_and_dtype[0] is not None and not all([type(data_shape_item) == int for data_shape_item in data_shape_and_dtype[0]]):
             warnings.warn('using a non-integer shape in DataAndMetadata', DeprecationWarning, stacklevel=2)
         self.data_shape_and_dtype = (tuple(data_shape_and_dtype[0]), numpy.dtype(data_shape_and_dtype[1])) if data_shape_and_dtype is not None else None
+
+        dimensional_shape = Image.dimensional_shape_from_shape_and_dtype(data_shape_and_dtype[0], data_shape_and_dtype[1]) if data_shape_and_dtype is not None else ()
+        dimension_count = len(dimensional_shape)
+
+        if not data_descriptor:
+            is_sequence = False
+            collection_dimension_count = 2 if dimension_count in (3, 4) else 0
+            datum_dimension_count = dimension_count - collection_dimension_count
+            data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
+
+        assert data_descriptor.expected_dimension_count == dimension_count
+
+        self.data_descriptor = data_descriptor
+
         self.intensity_calibration = copy.deepcopy(intensity_calibration) if intensity_calibration else Calibration.Calibration()
         if dimensional_calibrations is None:
             dimensional_calibrations = list()
@@ -40,7 +72,6 @@ class DataMetadata:
         self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
         self.timestamp = timestamp if not timestamp else datetime.datetime.utcnow()
         self.metadata = copy.deepcopy(metadata) if metadata is not None else dict()
-        dimensional_shape = Image.dimensional_shape_from_shape_and_dtype(data_shape_and_dtype[0], data_shape_and_dtype[1]) if data_shape_and_dtype is not None else ()
 
         assert isinstance(self.metadata, dict)
         assert len(dimensional_calibrations) == len(dimensional_shape)
@@ -62,6 +93,26 @@ class DataMetadata:
             data_shape, data_dtype = self.data_shape_and_dtype
             return Image.dimensional_shape_from_shape_and_dtype(data_shape, data_dtype)
         return None
+
+    @property
+    def is_sequence(self) -> bool:
+        return self.data_descriptor.is_sequence
+
+    @property
+    def is_collection(self) -> bool:
+        return self.data_descriptor.is_collection
+
+    @property
+    def collection_dimension_count(self) -> int:
+        return self.data_descriptor.collection_dimension_count
+
+    @property
+    def datum_dimension_count(self) -> int:
+        return self.data_descriptor.datum_dimension_count
+
+    @property
+    def max_sequence_index(self) -> int:
+        return self.dimensional_shape[0] if self.is_sequence else 0
 
     def get_intensity_calibration(self) -> Calibration.Calibration:
         return self.intensity_calibration
@@ -165,7 +216,7 @@ class DataAndMetadata:
 
     def __init__(self, data_fn: typing.Callable[[], numpy.ndarray], data_shape_and_dtype: typing.Tuple[ShapeType, numpy.dtype],
                  intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None, metadata: dict = None,
-                 timestamp: datetime.datetime = None, data: numpy.ndarray = None):
+                 timestamp: datetime.datetime = None, data: numpy.ndarray = None, data_descriptor: DataDescriptor=None):
         self.__data_lock = threading.RLock()
         self.__data_valid = data is not None
         self.__data = data
@@ -173,20 +224,21 @@ class DataAndMetadata:
         self.unloadable = False
         self.data_fn = data_fn
         assert isinstance(metadata, dict) if metadata is not None else True
-        self.__data_metadata = DataMetadata(data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp)
+        self.__data_metadata = DataMetadata(data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor)
 
     @classmethod
     def from_data(cls, data: numpy.ndarray, intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None,
-                  metadata: dict = None, timestamp: datetime.datetime = None):
+                  metadata: dict = None, timestamp: datetime.datetime = None, data_descriptor: DataDescriptor=None):
         data_shape_and_dtype = (data.shape, data.dtype) if data is not None else None
-        return cls(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data)
+        return cls(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data, data_descriptor=data_descriptor)
 
     @classmethod
     def from_rpc_dict(cls, d):
         if d is None:
             return None
         data = numpy.loads(base64.b64decode(d["data"].encode('utf-8')))
-        data_shape_and_dtype = Image.dimensional_shape_from_data(data), data.dtype
+        dimensional_shape = Image.dimensional_shape_from_data(data)
+        data_shape_and_dtype = data.shape, data.dtype
         intensity_calibration = Calibration.Calibration.from_rpc_dict(d.get("intensity_calibration"))
         if "dimensional_calibrations" in d:
             dimensional_calibrations = [Calibration.Calibration.from_rpc_dict(dc) for dc in d.get("dimensional_calibrations")]
@@ -194,7 +246,15 @@ class DataAndMetadata:
             dimensional_calibrations = None
         metadata = d.get("metadata")
         timestamp = datetime.datetime(*list(map(int, re.split('[^\d]', d.get("timestamp"))))) if "timestamp" in d else None
-        return DataAndMetadata(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp)
+        is_sequence = d.get("is_sequence", False)
+        collection_dimension_count = d.get("collection_dimension_count")
+        datum_dimension_count = d.get("datum_dimension_count")
+        if collection_dimension_count is None:
+            collection_dimension_count = 2 if len(dimensional_shape) == 3 and not is_sequence else 0
+        if datum_dimension_count is None:
+            datum_dimension_count = len(dimensional_shape) - collection_dimension_count - (1 if is_sequence else 0)
+        data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
+        return DataAndMetadata(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor)
 
     @property
     def rpc_dict(self):
@@ -210,6 +270,9 @@ class DataAndMetadata:
             d["timestamp"] = self.timestamp.isoformat()
         if self.metadata:
             d["metadata"] = copy.copy(self.metadata)
+        d["is_sequence"] = self.is_sequence
+        d["collection_dimension_count"] = self.collection_dimension_count
+        d["datum_dimension_count"] = self.datum_dimension_count
         return d
 
     @property
@@ -266,6 +329,30 @@ class DataAndMetadata:
     @property
     def dimensional_shape(self) -> ShapeType:
         return self.__data_metadata.dimensional_shape
+
+    @property
+    def data_descriptor(self) -> DataDescriptor:
+        return self.__data_metadata.data_descriptor
+
+    @property
+    def is_sequence(self) -> bool:
+        return self.__data_metadata.is_sequence
+
+    @property
+    def is_collection(self) -> bool:
+        return self.__data_metadata.is_collection
+
+    @property
+    def collection_dimension_count(self) -> int:
+        return self.__data_metadata.collection_dimension_count
+
+    @property
+    def datum_dimension_count(self) -> int:
+        return self.__data_metadata.datum_dimension_count
+
+    @property
+    def max_sequence_index(self) -> int:
+        return self.__data_metadata.max_sequence_index
 
     @property
     def intensity_calibration(self) -> Calibration.Calibration:
@@ -527,7 +614,13 @@ def key_to_list(key):
 def list_to_key(l):
     key = list()
     for d in l:
-        if "index" in d:
+        if isinstance(d, (slice, type(Ellipsis))):
+            key.append(d)
+        elif d is None:
+            key.append(None)
+        elif isinstance(d, numbers.Integral):
+            key.append(d)
+        elif "index" in d:
             key.append(d.get("index"))
         elif d.get("ellipses", False):
             key.append(Ellipsis)
@@ -638,5 +731,6 @@ def function_data_slice(data_and_metadata, key):
                            data_and_metadata.metadata, datetime.datetime.utcnow())
 
 
-def new_data_and_metadata(data, intensity_calibration: Calibration.Calibration=None, dimensional_calibrations: CalibrationListType=None, metadata: dict=None, timestamp: datetime.datetime=None) -> DataAndMetadata:
-    return DataAndMetadata.from_data(data, intensity_calibration, dimensional_calibrations, metadata, timestamp)
+def new_data_and_metadata(data, intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None,
+                          metadata: dict = None, timestamp: datetime.datetime = None, data_descriptor: DataDescriptor = None) -> DataAndMetadata:
+    return DataAndMetadata.from_data(data, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor)
