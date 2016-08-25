@@ -703,7 +703,11 @@ def function_vstack(data_and_metadata_list: typing.Sequence[DataAndMetadata.Data
 
     intensity_calibration = data_and_metadata_list[0].intensity_calibration
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration, dimensional_calibrations, dict(), datetime.datetime.utcnow())
+    data_descriptor = data_and_metadata_list[0].data_descriptor
+
+    data_descriptor = DataAndMetadata.DataDescriptor(data_descriptor.is_sequence, data_descriptor.collection_dimension_count + 1, data_descriptor.datum_dimension_count)
+
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration, dimensional_calibrations, dict(), datetime.datetime.utcnow(), data_descriptor)
 
 
 def function_moveaxis(data_and_metadata: DataAndMetadata.DataAndMetadata, src_axis: int, dst_axis: int) -> DataAndMetadata.DataAndMetadata:
