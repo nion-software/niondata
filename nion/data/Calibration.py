@@ -136,6 +136,9 @@ class Calibration(object):
             result = None
         return result
 
+    def convert_calibrated_size_to_str(self, calibrated_value, include_units=True, calibrated_value_range=None, samples=None, units=None):
+        return self.convert_calibrated_value_to_str(calibrated_value, include_units, calibrated_value_range, samples, units)
+
     def convert_to_calibrated_value_str(self, value, include_units=True, value_range=None, samples=None, display_inverted=False):
         if hasattr(value, 'dtype') and not value.shape:  # convert NumPy types to Python scalar types
             value = numpy.asscalar(value)
