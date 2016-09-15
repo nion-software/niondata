@@ -6,6 +6,7 @@ import math
 import numbers
 import typing
 
+# third party libraries
 import numpy
 import scipy
 import scipy.fftpack
@@ -13,10 +14,20 @@ import scipy.ndimage
 import scipy.ndimage.filters
 import scipy.ndimage.fourier
 import scipy.signal
+
+# local libraries
 from nion.data import Calibration
 from nion.data import DataAndMetadata
 from nion.data import Image
 from nion.utils import Geometry
+
+
+DataRangeType = typing.Tuple[float, float]
+NormIntervalType = typing.Tuple[float, float]
+NormRectangleType = typing.Tuple[typing.Tuple[float, float], typing.Tuple[float, float]]
+NormPointType = typing.Tuple[float, float]
+NormSizeType = typing.Tuple[float, float]
+NormVectorType = typing.Tuple[NormPointType, NormPointType]
 
 
 def column(data_and_metadata: DataAndMetadata.DataAndMetadata, start: int, stop: int) -> DataAndMetadata.DataAndMetadata:
@@ -469,7 +480,7 @@ def function_invert(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataA
                                                  data_and_metadata.metadata, datetime.datetime.utcnow())
 
 
-def function_crop(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: typing.Tuple[typing.Tuple[int, int], typing.Tuple[int, int]]) -> DataAndMetadata.DataAndMetadata:
+def function_crop(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: NormRectangleType) -> DataAndMetadata.DataAndMetadata:
     data_shape = data_and_metadata.data_shape
     data_dtype = data_and_metadata.data_dtype
 
@@ -502,7 +513,7 @@ def function_crop(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: ty
                                                  data_and_metadata.metadata, datetime.datetime.utcnow())
 
 
-def function_crop_interval(data_and_metadata: DataAndMetadata.DataAndMetadata, interval: typing.Tuple[float, float]) -> DataAndMetadata.DataAndMetadata:
+def function_crop_interval(data_and_metadata: DataAndMetadata.DataAndMetadata, interval: NormIntervalType) -> DataAndMetadata.DataAndMetadata:
     data_shape = data_and_metadata.data_shape
     data_dtype = data_and_metadata.data_dtype
 
@@ -850,7 +861,7 @@ def function_reshape(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: 
                                                  data_and_metadata.metadata, datetime.datetime.utcnow())
 
 
-def function_rescale(data_and_metadata: DataAndMetadata.DataAndMetadata, data_range: typing.Tuple[float, float]=None) -> DataAndMetadata.DataAndMetadata:
+def function_rescale(data_and_metadata: DataAndMetadata.DataAndMetadata, data_range: DataRangeType=None) -> DataAndMetadata.DataAndMetadata:
     """Rescale data and update intensity calibration.
 
     rescale(a, (0.0, 1.0))
@@ -939,7 +950,7 @@ def function_histogram(data_and_metadata: DataAndMetadata.DataAndMetadata, bins:
                                                  data_and_metadata.metadata, datetime.datetime.utcnow())
 
 
-def function_line_profile(data_and_metadata: DataAndMetadata.DataAndMetadata, vector: typing.Tuple[typing.Tuple[float, float], typing.Tuple[float, float]],
+def function_line_profile(data_and_metadata: DataAndMetadata.DataAndMetadata, vector: NormVectorType,
                           integration_width: float) -> DataAndMetadata.DataAndMetadata:
     integration_width = int(integration_width)
     assert integration_width > 0  # leave this here for test_evaluation_error_recovers_gracefully
@@ -1006,25 +1017,25 @@ def function_line_profile(data_and_metadata: DataAndMetadata.DataAndMetadata, ve
     return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, dimensional_calibrations,
                                                  data_and_metadata.metadata, datetime.datetime.utcnow())
 
-def function_make_point(y: float, x: float) -> typing.Tuple[float, float]:
+def function_make_point(y: float, x: float) -> NormPointType:
     return y, x
 
-def function_make_size(height, width):
+def function_make_size(height, width) -> NormSizeType:
     return height, width
 
-def function_make_vector(start, end):
+def function_make_vector(start, end) -> NormVectorType:
     return start, end
 
-def function_make_rectangle_origin_size(origin, size):
+def function_make_rectangle_origin_size(origin, size) -> NormRectangleType:
     return tuple(Geometry.FloatRect(origin, size))
 
-def function_make_rectangle_center_size(center, size):
+def function_make_rectangle_center_size(center, size) -> NormRectangleType:
     return tuple(Geometry.FloatRect.from_center_and_size(center, size))
 
-def function_make_interval(start, end):
+def function_make_interval(start, end) -> NormIntervalType:
     return start, end
 
-def function_make_shape(*args):
+def function_make_shape(*args) -> DataAndMetadata.ShapeType:
     return tuple([int(arg) for arg in args])
 
 # generic functions

@@ -19,6 +19,8 @@ _ = gettext.gettext
 
 
 ShapeType = typing.Sequence[int]
+Shape2dType = typing.Tuple[int, int]
+Shape3dType = typing.Tuple[int, int, int]
 PositionType = typing.Sequence[int]
 CalibrationListType = typing.Sequence[Calibration.Calibration]
 
