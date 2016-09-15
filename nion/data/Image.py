@@ -295,7 +295,7 @@ def create_rgba_image_from_array(array, normalize=True, data_range=None, display
                 # scalar data assigned to each component of rgb view
                 m = 255.0 / (nmax_new - nmin_new) if nmax_new != nmin_new else 1
                 if lookup is not None:
-                    get_rgb_view(rgba_image)[:] = lookup[(m * (a - nmin_new)).astype(int)]
+                    get_rgb_view(rgba_image)[:] = lookup[numpy.clip((m * (a - nmin_new)).astype(int), 0, 255)]
                 else:
                     get_rgb_view(rgba_image)[:] = m * (a[..., numpy.newaxis] - nmin_new)
                 if overlimit:
