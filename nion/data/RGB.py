@@ -27,8 +27,7 @@ def function_rgb_channel(data_and_metadata: DataAndMetadata.DataAndMetadata, cha
     if not data_and_metadata.is_data_rgb_type:
         return None
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations,
-                                                 data_and_metadata.metadata)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations)
 
 
 def function_rgb_linear_combine(data_and_metadata: DataAndMetadata.DataAndMetadata, red_weight: float, green_weight: float,
@@ -47,8 +46,7 @@ def function_rgb_linear_combine(data_and_metadata: DataAndMetadata.DataAndMetada
     if not data_and_metadata.is_data_rgb_type:
         return None
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations,
-                                                 data_and_metadata.metadata)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations)
 
 
 def function_rgb(red_data_and_metadata: DataAndMetadata.DataAndMetadata, green_data_and_metadata: DataAndMetadata.DataAndMetadata,
@@ -78,8 +76,7 @@ def function_rgb(red_data_and_metadata: DataAndMetadata.DataAndMetadata, green_d
     if tuple(green_data_and_metadata.data_shape) != shape or tuple(blue_data_and_metadata.data_shape) != shape:
         return None
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), red_data_and_metadata.intensity_calibration, red_data_and_metadata.dimensional_calibrations,
-                                                 red_data_and_metadata.metadata)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), red_data_and_metadata.intensity_calibration, red_data_and_metadata.dimensional_calibrations)
 
 
 def function_rgba(red_data_and_metadata: DataAndMetadata.DataAndMetadata, green_data_and_metadata: DataAndMetadata.DataAndMetadata,
@@ -111,5 +108,4 @@ def function_rgba(red_data_and_metadata: DataAndMetadata.DataAndMetadata, green_
             alpha_data_and_metadata.data_shape) != shape:
         return None
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), red_data_and_metadata.intensity_calibration, red_data_and_metadata.dimensional_calibrations,
-                                                 red_data_and_metadata.metadata)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), red_data_and_metadata.intensity_calibration, red_data_and_metadata.dimensional_calibrations)

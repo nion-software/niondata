@@ -459,7 +459,7 @@ class DataAndMetadata:
                                self.data_shape_and_dtype,
                                self.intensity_calibration,
                                self.dimensional_calibrations,
-                               self.metadata, datetime.datetime.utcnow())
+                               dict(), datetime.datetime.utcnow())
 
     def __binary_op(self, op, other):
         def calculate_data():
@@ -469,7 +469,7 @@ class DataAndMetadata:
                                self.data_shape_and_dtype,
                                self.intensity_calibration,
                                self.dimensional_calibrations,
-                               self.metadata, datetime.datetime.utcnow())
+                               dict(), datetime.datetime.utcnow())
 
     def __rbinary_op(self, op, other):
         def calculate_data():
@@ -479,7 +479,7 @@ class DataAndMetadata:
                                self.data_shape_and_dtype,
                                self.intensity_calibration,
                                self.dimensional_calibrations,
-                               self.metadata, datetime.datetime.utcnow())
+                               dict(), datetime.datetime.utcnow())
 
     def __abs__(self):
         return self.__unary_op(operator.abs)
@@ -557,11 +557,11 @@ class DataAndMetadata:
 class ScalarAndMetadata:
     """Represent the ability to calculate data and provide immediate calibrations."""
 
-    def __init__(self, value_fn, calibration, metadata, timestamp):
+    def __init__(self, value_fn, calibration, metadata=None, timestamp=None):
         self.value_fn = value_fn
         self.calibration = calibration
-        self.timestamp = timestamp
-        self.metadata = copy.deepcopy(metadata)
+        self.timestamp = timestamp if not timestamp else datetime.datetime.utcnow()
+        self.metadata = copy.deepcopy(metadata) if metadata is not None else dict()
 
     @classmethod
     def from_value(cls, value):
@@ -733,7 +733,7 @@ def function_data_slice(data_and_metadata, key):
     return DataAndMetadata(calculate_data,
                            (data_shape, data_and_metadata.data_dtype),
                            data_and_metadata.intensity_calibration, cropped_dimensional_calibrations,
-                           data_and_metadata.metadata, datetime.datetime.utcnow())
+                           dict(), datetime.datetime.utcnow())
 
 
 def new_data_and_metadata(data, intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None,
