@@ -67,6 +67,9 @@ def sum_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and
 def resample_image(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
     return Core.function_resample_2d(data_and_metadata, shape)
 
+def warp(data_and_metadata: DataAndMetadata.DataAndMetadata, coordinates: typing.Sequence[DataAndMetadata.DataAndMetadata]) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_warp(data_and_metadata, coordinates)
+
 # functions generating ndarrays
 # TODO: move these bodies to Core once Core usage has been migrated
 

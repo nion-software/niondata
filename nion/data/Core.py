@@ -910,6 +910,26 @@ def function_resample_2d(data_and_metadata: DataAndMetadata.DataAndMetadata, sha
     return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, resampled_dimensional_calibrations)
 
 
+def function_warp(data_and_metadata: DataAndMetadata.DataAndMetadata, coordinates: typing.Sequence[DataAndMetadata.DataAndMetadata]) -> DataAndMetadata.DataAndMetadata:
+    coords = numpy.moveaxis(numpy.dstack([coordinate.data for coordinate in coordinates]), -1, 0)
+    if data_and_metadata.is_data_rgb:
+        rgb = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (3,), numpy.uint8)
+        rgb[..., 0] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 0], coords)
+        rgb[..., 1] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 1], coords)
+        rgb[..., 2] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 2], coords)
+        return DataAndMetadata.new_data_and_metadata(rgb)
+    elif data_and_metadata.is_data_rgba:
+        rgba = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (4,), numpy.uint8)
+        rgba[..., 0] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 0], coords)
+        rgba[..., 1] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 1], coords)
+        rgba[..., 2] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 2], coords)
+        rgba[..., 3] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 3], coords)
+        return DataAndMetadata.new_data_and_metadata(rgba)
+    else:
+        return DataAndMetadata.new_data_and_metadata(scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data, coords))
+
+
+
 def function_histogram(data_and_metadata: DataAndMetadata.DataAndMetadata, bins: int) -> DataAndMetadata.DataAndMetadata:
     bins = int(bins)
 
