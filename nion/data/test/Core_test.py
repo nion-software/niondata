@@ -162,6 +162,11 @@ class TestCore(unittest.TestCase):
         self.assertEqual(result.intensity_calibration, data_and_metadata.intensity_calibration)
         self.assertEqual(result.dimensional_calibrations[0], data_and_metadata.dimensional_calibrations[0])
 
+    def test_fft_works_on_rgba_data(self):
+        random_data = numpy.random.randint(0, 256, (32, 32, 4), numpy.uint8)
+        data_and_metadata = DataAndMetadata.new_data_and_metadata(random_data)
+        Core.function_fft(data_and_metadata)
+
 
 
 if __name__ == '__main__':

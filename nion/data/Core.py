@@ -1,7 +1,6 @@
 # standard libraries
 import collections
 import copy
-import datetime
 import math
 import numbers
 import typing
@@ -136,7 +135,13 @@ def function_fft(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndM
             scaling = 1.0 / numpy.sqrt(data_shape[0])
             return scipy.fftpack.fftshift(numpy.multiply(scipy.fftpack.fft(data), scaling))
         elif Image.is_data_2d(data):
-            data_copy = data.copy()  # let other threads use data while we're processing
+            if Image.is_data_rgb_type(data):
+                if Image.is_data_rgb(data):
+                    data_copy = numpy.sum(data[..., :] * (0.2126, 0.7152, 0.0722), 2)
+                else:
+                    data_copy = numpy.sum(data[..., :] * (0.2126, 0.7152, 0.0722, 0.0), 2)
+            else:
+                data_copy = data.copy()  # let other threads use data while we're processing
             scaling = 1.0 / numpy.sqrt(data_shape[1] * data_shape[0])
             return scipy.fftpack.fftshift(numpy.multiply(scipy.fftpack.fft2(data_copy), scaling))
         else:
