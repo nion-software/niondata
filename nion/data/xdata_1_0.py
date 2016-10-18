@@ -78,7 +78,7 @@ def column(shape: DataAndMetadata.Shape2dType, start: int=None, stop: int=None) 
     stop_0 = stop if stop is not None else shape[0]
     start_1 = start if start is not None else 0
     stop_1 = stop if stop is not None else shape[1]
-    data = numpy.meshgrid(numpy.linspace(start_1, stop_1, shape[1]), numpy.linspace(start_0, stop_0, shape[0]), sparse=True)[0]
+    data = numpy.meshgrid(numpy.linspace(start_1, stop_1, shape[1]), numpy.linspace(start_0, stop_0, shape[0]))[0]
     return DataAndMetadata.new_data_and_metadata(data)
 
 def row(shape: DataAndMetadata.Shape2dType, start: int=None, stop: int=None) -> DataAndMetadata.DataAndMetadata:
@@ -86,7 +86,7 @@ def row(shape: DataAndMetadata.Shape2dType, start: int=None, stop: int=None) -> 
     stop_0 = stop if stop is not None else shape[0]
     start_1 = start if start is not None else 0
     stop_1 = stop if stop is not None else shape[1]
-    data = numpy.meshgrid(numpy.linspace(start_1, stop_1, shape[1]), numpy.linspace(start_0, stop_0, shape[0]), sparse=True)[1]
+    data = numpy.meshgrid(numpy.linspace(start_1, stop_1, shape[1]), numpy.linspace(start_0, stop_0, shape[0]))[1]
     return DataAndMetadata.new_data_and_metadata(data)
 
 def radius(shape: DataAndMetadata.Shape2dType, normalize: bool=True) -> DataAndMetadata.DataAndMetadata:
