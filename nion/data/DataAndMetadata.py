@@ -70,7 +70,7 @@ class DataMetadata:
         self.intensity_calibration = copy.deepcopy(intensity_calibration) if intensity_calibration else Calibration.Calibration()
         if dimensional_calibrations is None:
             dimensional_calibrations = list()
-            for _ in data_shape_and_dtype[0]:
+            for _ in dimensional_shape:
                 dimensional_calibrations.append(Calibration.Calibration())
         else:
             dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
@@ -654,12 +654,6 @@ def function_data_slice(data_and_metadata, key):
     # (4, 8, 8)[..., 2]
     # (4, 8, 8)[2, ..., 2]
 
-    slices = list_to_key(key)
-
-    def calculate_data():
-        data = data_and_metadata.data
-        return data[slices].copy()
-
     if data_and_metadata is None:
         return None
 
@@ -695,6 +689,9 @@ def function_data_slice(data_and_metadata, key):
         s_step = s_step if s_step is not None else 1
         return [(is_collapsible, is_new_axis, slice(s_start, s_stop, s_step))]
 
+
+    slices = list_to_key(key)
+
     ellipse_count = len(data_and_metadata.data_shape) - non_ellipses_count(slices) + new_axis_count(slices)  # how many slices go into the ellipse
     normalized_slices = list()  # type: typing.List[(bool, bool, slice)]
     slice_index = 0
@@ -707,10 +704,6 @@ def function_data_slice(data_and_metadata, key):
 
     if any(s.start >= s.stop for c, n, s in normalized_slices):
         return None
-
-    data_shape = [abs(s.start - s.stop) // s.step for c, n, s in normalized_slices if not c]
-
-    uncollapsed_data_shape = [abs(s.start - s.stop) // s.step for c, n, s in normalized_slices]
 
     cropped_dimensional_calibrations = list()
 
@@ -725,15 +718,14 @@ def function_data_slice(data_and_metadata, key):
             else:
                 dimensional_calibration = data_and_metadata.dimensional_calibrations[dimensional_calibration_index]
                 cropped_calibration = Calibration.Calibration(
-                    dimensional_calibration.offset + uncollapsed_data_shape[slice_index] * normalized_slice[2].start * dimensional_calibration.scale,
+                    dimensional_calibration.offset + normalized_slice[2].start * dimensional_calibration.scale,
                     dimensional_calibration.scale / normalized_slice[2].step, dimensional_calibration.units)
                 dimensional_calibration_index += 1
             cropped_dimensional_calibrations.append(cropped_calibration)
 
-    return DataAndMetadata(calculate_data,
-                           (data_shape, data_and_metadata.data_dtype),
-                           data_and_metadata.intensity_calibration, cropped_dimensional_calibrations,
-                           dict(), datetime.datetime.utcnow())
+    data = data_and_metadata.data[slices].copy()
+
+    return new_data_and_metadata(data, data_and_metadata.intensity_calibration, cropped_dimensional_calibrations)
 
 
 def new_data_and_metadata(data, intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None,
