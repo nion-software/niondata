@@ -75,7 +75,7 @@ class DataMetadata:
         else:
             dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
         self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
-        self.timestamp = timestamp if not timestamp else datetime.datetime.utcnow()
+        self.timestamp = timestamp if timestamp else datetime.datetime.utcnow()
         self.metadata = copy.deepcopy(metadata) if metadata is not None else dict()
 
         assert isinstance(self.metadata, dict)
