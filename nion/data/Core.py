@@ -1043,10 +1043,8 @@ def function_make_shape(*args) -> DataAndMetadata.ShapeType:
 # generic functions
 
 def function_array(array_fn, data_and_metadata: DataAndMetadata.DataAndMetadata, *args, **kwargs) -> DataAndMetadata.DataAndMetadata:
-    def calculate_data():
-        return array_fn(data_and_metadata.data, *args, **kwargs)
-
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations)
+    data = array_fn(data_and_metadata.data, *args, **kwargs)
+    return DataAndMetadata.new_data_and_metadata(data, data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations)
 
 def function_scalar(op, data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.ScalarAndMetadata:
     def calculate_value():

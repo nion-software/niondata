@@ -130,6 +130,26 @@ def normlogcdf(data_and_metadata: DataAndMetadata.DataAndMetadata, a: float, mea
     # cdf: cumulative density function
     return Core.apply_dist(data_and_metadata, mean, stddev, scipy.stats.norm, 'logcdf')
 
+# complex
+
+def absolute(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_array(numpy.absolute, data_and_metadata)
+
+def angle(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_array(numpy.angle, data_and_metadata)
+
+def real(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_array(numpy.real, data_and_metadata)
+
+def imag(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_array(numpy.imag, data_and_metadata)
+
+def conj(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_array(numpy.conj, data_and_metadata)
+
+def real_if_close(data_and_metadata: DataAndMetadata.DataAndMetadata, tol=100) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_array(numpy.real_if_close, data_and_metadata, tol)
+
 # rgb
 
 def red(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
@@ -205,6 +225,9 @@ def invert(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadat
     return Core.function_invert(data_and_metadata)
 
 # utility functions
+
+def map_function(fn, data_and_metadata: DataAndMetadata.DataAndMetadata, *args, **kwargs) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_array(fn, data_and_metadata, *args, **kwargs)
 
 def norm_point(y: float, x: float) -> Core.NormPointType:
     return y, x
