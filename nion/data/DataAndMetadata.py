@@ -274,7 +274,7 @@ class DataAndMetadata:
         if self.timestamp:
             d["timestamp"] = self.timestamp.isoformat()
         if self.metadata:
-            d["metadata"] = copy.copy(self.metadata)
+            d["metadata"] = copy.deepcopy(self.metadata)
         d["is_sequence"] = self.is_sequence
         d["collection_dimension_count"] = self.collection_dimension_count
         d["datum_dimension_count"] = self.datum_dimension_count
@@ -361,11 +361,11 @@ class DataAndMetadata:
 
     @property
     def intensity_calibration(self) -> Calibration.Calibration:
-        return self.__data_metadata.intensity_calibration
+        return copy.deepcopy(self.__data_metadata.intensity_calibration)
 
     @property
     def dimensional_calibrations(self) -> CalibrationListType:
-        return self.__data_metadata.dimensional_calibrations
+        return copy.deepcopy(self.__data_metadata.dimensional_calibrations)
 
     @property
     def metadata(self) -> dict:

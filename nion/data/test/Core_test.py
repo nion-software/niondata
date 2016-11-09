@@ -19,6 +19,25 @@ class TestCore(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def test_line_profile_uses_integer_coordinates(self):
+        data = numpy.zeros((32, 32))
+        data[16, 15] = 1
+        data[16, 16] = 1
+        data[16, 17] = 1
+        xdata = DataAndMetadata.new_data_and_metadata(data, intensity_calibration=Calibration.Calibration(units="e"))
+        line_profile_data = Core.function_line_profile(xdata, ((8/32, 16/32), (24/32, 16/32)), 1.0).data
+        self.assertTrue(numpy.array_equal(line_profile_data, data[8:24, 16]))
+        line_profile_data = Core.function_line_profile(xdata, ((8/32 + 1/128, 16/32 + 1/128), (24/32 + 2/128, 16/32 + 2/128)), 1.0).data
+        self.assertTrue(numpy.array_equal(line_profile_data, data[8:24, 16]))
+        line_profile_xdata = Core.function_line_profile(xdata, ((8 / 32, 16 / 32), (24 / 32, 16 / 32)), 3.0)
+        self.assertTrue(numpy.array_equal(line_profile_xdata.data, data[8:24, 16] * 3))
+
+    def test_line_profile_width_adjusts_intensity_calibration(self):
+        data = numpy.zeros((32, 32))
+        xdata = DataAndMetadata.new_data_and_metadata(data, intensity_calibration=Calibration.Calibration(units="e"))
+        line_profile_xdata = Core.function_line_profile(xdata, ((8 / 32, 16 / 32), (24 / 32, 16 / 32)), 3.0)
+        self.assertAlmostEqual(line_profile_xdata.intensity_calibration.scale, 1/3)
+
     def test_fft_produces_correct_calibration(self):
         src_data = ((numpy.abs(numpy.random.randn(16, 16)) + 1) * 10).astype(numpy.float)
         dimensional_calibrations = (Calibration.Calibration(offset=3), Calibration.Calibration(offset=2))

@@ -970,28 +970,29 @@ def function_line_profile(data_and_metadata: DataAndMetadata.DataAndMetadata, ve
         # n=2 => -0.5, 0.5
         # n=3 => -1, 0, 1
         # n=4 => -1.5, -0.5, 0.5, 1.5
-        length = math.sqrt(math.pow(end[0] - start[0], 2) + math.pow(end[1] - start[1], 2))
-        l = math.floor(length)
-        a = numpy.linspace(0, length, l)  # along
+        length_f = math.sqrt(math.pow(end[0] - start[0], 2) + math.pow(end[1] - start[1], 2))
+        samples = int(math.floor(length_f))
+        a = numpy.linspace(0, samples - 1, samples)  # along
         t = numpy.linspace(-(n-1)*0.5, (n-1)*0.5, n)  # transverse
-        dy = (end[0] - start[0]) / length
-        dx = (end[1] - start[1]) / length
+        dy = (end[0] - start[0]) / samples
+        dx = (end[1] - start[1]) / samples
         ix, iy = numpy.meshgrid(a, t)
         yy = start[0] + dy * ix + dx * iy
         xx = start[1] + dx * ix - dy * iy
-        return xx, yy
+        return yy, xx
 
     # xx, yy = __coordinates(None, (4,4), (8,4), 3)
 
-    def calculate_data():
-        data = data_and_metadata.data
+    data = data_and_metadata.data
+    shape = data.shape
+    actual_integration_width = min(max(shape[0], shape[1]), integration_width)  # limit integration width to sensible value
+
+    def calculate_data(data):
         if not Image.is_data_valid(data):
             return None
         if Image.is_data_rgb_type(data):
             data = Image.convert_to_grayscale(data, numpy.double)
         start, end = vector
-        shape = data.shape
-        actual_integration_width = min(max(shape[0], shape[1]), integration_width)  # limit integration width to sensible value
         start_data = (int(shape[0]*start[0]), int(shape[1]*start[1]))
         end_data = (int(shape[0]*end[0]), int(shape[1]*end[1]))
         length = math.sqrt(math.pow(end_data[1] - start_data[1], 2) + math.pow(end_data[0] - start_data[0], 2))
@@ -999,13 +1000,14 @@ def function_line_profile(data_and_metadata: DataAndMetadata.DataAndMetadata, ve
             spline_order_lookup = { "nearest": 0, "linear": 1, "quadratic": 2, "cubic": 3 }
             method = "nearest"
             spline_order = spline_order_lookup[method]
-            xx, yy = get_coordinates(start_data, end_data, actual_integration_width)
+            yy, xx = get_coordinates(start_data, end_data, actual_integration_width)
             samples = scipy.ndimage.map_coordinates(data, (yy, xx), order=spline_order)
             if len(samples.shape) > 1:
-                return numpy.sum(samples, 0) / actual_integration_width
+                return numpy.sum(samples, 0)
             else:
                 return samples
-        return numpy.zeros((1))
+        else:
+            return numpy.zeros((1))
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
@@ -1017,7 +1019,10 @@ def function_line_profile(data_and_metadata: DataAndMetadata.DataAndMetadata, ve
 
     dimensional_calibrations = [Calibration.Calibration(0.0, dimensional_calibrations[1].scale, dimensional_calibrations[1].units)]
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, dimensional_calibrations)
+    intensity_calibration = data_and_metadata.intensity_calibration
+    intensity_calibration.scale /= actual_integration_width
+
+    return DataAndMetadata.new_data_and_metadata(calculate_data(data), intensity_calibration, dimensional_calibrations)
 
 def function_make_point(y: float, x: float) -> NormPointType:
     return y, x
