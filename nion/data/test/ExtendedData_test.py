@@ -39,14 +39,6 @@ class TestExtendedData(unittest.TestCase):
         self.assertAlmostEqual(calibrations[1].offset, 40)
         self.assertAlmostEqual(calibrations[1].scale, 1)
 
-    def test_calibrations_return_a_copy(self):
-        data = numpy.zeros((100, 100), dtype=numpy.float)
-        xdata = DataAndMetadata.new_data_and_metadata(data)
-        xdata.dimensional_calibrations[0].scale = 2
-        xdata.intensity_calibration.scale = 3
-        self.assertAlmostEqual(xdata.dimensional_calibrations[0].scale, 1)
-        self.assertAlmostEqual(xdata.intensity_calibration.scale, 1)
-
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

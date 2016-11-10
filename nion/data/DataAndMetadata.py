@@ -361,11 +361,11 @@ class DataAndMetadata:
 
     @property
     def intensity_calibration(self) -> Calibration.Calibration:
-        return copy.deepcopy(self.__data_metadata.intensity_calibration)
+        return self.__data_metadata.intensity_calibration
 
     @property
     def dimensional_calibrations(self) -> CalibrationListType:
-        return copy.deepcopy(self.__data_metadata.dimensional_calibrations)
+        return self.__data_metadata.dimensional_calibrations
 
     @property
     def metadata(self) -> dict:
