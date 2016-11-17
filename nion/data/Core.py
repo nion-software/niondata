@@ -1019,7 +1019,7 @@ def function_line_profile(data_and_metadata: DataAndMetadata.DataAndMetadata, ve
 
     dimensional_calibrations = [Calibration.Calibration(0.0, dimensional_calibrations[1].scale, dimensional_calibrations[1].units)]
 
-    intensity_calibration = data_and_metadata.intensity_calibration
+    intensity_calibration = copy.deepcopy(data_and_metadata.intensity_calibration)
     intensity_calibration.scale /= actual_integration_width
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(data), intensity_calibration, dimensional_calibrations)

@@ -38,6 +38,12 @@ class TestCore(unittest.TestCase):
         line_profile_xdata = Core.function_line_profile(xdata, ((8 / 32, 16 / 32), (24 / 32, 16 / 32)), 3.0)
         self.assertAlmostEqual(line_profile_xdata.intensity_calibration.scale, 1/3)
 
+    def test_line_profile_width_computation_does_not_affect_source_intensity(self):
+        data = numpy.zeros((32, 32))
+        xdata = DataAndMetadata.new_data_and_metadata(data, intensity_calibration=Calibration.Calibration(units="e"))
+        Core.function_line_profile(xdata, ((8 / 32, 16 / 32), (24 / 32, 16 / 32)), 3.0)
+        self.assertAlmostEqual(xdata.intensity_calibration.scale, 1)
+
     def test_fft_produces_correct_calibration(self):
         src_data = ((numpy.abs(numpy.random.randn(16, 16)) + 1) * 10).astype(numpy.float)
         dimensional_calibrations = (Calibration.Calibration(offset=3), Calibration.Calibration(offset=2))
