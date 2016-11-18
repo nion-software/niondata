@@ -34,7 +34,7 @@ class DataDescriptor:
         self.collection_dimension_count = collection_dimension_count
         self.datum_dimension_count = datum_dimension_count
 
-    def __str__(self):
+    def __repr__(self):
         return ("sequence of " if self.is_sequence else "") + "[" + str(self.collection_dimension_count) + "," + str(self.datum_dimension_count) + "]"
 
     @property
@@ -44,6 +44,20 @@ class DataDescriptor:
     @property
     def is_collection(self) -> bool:
         return self.collection_dimension_count > 0
+
+    @property
+    def sequence_dimension_index_slice(self) -> slice:
+        return slice(0, 1) if self.is_sequence else slice(0, 0)
+
+    @property
+    def collection_dimension_index_slice(self) -> slice:
+        sequence_dimension_index_slice = self.sequence_dimension_index_slice
+        return slice(sequence_dimension_index_slice.stop, sequence_dimension_index_slice.stop + self.collection_dimension_count)
+
+    @property
+    def datum_dimension_index_slice(self) -> slice:
+        collection_dimension_index_slice = self.collection_dimension_index_slice
+        return slice(collection_dimension_index_slice.stop, collection_dimension_index_slice.stop + self.datum_dimension_count)
 
 
 class DataMetadata:
@@ -118,6 +132,30 @@ class DataMetadata:
     @property
     def max_sequence_index(self) -> int:
         return self.dimensional_shape[0] if self.is_sequence else 0
+
+    @property
+    def sequence_dimension_shape(self) -> ShapeType:
+        return self.dimensional_shape[self.data_descriptor.sequence_dimension_index_slice]
+
+    @property
+    def collection_dimension_shape(self) -> ShapeType:
+        return self.dimensional_shape[self.data_descriptor.collection_dimension_index_slice]
+
+    @property
+    def datum_dimension_shape(self) -> ShapeType:
+        return self.dimensional_shape[self.data_descriptor.datum_dimension_index_slice]
+
+    @property
+    def sequence_dimensional_calibration(self) -> Calibration.Calibration:
+        return self.dimensional_calibrations[self.data_descriptor.sequence_dimension_index_slice] if self.is_sequence else None
+
+    @property
+    def collection_dimensional_calibrations(self) -> CalibrationListType:
+        return self.dimensional_calibrations[self.data_descriptor.collection_dimension_index_slice]
+
+    @property
+    def datum_dimensional_calibrations(self) -> CalibrationListType:
+        return self.dimensional_calibrations[self.data_descriptor.datum_dimension_index_slice]
 
     def get_intensity_calibration(self) -> Calibration.Calibration:
         return self.intensity_calibration
@@ -358,6 +396,30 @@ class DataAndMetadata:
     @property
     def max_sequence_index(self) -> int:
         return self.__data_metadata.max_sequence_index
+
+    @property
+    def sequence_dimension_shape(self) -> ShapeType:
+        return self.__data_metadata.sequence_dimension_shape
+
+    @property
+    def collection_dimension_shape(self) -> ShapeType:
+        return self.__data_metadata.collection_dimension_shape
+
+    @property
+    def datum_dimension_shape(self) -> ShapeType:
+        return self.__data_metadata.datum_dimension_shape
+
+    @property
+    def sequence_dimensional_calibration(self) -> Calibration.Calibration:
+        return self.__data_metadata.sequence_dimensional_calibration
+
+    @property
+    def collection_dimensional_calibrations(self) -> CalibrationListType:
+        return self.__data_metadata.collection_dimensional_calibrations
+
+    @property
+    def datum_dimensional_calibrations(self) -> CalibrationListType:
+        return self.__data_metadata.datum_dimensional_calibrations
 
     @property
     def intensity_calibration(self) -> Calibration.Calibration:
