@@ -37,6 +37,9 @@ class DataDescriptor:
     def __repr__(self):
         return ("sequence of " if self.is_sequence else "") + "[" + str(self.collection_dimension_count) + "," + str(self.datum_dimension_count) + "]"
 
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.is_sequence == other.is_sequence and self.collection_dimension_count == other.collection_dimension_count and self.datum_dimension_count == other.datum_dimension_count
+
     @property
     def expected_dimension_count(self) -> int:
         return (1 if self.is_sequence else 0) + self.collection_dimension_count + self.datum_dimension_count
