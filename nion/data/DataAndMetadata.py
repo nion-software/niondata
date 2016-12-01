@@ -230,6 +230,8 @@ class DataMetadata:
                 if len(dimensional_shape) == 1:
                     spatial_shape_str += " x 1"
                 dtype_names = {
+                    numpy.bool: _("Boolean (1-bit)"),
+                    numpy.bool_: _("Boolean (1-bit)"),
                     numpy.int8: _("Integer (8-bit)"),
                     numpy.int16: _("Integer (16-bit)"),
                     numpy.int32: _("Integer (32-bit)"),
