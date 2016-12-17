@@ -145,7 +145,10 @@ def function_fft(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndM
             else:
                 data_copy = data.copy()  # let other threads use data while we're processing
             scaling = 1.0 / numpy.sqrt(data_shape[1] * data_shape[0])
-            return scipy.fftpack.fftshift(numpy.multiply(scipy.fftpack.fft2(data_copy), scaling))
+            # note: the numpy.fft.fft2 is faster than scipy.fftpack.fft2, probably either because
+            # our conda distribution compiles numpy for multiprocessing, the numpy version releases
+            # the GIL, or both.
+            return scipy.fftpack.fftshift(numpy.multiply(numpy.fft.fft2(data_copy), scaling))
         else:
             raise NotImplementedError()
 
