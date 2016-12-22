@@ -291,13 +291,13 @@ def create_rgba_image_from_array(array, normalize=True, data_range=None, display
             if display_limits and len(display_limits) == 2:
                 nmin_new = display_limits[0]
                 nmax_new = display_limits[1]
-                a = numpy.clip(array, nmin_new, nmax_new)
                 # scalar data assigned to each component of rgb view
                 m = 255.0 / (nmax_new - nmin_new) if nmax_new != nmin_new else 1
                 if lookup is not None:
-                    get_rgb_view(rgba_image)[:] = lookup[numpy.clip((m * (a - nmin_new)).astype(int), 0, 255)]
+                    get_rgb_view(rgba_image)[:] = lookup[numpy.clip((m * (array - nmin_new)).astype(int), 0, 255)]
                 else:
-                    get_rgb_view(rgba_image)[:] = m * (a[..., numpy.newaxis] - nmin_new)
+                    clipped_array = numpy.clip(array, nmin_new, nmax_new)
+                    get_rgb_view(rgba_image)[:] = m * (clipped_array[..., numpy.newaxis] - nmin_new)
                 if overlimit:
                     rgba_image = numpy.where(numpy.less(array - nmin_new, nmax_new - nmin_new * overlimit), rgba_image, 0xFFFF0000)
                 if underlimit:
