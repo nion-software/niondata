@@ -1100,7 +1100,7 @@ def function_display_data(data_and_metadata: DataAndMetadata.DataAndMetadata, se
 def function_display_rgba(data_and_metadata: DataAndMetadata.DataAndMetadata, display_range: typing.Tuple[float, float]=None, color_table: numpy.ndarray=None) -> DataAndMetadata.DataAndMetadata:
     data_2d = data_and_metadata.data
     if Image.is_data_1d(data_2d):
-        data_2d = data_2d.reshape(1, data_2d.shape[0])
+        data_2d = data_2d.reshape(1, *data_2d.shape)
     if not Image.is_data_rgb_type(data_2d):
         assert display_range is not None
     assert len(Image.dimensional_shape_from_data(data_2d)) == 2

@@ -166,6 +166,10 @@ class TestCore(unittest.TestCase):
         data_and_metadata = DataAndMetadata.new_data_and_metadata(random_data)
         Core.function_fft(data_and_metadata)
 
+    def test_display_rgba_with_1d_rgba(self):
+        random_data = numpy.random.randint(0, 256, (32, 4), numpy.uint8)
+        data_and_metadata = DataAndMetadata.new_data_and_metadata(random_data)
+        Core.function_display_rgba(data_and_metadata)
 
 
 if __name__ == '__main__':
