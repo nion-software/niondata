@@ -295,10 +295,10 @@ def function_fourier_mask(data_and_metadata: DataAndMetadata.DataAndMetadata, ma
                 fourier_mask_data[y_half_p1:, x_half_m1:x_low:-1] = mask_data[y_half_p1:, x_half_m1:x_low:-1]
                 fourier_mask_data[y_half_m1:y_low:-1, x_half_m1:x_low:-1] = mask_data[y_half_p1:, x_half_p1:]
                 fourier_mask_data[y_half_m1:y_low:-1, x_half_p1:] = mask_data[y_half_p1:, x_half_m1:x_low:-1]
-                fourier_mask_data[0, :] = 1
-                fourier_mask_data[:, 0] = 1
-                fourier_mask_data[y_half, :] = 1
-                fourier_mask_data[:, x_half] = 1
+                fourier_mask_data[0, :] = mask_data[0, :]
+                fourier_mask_data[:, 0] = mask_data[:, 0]
+                fourier_mask_data[y_half, :] = mask_data[y_half, :]
+                fourier_mask_data[:, x_half] = mask_data[:, x_half]
                 return data * fourier_mask_data
             except Exception as e:
                 print(e)
