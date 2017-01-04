@@ -76,15 +76,19 @@ def rebin_1d(src: numpy.ndarray, len: int, retained: dict=None) -> numpy.ndarray
         if retained is not None and "w" in retained:
             w = retained["w"]
         else:
-            # create linear bins
-            ss = numpy.linspace(0, len, len+1) * float(src_len) / len
-            # create some useful row and column values using meshgrid
             ix, iy = numpy.meshgrid(numpy.linspace(0, src_len-1, src_len), numpy.linspace(0, len-1, len))
-            ix = ix.astype(numpy.int32)
-            iy = iy.astype(numpy.int32)
-            # basic idea here is to multiply low window by high window to get the window for each bin; then sum the transpose to do the actual binning
-            # result is scaled to keep amplitude the same.
-            w = numpy.maximum(numpy.minimum(ss[iy+1] - ix, 1.0), 0.0) * numpy.minimum(numpy.maximum(ix+1 - ss[iy], 0), 1.0)
+            # # create linear bins
+            # ss = numpy.linspace(0, float(src_len), len+1)
+            # # create some useful row and column values using meshgrid
+            # ix = ix.astype(numpy.int32)
+            # iy = iy.astype(numpy.int32)
+            # # basic idea here is to multiply low window by high window to get the window for each bin; then sum the transpose to do the actual binning
+            # # result is scaled to keep amplitude the same.
+            # w = numpy.maximum(numpy.minimum(ss[iy+1] - ix, 1.0), 0.0) * numpy.minimum(numpy.maximum(ix+1 - ss[iy], 0), 1.0)
+            # below is a faster version (which releases the GIL).
+            s1 = (iy+1) * float(src_len) / len - ix
+            s2 = s1[::-1, ::-1]
+            w = numpy.clip(s1, 0.0, 1.0) * numpy.clip(s2, 0.0, 1.0)
         if retained is not None:
             retained["src_len"] = src_len
             retained["len"] = len
