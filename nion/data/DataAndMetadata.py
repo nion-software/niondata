@@ -714,7 +714,7 @@ def list_to_key(l):
             key.append(slice(d.get("start"), d.get("stop"), d.get("step")))
     if len(key) == 1:
         return [key[0]]
-    return key
+    return tuple(key)
 
 
 def function_data_slice(data_and_metadata, key):
@@ -767,7 +767,6 @@ def function_data_slice(data_and_metadata, key):
         s_stop = size + s_stop if s_stop < 0 else s_stop
         s_step = s_step if s_step is not None else 1
         return [(is_collapsible, is_new_axis, slice(s_start, s_stop, s_step))]
-
 
     slices = list_to_key(key)
 
