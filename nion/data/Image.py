@@ -264,6 +264,16 @@ def is_data_3d(data):
     return data is not None and is_shape_and_dtype_3d(data.shape, data.dtype)
 
 
+def is_shape_and_dtype_4d(shape, dtype):
+    if shape is None or dtype is None or not is_shape_and_dtype_valid(shape, dtype):
+        return False
+    if is_shape_and_dtype_rgb(shape, dtype) or is_shape_and_dtype_rgba(shape, dtype):
+        return len(shape) == 5  # one extra dimension for rgb(a) values
+    return len(shape) == 4
+def is_data_4d(data):
+    return data is not None and is_shape_and_dtype_4d(data.shape, data.dtype)
+
+
 def scalar_from_array(array, normalize=True):
     if numpy.iscomplexobj(array):
         # numpy.nextafter returns the next possible represented number after 0 in the direction of 1
