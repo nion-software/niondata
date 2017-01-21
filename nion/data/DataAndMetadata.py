@@ -153,8 +153,16 @@ class DataMetadata:
         return 0 if self.is_sequence else None
 
     @property
+    def sequence_dimension_slice(self) -> slice:
+        return slice(0, 1) if self.is_sequence else None
+
+    @property
     def collection_dimension_indexes(self) -> typing.Sequence[int]:
         return range(1, 1 + self.collection_dimension_count) if self.is_sequence else range(self.collection_dimension_count)
+
+    @property
+    def collection_dimension_slice(self) -> slice:
+        return slice(1, 1 + self.collection_dimension_count) if self.is_sequence else slice(0, self.collection_dimension_count)
 
     @property
     def datum_dimension_indexes(self) -> typing.Sequence[int]:
@@ -162,6 +170,13 @@ class DataMetadata:
             return range(1 + self.collection_dimension_count, 1 + self.collection_dimension_count + self.datum_dimension_count)
         else:
             return range(self.collection_dimension_count, self.collection_dimension_count + self.datum_dimension_count)
+
+    @property
+    def datum_dimension_slice(self) -> slice:
+        if self.is_sequence:
+            return slice(1 + self.collection_dimension_count, 1 + self.collection_dimension_count + self.datum_dimension_count)
+        else:
+            return slice(self.collection_dimension_count, self.collection_dimension_count + self.datum_dimension_count)
 
     @property
     def sequence_dimensional_calibration(self) -> Calibration.Calibration:
@@ -439,12 +454,24 @@ class DataAndMetadata:
         return self.__data_metadata.sequence_dimension_index
 
     @property
+    def sequence_dimension_slice(self) -> slice:
+        return self.__data_metadata.sequence_dimension_slice
+
+    @property
     def collection_dimension_indexes(self) -> typing.Sequence[int]:
         return self.__data_metadata.collection_dimension_indexes
 
     @property
+    def collection_dimension_slice(self) -> slice:
+        return self.__data_metadata.collection_dimension_slice
+
+    @property
     def datum_dimension_indexes(self) -> typing.Sequence[int]:
         return self.__data_metadata.datum_dimension_indexes
+
+    @property
+    def datum_dimension_slice(self) -> slice:
+        return self.__data_metadata.datum_dimension_slice
 
     @property
     def sequence_dimensional_calibration(self) -> Calibration.Calibration:
