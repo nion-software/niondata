@@ -149,6 +149,21 @@ class DataMetadata:
         return self.dimensional_shape[self.data_descriptor.datum_dimension_index_slice]
 
     @property
+    def sequence_dimension_index(self) -> int:
+        return 0 if self.is_sequence else None
+
+    @property
+    def collection_dimension_indexes(self) -> typing.Sequence[int]:
+        return range(1, 1 + self.collection_dimension_count) if self.is_sequence else range(self.collection_dimension_count)
+
+    @property
+    def datum_dimension_indexes(self) -> typing.Sequence[int]:
+        if self.is_sequence:
+            return range(1 + self.collection_dimension_count, 1 + self.collection_dimension_count + self.datum_dimension_count)
+        else:
+            return range(self.collection_dimension_count, self.collection_dimension_count + self.datum_dimension_count)
+
+    @property
     def sequence_dimensional_calibration(self) -> Calibration.Calibration:
         return self.dimensional_calibrations[self.data_descriptor.sequence_dimension_index_slice] if self.is_sequence else None
 
@@ -418,6 +433,18 @@ class DataAndMetadata:
     @property
     def datum_dimension_shape(self) -> ShapeType:
         return self.__data_metadata.datum_dimension_shape
+
+    @property
+    def sequence_dimension_index(self) -> int:
+        return self.__data_metadata.sequence_dimension_index
+
+    @property
+    def collection_dimension_indexes(self) -> typing.Sequence[int]:
+        return self.__data_metadata.collection_dimension_indexes
+
+    @property
+    def datum_dimension_indexes(self) -> typing.Sequence[int]:
+        return self.__data_metadata.datum_dimension_indexes
 
     @property
     def sequence_dimensional_calibration(self) -> Calibration.Calibration:
