@@ -119,8 +119,7 @@ class TestCore(unittest.TestCase):
         self.assertEqual(slice.dimensional_calibrations[0], c1)
         self.assertEqual(slice.dimensional_calibrations[1], c2)
 
-
-    def test_pick_grabs_signal_index(self):
+    def test_pick_grabs_datum_index_from_3d(self):
         random_data = numpy.random.randn(3, 4, 5)
         c0 = Calibration.Calibration(units="a")
         c1 = Calibration.Calibration(units="b")
@@ -132,6 +131,21 @@ class TestCore(unittest.TestCase):
         self.assertEqual(pick.dimensional_shape, (random_data.shape[-1],))
         self.assertEqual(pick.intensity_calibration, c0)
         self.assertEqual(pick.dimensional_calibrations[0], c3)
+
+    def test_pick_grabs_datum_index_from_4d(self):
+        random_data = numpy.random.randn(3, 4, 5, 6)
+        c0 = Calibration.Calibration(units="a")
+        c1 = Calibration.Calibration(units="b")
+        c2 = Calibration.Calibration(units="c")
+        c3 = Calibration.Calibration(units="d")
+        c4 = Calibration.Calibration(units="e")
+        data_and_metadata = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[c1, c2, c3, c4], data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 2))
+        pick = Core.function_pick(data_and_metadata, (2/3, 1/4))
+        self.assertTrue(numpy.array_equal(random_data[2, 1, ...], pick.data))
+        self.assertEqual(pick.dimensional_shape, random_data.shape[2:4])
+        self.assertEqual(pick.intensity_calibration, c0)
+        self.assertEqual(pick.dimensional_calibrations[0], c3)
+        self.assertEqual(pick.dimensional_calibrations[1], c4)
 
     def test_sum_region_produces_correct_result(self):
         random_data = numpy.random.randn(3, 4, 5)

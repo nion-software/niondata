@@ -578,27 +578,29 @@ def function_pick(data_and_metadata: DataAndMetadata.DataAndMetadata, position: 
 
     def calculate_data():
         data = data_and_metadata.data
-        if not Image.is_data_valid(data):
-            return None
-        dimensional_shape = data_and_metadata.dimensional_shape
-        if len(dimensional_shape) != 3:
-            return None
-        position_f = Geometry.FloatPoint.make(position)
-        position_i = Geometry.IntPoint(y=position_f.y * dimensional_shape[0], x=position_f.x * dimensional_shape[1])
-        if position_i.y >= 0 and position_i.y < dimensional_shape[0] and position_i.x >= 0 and position_i.x < dimensional_shape[1]:
-            return data[position_i[0], position_i[1], :].copy()
-        else:
-            return numpy.zeros((dimensional_shape[signal_index], ), dtype=data.dtype)
+        collection_dimensions = data_and_metadata.dimensional_shape[data_and_metadata.collection_dimension_slice]
+        datum_dimensions = data_and_metadata.dimensional_shape[data_and_metadata.datum_dimension_slice]
+        assert len(collection_dimensions) == len(position)
+        position_i = list()
+        for collection_dimension, pos in zip(collection_dimensions, position):
+            pos_i = int(pos * collection_dimension)
+            if not (0 <= pos_i < collection_dimension):
+                return numpy.zeros(datum_dimensions, dtype=data.dtype)
+            position_i.append(pos_i)
+        return data[tuple(position_i + [...])].copy()
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
     if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
         return None
 
-    if len(data_shape) != 3:
+    if len(position) != data_and_metadata.collection_dimension_count:
         return None
 
-    dimensional_calibrations = dimensional_calibrations[-1:]
+    if data_and_metadata.datum_dimension_count == 0:
+        return None
+
+    dimensional_calibrations = dimensional_calibrations[data_and_metadata.datum_dimension_slice]
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, dimensional_calibrations)
 
