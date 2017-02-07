@@ -309,6 +309,11 @@ class DataAndMetadata:
         assert isinstance(metadata, dict) if metadata is not None else True
         self.__data_metadata = DataMetadata(data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor)
 
+    def __deepcopy__(self, memo):
+        deepcopy = DataAndMetadata.from_data(self.data, self.intensity_calibration, self.dimensional_calibrations, self.metadata, self.timestamp, self.data_descriptor)
+        memo[id(self)] = deepcopy
+        return deepcopy
+
     @classmethod
     def from_data(cls, data: numpy.ndarray, intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None,
                   metadata: dict = None, timestamp: datetime.datetime = None, data_descriptor: DataDescriptor=None):
