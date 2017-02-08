@@ -310,7 +310,8 @@ class DataAndMetadata:
         self.__data_metadata = DataMetadata(data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor)
 
     def __deepcopy__(self, memo):
-        deepcopy = DataAndMetadata.from_data(self.data, self.intensity_calibration, self.dimensional_calibrations, self.metadata, self.timestamp, self.data_descriptor)
+        # use numpy.copy so that it handles h5py arrays too (resulting in ndarray).
+        deepcopy = DataAndMetadata.from_data(numpy.copy(self.data), self.intensity_calibration, self.dimensional_calibrations, self.metadata, self.timestamp, self.data_descriptor)
         memo[id(self)] = deepcopy
         return deepcopy
 
