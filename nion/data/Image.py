@@ -36,19 +36,15 @@ def scaled(image, size, method='linear'):
     assert numpy.ndim(image) in (2,3)
     if numpy.ndim(image) == 2:
         if method == 'cubic':
-            new_x_coords = numpy.linspace(0, image.shape[1], size[1])
-            new_y_coords = numpy.linspace(0, image.shape[0], size[0])
-            f = scipy.interpolate.RectBivariateSpline(numpy.arange(image.shape[0]), numpy.arange(image.shape[1]), image)
-            data = f(new_y_coords, new_x_coords)
-            return data
+            iy = numpy.linspace(0, image.shape[0]-1, size[0])
+            ix = numpy.linspace(0, image.shape[1]-1, size[1])
+            f = scipy.interpolate.RectBivariateSpline(numpy.arange(image.shape[0]), numpy.arange(image.shape[1]), image, ky=3, kx=3)
+            return f(iy, ix)
         elif method == 'linear':
-            fy = scipy.interpolate.interp1d(numpy.arange(image.shape[0]), image, axis=0, copy=True)
-            iy = (image.shape[0]-1) * numpy.arange(size[0]).astype(float) / size[0]
-            image = fy(iy)
-            fx = scipy.interpolate.interp1d(numpy.arange(image.shape[1]), image, axis=1, copy=True)
-            ix = (image.shape[1]-1) * numpy.arange(size[1]).astype(float) / size[1]
-            image = fx(ix)
-            return image
+            iy = numpy.linspace(0, image.shape[0]-1, size[0])
+            ix = numpy.linspace(0, image.shape[1]-1, size[1])
+            f = scipy.interpolate.RectBivariateSpline(numpy.arange(image.shape[0]), numpy.arange(image.shape[1]), image, ky=1, kx=1)
+            return f(iy, ix)
         else:  # nearest
             dst = numpy.empty(size, image.dtype)
             indices = numpy.indices(size)
