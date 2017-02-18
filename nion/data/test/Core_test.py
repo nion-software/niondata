@@ -1,4 +1,5 @@
 # standard libraries
+import copy
 import logging
 import unittest
 
@@ -179,6 +180,14 @@ class TestCore(unittest.TestCase):
         random_data = numpy.random.randint(0, 256, (32, 32, 4), numpy.uint8)
         data_and_metadata = DataAndMetadata.new_data_and_metadata(random_data)
         Core.function_fft(data_and_metadata)
+
+    def test_display_data_2d_not_a_view(self):
+        random_data = numpy.random.randint(0, 256, (2, 2), numpy.uint8)
+        data_and_metadata = DataAndMetadata.new_data_and_metadata(random_data)
+        display_xdata = Core.function_display_data(data_and_metadata)
+        display_xdata_copy = copy.deepcopy(display_xdata)
+        data_and_metadata.data[:] = 0
+        self.assertTrue(numpy.array_equal(display_xdata.data, display_xdata_copy.data))
 
     def test_display_rgba_with_1d_rgba(self):
         random_data = numpy.random.randint(0, 256, (32, 4), numpy.uint8)

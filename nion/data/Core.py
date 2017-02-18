@@ -1066,11 +1066,13 @@ def function_scalar(op, data_and_metadata: DataAndMetadata.DataAndMetadata) -> D
 
 def function_display_data(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None, slice_center: int=0, slice_width: int=1, complex_display_type: str=None) -> DataAndMetadata.DataAndMetadata:
     dimensional_shape = data_and_metadata.dimensional_shape
+    modified = False
     next_dimension = 0
     if data_and_metadata.is_sequence:
         # next dimension is treated as a sequence index, which may be time or just a sequence index
         sequence_index = min(max(sequence_index, 0), dimensional_shape[next_dimension])
         data_and_metadata = DataAndMetadata.function_data_slice(data_and_metadata, [sequence_index, Ellipsis])
+        modified = True
         next_dimension += 1
     if data_and_metadata and data_and_metadata.is_collection:
         collection_dimension_count = data_and_metadata.collection_dimension_count
@@ -1080,9 +1082,11 @@ def function_display_data(data_and_metadata: DataAndMetadata.DataAndMetadata, se
             pass
         elif collection_dimension_count == 2 and datum_dimension_count == 1:
             data_and_metadata = function_slice_sum(data_and_metadata, slice_center, slice_width)
+            modified = True
         else:  # default, "pick"
             collection_slice = [collection_index for collection_index in collection_index][0:collection_dimension_count] + [Ellipsis, ]
             data_and_metadata = DataAndMetadata.function_data_slice(data_and_metadata, collection_slice)
+            modified = True
         next_dimension += collection_dimension_count + datum_dimension_count
     if data_and_metadata and data_and_metadata.is_data_complex_type:
         if complex_display_type == "real":
@@ -1095,9 +1099,10 @@ def function_display_data(data_and_metadata: DataAndMetadata.DataAndMetadata, se
             def log_absolute(d):
                 return numpy.log(numpy.abs(d).astype(numpy.float64) + numpy.nextafter(0,1))
             data_and_metadata = function_array(log_absolute, data_and_metadata)
+        modified = True
     if data_and_metadata and functools.reduce(operator.mul, data_and_metadata.dimensional_shape) == 0:
         data_and_metadata = None
-    return data_and_metadata
+    return copy.deepcopy(data_and_metadata) if data_and_metadata and not modified else data_and_metadata
 
 def function_display_rgba(data_and_metadata: DataAndMetadata.DataAndMetadata, display_range: typing.Tuple[float, float]=None, color_table: numpy.ndarray=None) -> DataAndMetadata.DataAndMetadata:
     data_2d = data_and_metadata.data
