@@ -64,7 +64,10 @@ class DataDescriptor:
 
 
 class DataMetadata:
-    """A class describing data metadata, including size, data type, calibrations, the metadata dict, and the creation timestamp."""
+    """A class describing data metadata, including size, data type, calibrations, the metadata dict, and the creation timestamp.
+
+    Values passed to init and set methods are copied before storing. Returned values are return directly and not copied.
+    """
 
     def __init__(self, data_shape_and_dtype, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None, data_descriptor=None):
         if data_shape_and_dtype is not None and data_shape_and_dtype[0] is not None and not all([type(data_shape_item) == int for data_shape_item in data_shape_and_dtype[0]]):
@@ -91,7 +94,7 @@ class DataMetadata:
                 dimensional_calibrations.append(Calibration.Calibration())
         else:
             dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
-        self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
+        self.dimensional_calibrations = dimensional_calibrations
         self.timestamp = timestamp if timestamp else datetime.datetime.utcnow()
         self.metadata = copy.deepcopy(metadata) if metadata is not None else dict()
 
@@ -295,7 +298,11 @@ class DataMetadata:
 
 
 class DataAndMetadata:
-    """A class encapsulating a data future and metadata about the data."""
+    """A class encapsulating a data future and metadata about the data.
+
+    Value other than data that are passed to init and set methods are copied before storing. Returned values are return
+    directly and not copied.
+    """
 
     def __init__(self, data_fn: typing.Callable[[], numpy.ndarray], data_shape_and_dtype: typing.Tuple[ShapeType, numpy.dtype],
                  intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None, metadata: dict = None,
