@@ -66,10 +66,16 @@ class DataDescriptor:
 class DataMetadata:
     """A class describing data metadata, including size, data type, calibrations, the metadata dict, and the creation timestamp.
 
+    Timestamp is UTC string in ISO 8601 format, e.g. 2013-11-17T08:43:21.389391.
+
+    Timezone and timezone are optional. Timezone is the Olson timezone string, e.g. America/Los_Angeles. Timezone offset is
+    a string representing hours different from UTC, e.g. +0300 or -0700. Daylight savings can be calculated using the timezone
+    string for a given timestamp.
+
     Values passed to init and set methods are copied before storing. Returned values are return directly and not copied.
     """
 
-    def __init__(self, data_shape_and_dtype, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None, data_descriptor=None):
+    def __init__(self, data_shape_and_dtype, intensity_calibration=None, dimensional_calibrations=None, metadata=None, timestamp=None, data_descriptor=None, timezone=None, timezone_offset=None):
         if data_shape_and_dtype is not None and data_shape_and_dtype[0] is not None and not all([type(data_shape_item) == int for data_shape_item in data_shape_and_dtype[0]]):
             warnings.warn('using a non-integer shape in DataAndMetadata', DeprecationWarning, stacklevel=2)
         self.data_shape_and_dtype = (tuple(data_shape_and_dtype[0]), numpy.dtype(data_shape_and_dtype[1])) if data_shape_and_dtype is not None else None
@@ -96,6 +102,8 @@ class DataMetadata:
             dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
         self.dimensional_calibrations = dimensional_calibrations
         self.timestamp = timestamp if timestamp else datetime.datetime.utcnow()
+        self.timezone = timezone
+        self.timezone_offset = timezone_offset
         self.metadata = copy.deepcopy(metadata) if metadata is not None else dict()
 
         assert isinstance(self.metadata, dict)
@@ -300,13 +308,20 @@ class DataMetadata:
 class DataAndMetadata:
     """A class encapsulating a data future and metadata about the data.
 
+    Timestamp is UTC string in ISO 8601 format, e.g. 2013-11-17T08:43:21.389391.
+
+    Timezone and timezone are optional. Timezone is the Olson timezone string, e.g. America/Los_Angeles. Timezone offset is
+    a string representing hours different from UTC, e.g. +0300 or -0700. Daylight savings can be calculated using the timezone
+    string for a given timestamp.
+
     Value other than data that are passed to init and set methods are copied before storing. Returned values are return
     directly and not copied.
     """
 
     def __init__(self, data_fn: typing.Callable[[], numpy.ndarray], data_shape_and_dtype: typing.Tuple[ShapeType, numpy.dtype],
                  intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None, metadata: dict = None,
-                 timestamp: datetime.datetime = None, data: numpy.ndarray = None, data_descriptor: DataDescriptor=None):
+                 timestamp: datetime.datetime = None, data: numpy.ndarray = None, data_descriptor: DataDescriptor=None,
+                 timezone: str = None, timezone_offset: str = None):
         self.__data_lock = threading.RLock()
         self.__data_valid = data is not None
         self.__data = data
@@ -314,19 +329,20 @@ class DataAndMetadata:
         self.unloadable = False
         self.data_fn = data_fn
         assert isinstance(metadata, dict) if metadata is not None else True
-        self.__data_metadata = DataMetadata(data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor)
+        self.__data_metadata = DataMetadata(data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor,
+                                            timezone=timezone, timezone_offset=timezone)
 
     def __deepcopy__(self, memo):
         # use numpy.copy so that it handles h5py arrays too (resulting in ndarray).
-        deepcopy = DataAndMetadata.from_data(numpy.copy(self.data), self.intensity_calibration, self.dimensional_calibrations, self.metadata, self.timestamp, self.data_descriptor)
+        deepcopy = DataAndMetadata.from_data(numpy.copy(self.data), self.intensity_calibration, self.dimensional_calibrations, self.metadata, self.timestamp, self.data_descriptor, self.timezone, self.timezone_offset)
         memo[id(self)] = deepcopy
         return deepcopy
 
     @classmethod
     def from_data(cls, data: numpy.ndarray, intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None,
-                  metadata: dict = None, timestamp: datetime.datetime = None, data_descriptor: DataDescriptor=None):
+                  metadata: dict = None, timestamp: datetime.datetime = None, data_descriptor: DataDescriptor=None, timezone: str = None, timezone_offset: str = None):
         data_shape_and_dtype = (data.shape, data.dtype) if data is not None else None
-        return cls(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data, data_descriptor=data_descriptor)
+        return cls(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data, data_descriptor=data_descriptor, timezone=timezone, timezone_offset=timezone_offset)
 
     @classmethod
     def from_rpc_dict(cls, d):
@@ -342,6 +358,8 @@ class DataAndMetadata:
             dimensional_calibrations = None
         metadata = d.get("metadata")
         timestamp = datetime.datetime(*list(map(int, re.split('[^\d]', d.get("timestamp"))))) if "timestamp" in d else None
+        timezone = d.get("timezone")
+        timezone_offset = d.get("timezone_offset")
         is_sequence = d.get("is_sequence", False)
         collection_dimension_count = d.get("collection_dimension_count")
         datum_dimension_count = d.get("datum_dimension_count")
@@ -350,7 +368,7 @@ class DataAndMetadata:
         if datum_dimension_count is None:
             datum_dimension_count = len(dimensional_shape) - collection_dimension_count - (1 if is_sequence else 0)
         data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
-        return DataAndMetadata(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor)
+        return DataAndMetadata(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor, timezone=timezone, timezone_offset=timezone_offset)
 
     @property
     def rpc_dict(self):
@@ -364,6 +382,10 @@ class DataAndMetadata:
             d["dimensional_calibrations"] = [dimensional_calibration.rpc_dict for dimensional_calibration in self.dimensional_calibrations]
         if self.timestamp:
             d["timestamp"] = self.timestamp.isoformat()
+        if self.timezone:
+            d["timezone"] = self.timezone
+        if self.timezone_offset:
+            d["timezone_offset"] = self.timezone_offset
         if self.metadata:
             d["metadata"] = copy.deepcopy(self.metadata)
         d["is_sequence"] = self.is_sequence
@@ -385,7 +407,7 @@ class DataAndMetadata:
 
     @property
     def data_if_loaded(self) -> bool:
-        return self.__data
+        return self.__data is not None
 
     def increment_data_ref_count(self) -> int:
         with self.__data_lock:
@@ -530,6 +552,14 @@ class DataAndMetadata:
     @property
     def timestamp(self) -> datetime.datetime:
         return self.__data_metadata.timestamp
+
+    @property
+    def timezone(self) -> str:
+        return self.__data_metadata.timezone
+
+    @property
+    def timezone_offset(self) -> str:
+        return self.__data_metadata.timezone_offset
 
     @property
     def is_data_1d(self) -> bool:
