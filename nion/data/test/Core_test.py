@@ -56,6 +56,23 @@ class TestCore(unittest.TestCase):
         self.assertAlmostEqual(ifft.dimensional_calibrations[0].offset, 0.0)
         self.assertAlmostEqual(ifft.dimensional_calibrations[1].offset, 0.0)
 
+    def test_fft_forward_and_back_is_consistent(self):
+        src_data = numpy.random.randn(256, 256)
+        a = DataAndMetadata.DataAndMetadata.from_data(src_data)
+        fft = Core.function_fft(a)
+        ifft = Core.function_ifft(fft)
+        src_data_2 = ifft.data
+        # error increases for size of data
+        self.assertLess(numpy.amax(numpy.absolute(src_data - src_data_2)), 1E-12)
+        self.assertLess(numpy.absolute(numpy.sum(src_data - src_data_2)), 1E-12)
+
+    def test_fft_rms_is_same_as_original(self):
+        src_data = numpy.random.randn(256, 256)
+        a = DataAndMetadata.DataAndMetadata.from_data(src_data)
+        fft = Core.function_fft(a)
+        src_data_2 = fft.data
+        self.assertLess(numpy.sqrt(numpy.mean(numpy.square(numpy.absolute(src_data)))) - numpy.sqrt(numpy.mean(numpy.square(numpy.absolute(src_data_2)))), 1E-12)
+
     def test_concatenate_works_with_1d_inputs(self):
         src_data1 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float)
         src_data2 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float)
