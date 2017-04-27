@@ -341,6 +341,7 @@ class DataAndMetadata:
     @classmethod
     def from_data(cls, data: numpy.ndarray, intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None,
                   metadata: dict = None, timestamp: datetime.datetime = None, data_descriptor: DataDescriptor=None, timezone: str = None, timezone_offset: str = None):
+        """Return a new data and metadata from an ndarray. Takes ownership of data."""
         data_shape_and_dtype = (data.shape, data.dtype) if data is not None else None
         return cls(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data, data_descriptor=data_descriptor, timezone=timezone, timezone_offset=timezone_offset)
 
@@ -905,4 +906,5 @@ def function_data_slice(data_and_metadata, key):
 
 def new_data_and_metadata(data, intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None,
                           metadata: dict = None, timestamp: datetime.datetime = None, data_descriptor: DataDescriptor = None) -> DataAndMetadata:
+    """Return a new data and metadata from an ndarray. Takes ownership of data."""
     return DataAndMetadata.from_data(data, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor)
