@@ -306,8 +306,19 @@ def create_rgba_image_from_array(array, normalize=True, data_range=None, display
                 if lookup is not None:
                     get_rgb_view(rgba_image)[:] = lookup[numpy.clip((m * (array - nmin_new)).astype(int), 0, 255)]
                 else:
+                    # slower by 5ms
+                    # get_rgb_view(rgba_image)[:] = numpy.clip(numpy.multiply(m, numpy.subtract(array[..., numpy.newaxis], nmin_new)), 0, 255)
+                    # slowest by 15ms
+                    # clipped_array = numpy.clip(array, nmin_new, nmax_new)
+                    # get_rgb_view(rgba_image)[:] = m * (clipped_array[..., numpy.newaxis] - nmin_new)
+                    # best (in place)
                     clipped_array = numpy.clip(array, nmin_new, nmax_new)
-                    get_rgb_view(rgba_image)[:] = m * (clipped_array[..., numpy.newaxis] - nmin_new)
+                    numpy.subtract(clipped_array, nmin_new, out=clipped_array)
+                    if clipped_array.dtype in (numpy.float32, numpy.float64):
+                        numpy.multiply(clipped_array, m, out=clipped_array)
+                        get_rgb_view(rgba_image)[:] = clipped_array[..., numpy.newaxis]
+                    else:
+                        get_rgb_view(rgba_image)[:] = clipped_array[..., numpy.newaxis] * m
                 if overlimit:
                     rgba_image = numpy.where(numpy.less(array - nmin_new, nmax_new - nmin_new * overlimit), rgba_image, 0xFFFF0000)
                 if underlimit:
