@@ -48,8 +48,8 @@ class TestCore(unittest.TestCase):
     def test_line_profile_produces_appropriate_data_type(self):
         # valid for 'nearest' mode only. ignores overflow issues.
         vector = (0.1, 0.2), (0.3, 0.4)
-        self.assertEqual(Core.function_line_profile(DataAndMetadata.new_data_and_metadata(numpy.zeros((32, 32), numpy.int32)), vector, 3.0).data_dtype, numpy.int64)
-        self.assertEqual(Core.function_line_profile(DataAndMetadata.new_data_and_metadata(numpy.zeros((32, 32), numpy.uint32)), vector, 3.0).data_dtype, numpy.uint64)
+        self.assertEqual(Core.function_line_profile(DataAndMetadata.new_data_and_metadata(numpy.zeros((32, 32), numpy.int32)), vector, 3.0).data_dtype, numpy.int)
+        self.assertEqual(Core.function_line_profile(DataAndMetadata.new_data_and_metadata(numpy.zeros((32, 32), numpy.uint32)), vector, 3.0).data_dtype, numpy.uint)
         self.assertEqual(Core.function_line_profile(DataAndMetadata.new_data_and_metadata(numpy.zeros((32, 32), numpy.float32)), vector, 3.0).data_dtype, numpy.float32)
         self.assertEqual(Core.function_line_profile(DataAndMetadata.new_data_and_metadata(numpy.zeros((32, 32), numpy.float64)), vector, 3.0).data_dtype, numpy.float64)
 
