@@ -267,6 +267,24 @@ class DataMetadata:
         return Image.is_shape_and_dtype_bool(*data_shape_and_dtype) if data_shape_and_dtype else False
 
     @property
+    def is_datum_1d(self) -> bool:
+        if self.datum_dimension_count == 1:
+            return True
+        if self.datum_dimension_count == 0 and self.collection_dimension_count == 1:
+            return True
+        if self.datum_dimension_count == 0 and self.collection_dimension_count == 0 and self.is_sequence:
+            return True
+        return False
+
+    @property
+    def is_datum_2d(self) -> bool:
+        if self.datum_dimension_count == 2:
+            return True
+        if self.datum_dimension_count == 0 and self.collection_dimension_count == 2:
+            return True
+        return False
+
+    @property
     def size_and_data_format_as_string(self) -> str:
         try:
             dimensional_shape = self.dimensional_shape
@@ -601,6 +619,14 @@ class DataAndMetadata:
     @property
     def is_data_bool(self) -> bool:
         return self.__data_metadata.is_data_bool
+
+    @property
+    def is_datum_1d(self) -> bool:
+        return self.__data_metadata.is_datum_1d
+
+    @property
+    def is_datum_2d(self) -> bool:
+        return self.__data_metadata.is_datum_2d
 
     @property
     def size_and_data_format_as_string(self) -> str:
