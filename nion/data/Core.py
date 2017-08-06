@@ -498,9 +498,6 @@ def function_crop(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: No
     if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
         return None
 
-    bounds_int = ((int(data_shape[0] * bounds[0][0]), int(data_shape[1] * bounds[0][1])),
-        (int(data_shape[0] * bounds[1][0]), int(data_shape[1] * bounds[1][1])))
-
     cropped_dimensional_calibrations = list()
     for index, dimensional_calibration in enumerate(dimensional_calibrations):
         cropped_calibration = Calibration.Calibration(
