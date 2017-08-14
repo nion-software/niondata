@@ -4,10 +4,10 @@ import setuptools
 import os
 
 setuptools.setup(
-    name="nion.data",
+    name="niondata",
     version="0.0.1",
-    packages=setuptools.find_packages(exclude=['contrib', 'docs', 'tests*']),
-    install_requires=['scipy', 'numpy'],
+    packages=["nion.data"],
+    install_requires=['scipy', 'numpy', 'nionutils'],
     classifiers=[
         "Development Status :: 2 - Pre-Alpha"
     ],
