@@ -224,6 +224,29 @@ class TestCore(unittest.TestCase):
         data_and_metadata = DataAndMetadata.new_data_and_metadata(random_data)
         Core.function_display_rgba(data_and_metadata)
 
+    def test_align_works_on_2d_data(self):
+        data = numpy.random.randn(64, 64)
+        data[30:40, 30:40] += 10
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        shift = (-3.4, 1.2)
+        xdata_shifted = Core.function_shift(xdata, shift)
+        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True)
+        self.assertAlmostEqual(shift[0], measured_shift[0], 1)
+        self.assertAlmostEqual(shift[1], measured_shift[1], 1)
+        result = Core.function_align(data, xdata_shifted, 100) - xdata_shifted
+        self.assertAlmostEqual(result.data.mean(), 0)
+
+    def test_align_works_on_1d_data(self):
+        data = numpy.random.randn(64)
+        data[30:40] += 10
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        shift = (-3.4,)
+        xdata_shifted = Core.function_shift(xdata, shift)
+        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True)
+        self.assertAlmostEqual(shift[0], measured_shift[0], 1)
+        result = Core.function_align(data, xdata_shifted, 100) - xdata_shifted
+        self.assertAlmostEqual(result.data.mean(), 0)
+
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

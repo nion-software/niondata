@@ -9,6 +9,7 @@ import typing
 
 # third party libraries
 import numpy
+import numpy.fft
 import scipy
 import scipy.fftpack
 import scipy.ndimage
@@ -20,6 +21,7 @@ import scipy.signal
 from nion.data import Calibration
 from nion.data import DataAndMetadata
 from nion.data import Image
+from nion.data import ImageRegistration
 from nion.utils import Geometry
 
 
@@ -271,6 +273,38 @@ def function_crosscorrelate(*args) -> DataAndMetadata.DataAndMetadata:
     dimensional_calibrations = [Calibration.Calibration() for _ in data_and_metadata1.data_shape]
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), Calibration.Calibration(), dimensional_calibrations)
+
+
+def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool) -> typing.Tuple[float, ...]:
+    # FUTURE: use scikit.image register_translation
+    data1 = xdata1.data
+    data2 = xdata2.data
+    if subtract_means:
+        data1 = data1 - numpy.average(data1)
+        data2 = data2 - numpy.average(data2)
+    data_shape = len(data1.shape)
+    if len(data1.shape) == 1:
+        data1 = data1[..., numpy.newaxis]
+    if len(data2.shape) == 1:
+        data2 = data2[..., numpy.newaxis]
+    return tuple(ImageRegistration.dftregistration(data1, data2, upsample_factor)[0:data_shape])
+
+
+def function_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...]) -> DataAndMetadata.DataAndMetadata:
+    # TODO: apply to collection images
+    src_data = numpy.fft.fftn(src.data)
+    if len(src_data.shape) == 1:
+        src_data = src_data[..., numpy.newaxis]
+        shift = shift + (1,)
+    # NOTE: fourier_shift assumes non-fft-shifted data.
+    shifted = numpy.fft.ifftn(scipy.ndimage.fourier_shift(src_data, shift)).real
+    return DataAndMetadata.new_data_and_metadata(numpy.squeeze(shifted))
+
+
+def function_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int) -> DataAndMetadata.DataAndMetadata:
+    # TODO: apply to collection images
+    """Aligns target to src and returns align target, using Fourier space."""
+    return function_shift(target, function_register(src, target, upsample_factor, True))
 
 
 def function_fourier_mask(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
