@@ -10,10 +10,11 @@ It does not include functions which can be readily implemented via numpy.
 
 # standard libraries
 import functools
-import typing
-
+import math
 import numpy
 import scipy.stats
+import typing
+
 from nion.data import Core
 from nion.data import DataAndMetadata
 from nion.data import RGB
@@ -246,3 +247,6 @@ def rectangle_from_center_size(center: Core.NormPointType, size: Core.NormSizeTy
 
 def norm_interval(start, end) -> Core.NormIntervalType:
     return start, end
+
+def norm_interval_to_px_interval(data_and_metadata: DataAndMetadata.DataAndMetadata, interval: Core.NormIntervalType) -> Core.NormIntervalType:
+    return interval[0] * data_and_metadata.data_shape[0], interval[1] * data_and_metadata.data_shape[0]

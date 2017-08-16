@@ -447,6 +447,9 @@ class DataAndMetadata:
                 self.__data_valid = False
         return final_count
 
+    def clone_with_data(self, data: numpy.ndarray) -> "DataAndMetadata":
+        return new_data_and_metadata(data, self.intensity_calibration, self.dimensional_calibrations, data_descriptor=self.data_descriptor)
+
     @property
     def data_shape_and_dtype(self) -> typing.Tuple[ShapeType, numpy.dtype]:
         return self.__data_metadata.data_shape_and_dtype
