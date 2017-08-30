@@ -885,6 +885,57 @@ def function_reshape(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, new_dimensional_calibrations)
 
 
+def function_resize(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType, mode: str=None) -> DataAndMetadata.DataAndMetadata:
+    """Resize a data and metadata to shape, padding if larger, cropping if smaller.
+
+    resize(a, shape(4, 5))
+    resize(a, data_shape(b))
+
+    Shape must have same number of dimensions as original.
+    """
+    data_shape = data_and_metadata.data_shape
+    data_dtype = data_and_metadata.data_dtype
+
+    def calculate_data():
+        data = data_and_metadata.data
+        if not Image.is_data_valid(data):
+            return None
+        c = numpy.mean(data)
+        data_shape = data_and_metadata.data_shape
+        slices = list()
+        for data_size, new_size in zip(data_shape, shape):
+            if new_size <= data_size:
+                left = data_size // 2 - new_size // 2
+                slices.append(slice(left, left + new_size))
+            else:
+                slices.append(slice(None))
+        data = data[slices]
+        data_shape = data_and_metadata.data_shape
+        pads = list()
+        for data_size, new_size in zip(data_shape, shape):
+            if new_size > data_size:
+                left = new_size // 2 - data_size // 2
+                pads.append((left, new_size - left - data_size))
+            else:
+                pads.append((0, 0))
+        return numpy.pad(data, pads, 'constant', constant_values=c)
+
+    dimensional_calibrations = data_and_metadata.dimensional_calibrations
+
+    if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
+        return None
+
+    resized_dimensional_calibrations = list()
+    for index, dimensional_calibration in enumerate(dimensional_calibrations):
+        offset = data_shape[index] // 2 - shape[index] // 2
+        cropped_calibration = Calibration.Calibration(
+            dimensional_calibration.offset + offset * dimensional_calibration.scale,
+            dimensional_calibration.scale, dimensional_calibration.units)
+        resized_dimensional_calibrations.append(cropped_calibration)
+
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, resized_dimensional_calibrations)
+
+
 def function_rescale(data_and_metadata: DataAndMetadata.DataAndMetadata, data_range: DataRangeType=None) -> DataAndMetadata.DataAndMetadata:
     """Rescale data and update intensity calibration.
 

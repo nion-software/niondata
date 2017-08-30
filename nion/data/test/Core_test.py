@@ -247,6 +247,29 @@ class TestCore(unittest.TestCase):
         result = Core.function_align(data, xdata_shifted, 100) - xdata_shifted
         self.assertAlmostEqual(result.data.mean(), 0)
 
+    def test_resize_works_to_make_one_dimension_larger_and_one_smaller(self):
+        data = numpy.random.randn(64, 64)
+        c0 = Calibration.Calibration(offset=1, scale=2)
+        c1 = Calibration.Calibration(offset=1, scale=2)
+        xdata = DataAndMetadata.new_data_and_metadata(data, dimensional_calibrations=[c0, c1])
+        xdata2 = Core.function_resize(xdata, (60, 68))
+        self.assertEqual(xdata2.data_shape, (60, 68))
+        self.assertTrue(numpy.array_equal(xdata2.data[:, 0:2], numpy.full((60, 2), numpy.mean(data))))
+        self.assertTrue(numpy.array_equal(xdata2.data[:, -2:], numpy.full((60, 2), numpy.mean(data))))
+        self.assertTrue(numpy.array_equal(xdata2.data[:, 2:-2], xdata.data[2:-2, :]))
+        self.assertEqual(xdata.dimensional_calibrations[0].convert_to_calibrated_value(2), xdata2.dimensional_calibrations[0].convert_to_calibrated_value(0))
+        self.assertEqual(xdata.dimensional_calibrations[1].convert_to_calibrated_value(0), xdata2.dimensional_calibrations[1].convert_to_calibrated_value(2))
+
+    def test_resize_works_to_make_one_dimension_larger_and_one_smaller_with_odd_dimensions(self):
+        data = numpy.random.randn(65, 67)
+        c0 = Calibration.Calibration(offset=1, scale=2)
+        c1 = Calibration.Calibration(offset=1, scale=2)
+        xdata = DataAndMetadata.new_data_and_metadata(data, dimensional_calibrations=[c0, c1])
+        xdata2 = Core.function_resize(xdata, (61, 70))
+        self.assertEqual(xdata2.data_shape, (61, 70))
+        self.assertEqual(xdata.dimensional_calibrations[0].convert_to_calibrated_value(2), xdata2.dimensional_calibrations[0].convert_to_calibrated_value(0))
+        self.assertEqual(xdata.dimensional_calibrations[1].convert_to_calibrated_value(0), xdata2.dimensional_calibrations[1].convert_to_calibrated_value(2))
+
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

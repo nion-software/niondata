@@ -44,6 +44,9 @@ def reshape(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMe
 def rescale(data_and_metadata: DataAndMetadata.DataAndMetadata, data_range: Core.DataRangeType=None) -> DataAndMetadata.DataAndMetadata:
     return Core.function_rescale(data_and_metadata, data_range)
 
+def resize(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType, mode=None) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_resize(data_and_metadata, shape, mode)
+
 def data_slice(data_and_metadata: DataAndMetadata.DataAndMetadata, key) -> DataAndMetadata.DataAndMetadata:
     return DataAndMetadata.function_data_slice(data_and_metadata, key)
 
