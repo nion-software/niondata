@@ -228,7 +228,7 @@ def invert(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadat
 # registration, shifting, alignment
 
 def register_translation(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1, subtract_means: bool = True) -> typing.Tuple[float, ...]:
-    return Core.function_register(xdata1, xdata2, subtract_means, upsample_factor)
+    return Core.function_register(xdata1, xdata2, upsample_factor, subtract_means)
 
 def shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...]) -> DataAndMetadata.DataAndMetadata:
     return Core.function_shift(src, shift)
