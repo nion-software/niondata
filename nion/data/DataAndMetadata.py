@@ -216,6 +216,9 @@ class DataMetadata:
     def _set_metadata(self, metadata: dict) -> None:
         self.metadata = copy.deepcopy(metadata)
 
+    def _set_timestamp(self, timestamp: datetime.datetime) -> None:
+        self.timestamp = timestamp
+
     @property
     def is_data_1d(self) -> bool:
         data_shape_and_dtype = self.data_shape_and_dtype
@@ -570,6 +573,9 @@ class DataAndMetadata:
 
     def _set_metadata(self, metadata: dict) -> None:
         self.__data_metadata._set_metadata(metadata)
+
+    def _set_timestamp(self, timestamp: datetime.datetime) -> None:
+        self.__data_metadata._set_timestamp(timestamp)
 
     @property
     def timestamp(self) -> datetime.datetime:
