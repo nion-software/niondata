@@ -113,6 +113,39 @@ def get_rgb_view(rgba_image, byteorder=None):
         return bytes[..., 1:]  # strip A off ARGB
 
 
+def get_red_view(rgba_image, byteorder=None):
+    if byteorder is None:
+        byteorder = sys.byteorder
+    bytes = get_byte_view(rgba_image)
+    assert bytes.shape[2] == 4
+    if byteorder == 'little':
+        return bytes[..., 2]  # strip A off BGRA
+    else:
+        return bytes[..., 1]  # strip A off ARGB
+
+
+def get_green_view(rgba_image, byteorder=None):
+    if byteorder is None:
+        byteorder = sys.byteorder
+    bytes = get_byte_view(rgba_image)
+    assert bytes.shape[2] == 4
+    if byteorder == 'little':
+        return bytes[..., 1]  # strip A off BGRA
+    else:
+        return bytes[..., 2]  # strip A off ARGB
+
+
+def get_blue_view(rgba_image, byteorder=None):
+    if byteorder is None:
+        byteorder = sys.byteorder
+    bytes = get_byte_view(rgba_image)
+    assert bytes.shape[2] == 4
+    if byteorder == 'little':
+        return bytes[..., 0]  # strip A off BGRA
+    else:
+        return bytes[..., 3]  # strip A off ARGB
+
+
 def get_alpha_view(rgba_image, byteorder=None):
     if byteorder is None:
         byteorder = sys.byteorder
@@ -314,11 +347,10 @@ def create_rgba_image_from_array(array, normalize=True, data_range=None, display
                     # best (in place)
                     clipped_array = numpy.clip(array, nmin_new, nmax_new)
                     numpy.subtract(clipped_array, nmin_new, out=clipped_array)
-                    if clipped_array.dtype in (numpy.float32, numpy.float64):
-                        numpy.multiply(clipped_array, m, out=clipped_array)
-                        get_rgb_view(rgba_image)[:] = clipped_array[..., numpy.newaxis]
-                    else:
-                        get_rgb_view(rgba_image)[:] = clipped_array[..., numpy.newaxis] * m
+                    numpy.multiply(clipped_array, m, out=clipped_array)
+                    get_red_view(rgba_image)[:] = clipped_array
+                    get_green_view(rgba_image)[:] = clipped_array
+                    get_blue_view(rgba_image)[:] = clipped_array
                 if overlimit:
                     rgba_image = numpy.where(numpy.less(array - nmin_new, nmax_new - nmin_new * overlimit), rgba_image, 0xFFFF0000)
                 if underlimit:
