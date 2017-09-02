@@ -291,20 +291,52 @@ def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMe
 
 
 def function_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...]) -> DataAndMetadata.DataAndMetadata:
-    # TODO: apply to collection images
     src_data = numpy.fft.fftn(src.data)
     if len(src_data.shape) == 1:
         src_data = src_data[..., numpy.newaxis]
-        shift = shift + (1,)
+        shift = tuple(shift) + (1,)
     # NOTE: fourier_shift assumes non-fft-shifted data.
     shifted = numpy.fft.ifftn(scipy.ndimage.fourier_shift(src_data, shift)).real
     return DataAndMetadata.new_data_and_metadata(numpy.squeeze(shifted))
 
 
 def function_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int) -> DataAndMetadata.DataAndMetadata:
-    # TODO: apply to collection images
     """Aligns target to src and returns align target, using Fourier space."""
     return function_shift(target, function_register(src, target, upsample_factor, True))
+
+
+def function_sequence_register_translation(src: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool) -> DataAndMetadata.DataAndMetadata:
+    if not src.is_sequence:
+        return None
+    c = src.sequence_dimension_shape[0]
+    dim = src.data_shape[1:]
+    if len(dim) < 1 or len(dim) > 2:
+        return None
+    result = numpy.empty((c - 1, len(dim)))
+    previous_data = None
+    for i in range(c):
+        if previous_data is None:
+            previous_data = src.data[i, ...]
+        else:
+            current_data = src.data[i, ...]
+            result[i - 1, ...] = function_register(previous_data, current_data, upsample_factor, subtract_means)
+            previous_data = current_data
+    intensity_calibration = src.dimensional_calibrations[1]  # not the sequence dimension
+    return DataAndMetadata.new_data_and_metadata(result, intensity_calibration=intensity_calibration)
+
+
+def function_sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int) -> DataAndMetadata.DataAndMetadata:
+    translations = function_sequence_register_translation(src, upsample_factor, True)
+    if not translations:
+        return None
+    result_data = numpy.copy(src.data)
+    previous_xdata = DataAndMetadata.new_data_and_metadata(numpy.copy(result_data[0]))
+    for i in range(translations.data_shape[0]):
+        current_xdata = DataAndMetadata.new_data_and_metadata(numpy.copy(result_data[i + 1]))
+        cumulative_shift = numpy.sum(translations.data[0:i + 1], axis=0)
+        result_data[i + 1, ...] = function_shift(current_xdata, cumulative_shift).data
+        previous_xdata = current_xdata
+    return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=src.intensity_calibration, dimensional_calibrations=src.dimensional_calibrations, data_descriptor=src.data_descriptor)
 
 
 def function_fourier_mask(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:

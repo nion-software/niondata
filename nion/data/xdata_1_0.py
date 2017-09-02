@@ -239,6 +239,12 @@ def shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...])
 def align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1) -> DataAndMetadata.DataAndMetadata:
     return Core.function_align(src, target, upsample_factor)
 
+def sequence_register_translation(src: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1, subtract_means: bool = True) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_sequence_register_translation(src, upsample_factor, subtract_means)
+
+def sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_sequence_align(src, upsample_factor)
+
 # utility functions
 
 def map_function(fn, data_and_metadata: DataAndMetadata.DataAndMetadata, *args, **kwargs) -> DataAndMetadata.DataAndMetadata:
