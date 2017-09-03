@@ -6,6 +6,7 @@ import unittest
 import numpy
 
 # local libraries
+from nion.data import Calibration
 from nion.data import DataAndMetadata
 
 
@@ -38,6 +39,21 @@ class TestExtendedData(unittest.TestCase):
         self.assertAlmostEqual(calibrations[0].scale, 1)
         self.assertAlmostEqual(calibrations[1].offset, 40)
         self.assertAlmostEqual(calibrations[1].scale, 1)
+
+    def test_data_slice_of_sequence_handles_calibrations(self):
+        data = numpy.zeros((10, 100, 100), dtype=numpy.float)
+        intensity_calibration = Calibration.Calibration(0.1, 0.2, "I")
+        dimensional_calibrations = [Calibration.Calibration(0.11, 0.22, "S"), Calibration.Calibration(0.11, 0.22, "A"), Calibration.Calibration(0.111, 0.222, "B")]
+        xdata = DataAndMetadata.new_data_and_metadata(data, intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
+        self.assertAlmostEqual(xdata[3].intensity_calibration.offset, xdata.intensity_calibration.offset)
+        self.assertAlmostEqual(xdata[3].intensity_calibration.scale, xdata.intensity_calibration.scale)
+        self.assertEqual(xdata[3].intensity_calibration.units, xdata.intensity_calibration.units)
+        self.assertAlmostEqual(xdata[3].dimensional_calibrations[0].offset, xdata.dimensional_calibrations[1].offset)
+        self.assertAlmostEqual(xdata[3].dimensional_calibrations[0].scale, xdata.dimensional_calibrations[1].scale)
+        self.assertEqual(xdata[3].dimensional_calibrations[0].units, xdata.dimensional_calibrations[1].units)
+        self.assertAlmostEqual(xdata[3].dimensional_calibrations[1].offset, xdata.dimensional_calibrations[2].offset)
+        self.assertAlmostEqual(xdata[3].dimensional_calibrations[1].scale, xdata.dimensional_calibrations[2].scale)
+        self.assertEqual(xdata[3].dimensional_calibrations[1].units, xdata.dimensional_calibrations[2].units)
 
 
 if __name__ == '__main__':

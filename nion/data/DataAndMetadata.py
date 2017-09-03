@@ -846,7 +846,7 @@ def list_to_key(l):
         else:
             key.append(slice(d.get("start"), d.get("stop"), d.get("step")))
     if len(key) == 1:
-        return [key[0]]
+        return (key[0], )
     return tuple(key)
 
 
@@ -875,6 +875,9 @@ def function_data_slice(data_and_metadata, key):
     def new_axis_count(slices):
         return sum(1 if slice is None else 0 for slice in slices)
 
+    def ellipses_count(slices):
+        return sum(1 if isinstance(slice, type(Ellipsis)) else 0 for slice in slices)
+
     def normalize_slice(index: int, s: slice, shape: typing.List[int], ellipse_count: int):
         size = shape[index] if index < len(shape) else 1
         is_collapsible = False  # if the index is fixed, it will disappear in final data
@@ -902,6 +905,9 @@ def function_data_slice(data_and_metadata, key):
         return [(is_collapsible, is_new_axis, slice(s_start, s_stop, s_step))]
 
     slices = list_to_key(key)
+
+    if ellipses_count(slices) == 0 and len(slices) < len(data_and_metadata.dimensional_shape):
+        slices = slices + (Ellipsis, )
 
     ellipse_count = len(data_and_metadata.data_shape) - non_ellipses_count(slices) + new_axis_count(slices)  # how many slices go into the ellipse
     normalized_slices = list()  # type: typing.List[(bool, bool, slice)]
