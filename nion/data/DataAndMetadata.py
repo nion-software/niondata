@@ -940,9 +940,76 @@ def function_data_slice(data_and_metadata, key):
                 dimensional_calibration_index += 1
             cropped_dimensional_calibrations.append(cropped_calibration)
 
-    data = data_and_metadata.data[slices].copy()
+    is_sequence = data_and_metadata.data_descriptor.is_sequence
+    collection_dimension_count = data_and_metadata.data_descriptor.collection_dimension_count
+    datum_dimension_count = data_and_metadata.data_descriptor.datum_dimension_count
 
-    return new_data_and_metadata(data, data_and_metadata.intensity_calibration, cropped_dimensional_calibrations)
+    # print(f"slices {slices}  {data_and_metadata.data_descriptor}")
+
+    skip = False
+
+    if isinstance(slices[0], type(Ellipsis)):
+        skip = True
+
+    if not skip and isinstance(slices[0], numbers.Integral):
+        # print("s")
+        is_sequence = False
+
+    for collection_dimension_index in data_and_metadata.collection_dimension_indexes:
+        # print(f"c {collection_dimension_index}")
+        if skip:
+            # print("skipping")
+            break
+        if isinstance(slices[collection_dimension_index], type(Ellipsis)):
+            # print("ellipsis")
+            skip = True
+        elif isinstance(slices[collection_dimension_index], numbers.Integral):
+            # print("integral")
+            collection_dimension_count -= 1
+        elif slices[collection_dimension_index] is None:
+            # print("newaxis")
+            if collection_dimension_index == 0 and not is_sequence:
+                is_sequence = True
+            else:
+                collection_dimension_count += 1
+
+    for datum_dimension_index in data_and_metadata.datum_dimension_indexes:
+        # print(f"d {datum_dimension_index}")
+        if skip:
+            # print("skipping")
+            break
+        if isinstance(slices[datum_dimension_index], type(Ellipsis)):
+            # print("ellipsis")
+            skip = True
+        elif isinstance(slices[datum_dimension_index], numbers.Integral):
+            # print("integral")
+            datum_dimension_count -= 1
+        elif slices[datum_dimension_index] is None:
+            # print("newaxis")
+            if datum_dimension_index == 0 and not is_sequence:
+                is_sequence = True
+            elif datum_dimension_count >= 2:
+                collection_dimension_count += 1
+            else:
+                datum_dimension_count += 1
+
+    if skip and slices[-1] is None:  # case of adding newaxis after ellipsis
+        # print("adding datum, newaxis")
+        datum_dimension_count += 1
+
+    if datum_dimension_count == 0:  # case where datum has been sliced
+        # print("collection to datum")
+        datum_dimension_count = collection_dimension_count
+        collection_dimension_count = 0
+
+    data = data_and_metadata.data[slices].copy()
+    # print(f"was {new_data_and_metadata(data, data_and_metadata.intensity_calibration, cropped_dimensional_calibrations).data_descriptor}")
+    # print(f"now [{is_sequence if is_sequence else ''}{collection_dimension_count},{datum_dimension_count}]")
+
+    data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
+    # print(f"data descriptor {data_descriptor}")
+
+    return new_data_and_metadata(data, data_and_metadata.intensity_calibration, cropped_dimensional_calibrations, data_descriptor=data_descriptor)
 
 
 def new_data_and_metadata(data, intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None,

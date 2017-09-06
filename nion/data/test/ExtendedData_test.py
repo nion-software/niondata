@@ -45,6 +45,8 @@ class TestExtendedData(unittest.TestCase):
         intensity_calibration = Calibration.Calibration(0.1, 0.2, "I")
         dimensional_calibrations = [Calibration.Calibration(0.11, 0.22, "S"), Calibration.Calibration(0.11, 0.22, "A"), Calibration.Calibration(0.111, 0.222, "B")]
         xdata = DataAndMetadata.new_data_and_metadata(data, intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
+        self.assertFalse(xdata[3].is_sequence)
+        self.assertTrue(xdata[3:4].is_sequence)
         self.assertAlmostEqual(xdata[3].intensity_calibration.offset, xdata.intensity_calibration.offset)
         self.assertAlmostEqual(xdata[3].intensity_calibration.scale, xdata.intensity_calibration.scale)
         self.assertEqual(xdata[3].intensity_calibration.units, xdata.intensity_calibration.units)
