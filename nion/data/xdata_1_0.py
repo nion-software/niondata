@@ -228,7 +228,7 @@ def line_profile(data_and_metadata: DataAndMetadata.DataAndMetadata, vector: Cor
 def invert(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
     return Core.function_invert(data_and_metadata)
 
-# registration, shifting, alignment
+# sequences: registration, shifting, alignment, integrate, trim, insert, concat, extract
 
 def register_translation(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1, subtract_means: bool = True) -> typing.Tuple[float, ...]:
     return Core.function_register(xdata1, xdata2, upsample_factor, subtract_means)
@@ -244,6 +244,21 @@ def sequence_register_translation(src: DataAndMetadata.DataAndMetadata, upsample
 
 def sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1) -> DataAndMetadata.DataAndMetadata:
     return Core.function_sequence_align(src, upsample_factor)
+
+def sequence_integrate(src: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_sequence_integrate(src)
+
+def sequence_trim(src: DataAndMetadata.DataAndMetadata, trim_start: int, trim_end: int) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_sequence_trim(src, trim_start, trim_end)
+
+def sequence_insert(src1: DataAndMetadata.DataAndMetadata, src2: DataAndMetadata.DataAndMetadata, position: int) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_sequence_insert(src1, src2, position)
+
+def sequence_concatenate(src1: DataAndMetadata.DataAndMetadata, src2: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_sequence_concatenate(src1, src2)
+
+def sequence_extract(src: DataAndMetadata.DataAndMetadata, position: int) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_sequence_extract(src, position)
 
 # utility functions
 

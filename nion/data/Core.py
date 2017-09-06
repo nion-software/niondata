@@ -27,6 +27,7 @@ from nion.utils import Geometry
 
 DataRangeType = typing.Tuple[float, float]
 NormIntervalType = typing.Tuple[float, float]
+NormChannelType = float
 NormRectangleType = typing.Tuple[typing.Tuple[float, float], typing.Tuple[float, float]]
 NormPointType = typing.Tuple[float, float]
 NormSizeType = typing.Tuple[float, float]
@@ -330,13 +331,67 @@ def function_sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_facto
     if not translations:
         return None
     result_data = numpy.copy(src.data)
-    previous_xdata = DataAndMetadata.new_data_and_metadata(numpy.copy(result_data[0]))
     for i in range(translations.data_shape[0]):
         current_xdata = DataAndMetadata.new_data_and_metadata(numpy.copy(result_data[i + 1]))
         cumulative_shift = numpy.sum(translations.data[0:i + 1], axis=0)
         result_data[i + 1, ...] = function_shift(current_xdata, cumulative_shift).data
-        previous_xdata = current_xdata
     return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=src.intensity_calibration, dimensional_calibrations=src.dimensional_calibrations, data_descriptor=src.data_descriptor)
+
+
+def function_sequence_integrate(src: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    if not src.is_sequence:
+        return None
+    dim = src.data_shape[1:]
+    if len(dim) < 1 or len(dim) > 2:
+        return None
+    result = numpy.sum(src.data, axis=0)
+    intensity_calibration = src.intensity_calibration
+    dimensional_calibrations = src.dimensional_calibrations[1:]
+    data_descriptor = DataAndMetadata.DataDescriptor(False, src.data_descriptor.collection_dimension_count, src.data_descriptor.datum_dimension_count)
+    return DataAndMetadata.new_data_and_metadata(result, intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
+
+def function_sequence_trim(src: DataAndMetadata.DataAndMetadata, trim_start: int, trim_end: int) -> DataAndMetadata.DataAndMetadata:
+    if not src.is_sequence:
+        return None
+    c = src.sequence_dimension_shape[0]
+    dim = src.data_shape[1:]
+    if len(dim) < 1 or len(dim) > 2:
+        return None
+    cs = max(0, int(trim_start))
+    ce = min(c, max(cs + 1, int(trim_end)))
+    return src[cs:ce]
+
+
+def function_sequence_insert(src1: DataAndMetadata.DataAndMetadata, src2: DataAndMetadata.DataAndMetadata, position: int) -> DataAndMetadata.DataAndMetadata:
+    if not src1.is_sequence or not src2.is_sequence:
+        return None
+    if src1.data_shape[1:] != src2.data_shape[1:]:
+        return None
+    c = src1.sequence_dimension_shape[0]
+    dim = src1.data_shape[1:]
+    if len(dim) < 1 or len(dim) > 2:
+        return None
+    channel = max(0, min(c, int(position)))
+    result = numpy.vstack(src1.data[:channel], src2.data, src1.data[channel:])
+    intensity_calibration = src1.intensity_calibration
+    dimensional_calibrations = src1.dimensional_calibrations
+    data_descriptor = src1.data_descriptor
+    return DataAndMetadata.new_data_and_metadata(result, intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
+
+
+def function_sequence_concatenate(src1: DataAndMetadata.DataAndMetadata, src2: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    return function_sequence_insert(src1, src2, src1.data_shape[0])
+
+
+def function_sequence_extract(src: DataAndMetadata.DataAndMetadata, position: int) -> DataAndMetadata.DataAndMetadata:
+    if not src.is_sequence:
+        return None
+    c = src.sequence_dimension_shape[0]
+    dim = src.data_shape[1:]
+    if len(dim) < 1 or len(dim) > 2:
+        return None
+    channel = max(0, min(c, int(position)))
+    return src[channel]
 
 
 def function_fourier_mask(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
