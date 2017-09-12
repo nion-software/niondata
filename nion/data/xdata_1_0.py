@@ -9,13 +9,14 @@ It does not include functions which can be readily implemented via numpy.
 
 
 # standard libraries
+import datetime
 import functools
-import math
 import numpy
 import scipy.stats
 import typing
 
 from nion.data import Core
+from nion.data import Calibration
 from nion.data import DataAndMetadata
 from nion.data import RGB
 from nion.utils import Geometry
@@ -261,6 +262,19 @@ def sequence_extract(src: DataAndMetadata.DataAndMetadata, position: int) -> Dat
     return Core.function_sequence_extract(src, position)
 
 # utility functions
+
+def new_with_data(data: numpy.ndarray, *,
+                  intensity_calibration: Calibration.Calibration = None,
+                  dimensional_calibrations: DataAndMetadata.CalibrationListType = None,
+                  metadata: dict = None,
+                  timestamp: datetime.datetime = None,
+                  data_descriptor: DataAndMetadata.DataDescriptor = None) -> DataAndMetadata.DataAndMetadata:
+    return DataAndMetadata.new_data_and_metadata(data,
+                                                 intensity_calibration=intensity_calibration,
+                                                 dimensional_calibrations=dimensional_calibrations,
+                                                 metadata=metadata,
+                                                 timestamp=timestamp,
+                                                 data_descriptor=data_descriptor)
 
 def map_function(fn, data_and_metadata: DataAndMetadata.DataAndMetadata, *args, **kwargs) -> DataAndMetadata.DataAndMetadata:
     return Core.function_array(fn, data_and_metadata, *args, **kwargs)
