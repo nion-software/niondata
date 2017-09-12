@@ -857,16 +857,16 @@ def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typin
         if Image.is_shape_and_dtype_rgb_type(data.shape, data.dtype):
             if Image.is_shape_and_dtype_rgb(data.shape, data.dtype):
                 rgb_image = numpy.empty(data.shape[1:], numpy.uint8)
-                rgb_image[:,0] = numpy.average(data[...,0], 0)
-                rgb_image[:,1] = numpy.average(data[...,1], 0)
-                rgb_image[:,2] = numpy.average(data[...,2], 0)
+                rgb_image[:,0] = numpy.average(data[...,0], axis)
+                rgb_image[:,1] = numpy.average(data[...,1], axis)
+                rgb_image[:,2] = numpy.average(data[...,2], axis)
                 return rgb_image
             else:
                 rgba_image = numpy.empty(data.shape[1:], numpy.uint8)
-                rgba_image[:,0] = numpy.average(data[...,0], 0)
-                rgba_image[:,1] = numpy.average(data[...,1], 0)
-                rgba_image[:,2] = numpy.average(data[...,2], 0)
-                rgba_image[:,3] = numpy.average(data[...,3], 0)
+                rgba_image[:,0] = numpy.average(data[...,0], axis)
+                rgba_image[:,1] = numpy.average(data[...,1], axis)
+                rgba_image[:,2] = numpy.average(data[...,2], axis)
+                rgba_image[:,3] = numpy.average(data[...,3], axis)
                 return rgba_image
         else:
             return numpy.sum(data, axis)

@@ -114,6 +114,21 @@ class TestCore(unittest.TestCase):
         dst = Core.function_sum(src, (0, 1))
         self.assertEqual(dst.data_shape, dst.data.shape)
 
+    def test_sum_over_rgb_produces_correct_data(self):
+        data = numpy.zeros((3, 3, 4), numpy.uint8)
+        data[1, 0] = (3, 3, 3, 3)
+        src = DataAndMetadata.DataAndMetadata.from_data(data)
+        dst0 = Core.function_sum(src, 0)
+        dst1 = Core.function_sum(src, 1)
+        self.assertEqual(dst0.data_shape, dst0.data.shape)
+        self.assertEqual(dst1.data_shape, dst1.data.shape)
+        self.assertTrue(numpy.array_equal(dst0.data[0], (1, 1, 1, 1)))
+        self.assertTrue(numpy.array_equal(dst0.data[1], (0, 0, 0, 0)))
+        self.assertTrue(numpy.array_equal(dst0.data[2], (0, 0, 0, 0)))
+        self.assertTrue(numpy.array_equal(dst1.data[0], (0, 0, 0, 0)))
+        self.assertTrue(numpy.array_equal(dst1.data[1], (1, 1, 1, 1)))
+        self.assertTrue(numpy.array_equal(dst1.data[2], (0, 0, 0, 0)))
+
     def test_fourier_filter_gives_sensible_units_when_source_has_units(self):
         dimensional_calibrations = [Calibration.Calibration(units="mm"), Calibration.Calibration(units="mm")]
         src = DataAndMetadata.DataAndMetadata.from_data(numpy.ones((32, 32)), dimensional_calibrations=dimensional_calibrations)
