@@ -1233,7 +1233,7 @@ def function_scalar(op, data_and_metadata: DataAndMetadata.DataAndMetadata) -> D
 
     return DataAndMetadata.ScalarAndMetadata(lambda: calculate_value(), data_and_metadata.intensity_calibration, data_and_metadata.metadata)
 
-def function_display_data(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None, slice_center: int=0, slice_width: int=1, complex_display_type: str=None) -> DataAndMetadata.DataAndMetadata:
+def function_display_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None, slice_center: int=0, slice_width: int=1, complex_display_type: str=None) -> DataAndMetadata.DataAndMetadata:
     dimensional_shape = data_and_metadata.dimensional_shape
     modified = False
     next_dimension = 0
@@ -1271,6 +1271,10 @@ def function_display_data(data_and_metadata: DataAndMetadata.DataAndMetadata, se
         modified = True
     if data_and_metadata and functools.reduce(operator.mul, data_and_metadata.dimensional_shape) == 0:
         data_and_metadata = None
+    return data_and_metadata, modified
+
+def function_display_data(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None, slice_center: int=0, slice_width: int=1, complex_display_type: str=None) -> DataAndMetadata.DataAndMetadata:
+    data_and_metadata, modified = function_display_data_no_copy(data_and_metadata, sequence_index, collection_index, slice_center, slice_width, complex_display_type)
     return copy.deepcopy(data_and_metadata) if data_and_metadata and not modified else data_and_metadata
 
 def function_display_rgba(data_and_metadata: DataAndMetadata.DataAndMetadata, display_range: typing.Tuple[float, float]=None, color_table: numpy.ndarray=None) -> DataAndMetadata.DataAndMetadata:
