@@ -1231,7 +1231,7 @@ def function_scalar(op, data_and_metadata: DataAndMetadata.DataAndMetadata) -> D
     def calculate_value():
         return op(data_and_metadata.data)
 
-    return DataAndMetadata.ScalarAndMetadata(lambda: calculate_value(), data_and_metadata.intensity_calibration, data_and_metadata.metadata)
+    return DataAndMetadata.ScalarAndMetadata(lambda: calculate_value(), data_and_metadata.intensity_calibration)
 
 def function_display_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None, slice_center: int=0, slice_width: int=1, complex_display_type: str=None) -> DataAndMetadata.DataAndMetadata:
     dimensional_shape = data_and_metadata.dimensional_shape
