@@ -1247,8 +1247,8 @@ def function_display_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMeta
         collection_dimension_count = data_and_metadata.collection_dimension_count
         datum_dimension_count = data_and_metadata.datum_dimension_count
         # next dimensions are treated as collection indexes.
-        if collection_dimension_count == 1 and datum_dimension_count == 1:
-            pass
+        if collection_dimension_count == 1 and datum_dimension_count == 1 and data_and_metadata.collection_dimension_shape[0] <= 16:
+            pass  # this is a special case to display a few rows all at once. once true multi-data displays are available, remove this
         elif collection_dimension_count == 2 and datum_dimension_count == 1:
             data_and_metadata = function_slice_sum(data_and_metadata, slice_center, slice_width)
             modified = True
