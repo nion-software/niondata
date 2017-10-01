@@ -6,6 +6,7 @@ import os
 setuptools.setup(
     name="niondata",
     version="0.0.1",
+    namespace_packages=['nion'],
     packages=["nion.data"],
     install_requires=['scipy', 'numpy', 'nionutils'],
     classifiers=[
