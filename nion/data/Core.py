@@ -972,6 +972,47 @@ def function_reshape(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, new_dimensional_calibrations)
 
 
+def function_squeeze(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    """Remove dimensions with lengths of one."""
+    data_shape = data_and_metadata.data_shape
+
+    dimensional_calibrations = data_and_metadata.dimensional_calibrations
+    is_sequence = data_and_metadata.is_sequence
+    collection_dimension_count = data_and_metadata.collection_dimension_count
+    datum_dimension_count = data_and_metadata.datum_dimension_count
+    new_dimensional_calibrations = list()
+    dimensional_index = 0
+
+    # fix the data descriptor and the dimensions
+    if is_sequence:
+        if data_shape[dimensional_index] <= 1:
+            is_sequence = 0
+        else:
+            new_dimensional_calibrations.append(dimensional_calibrations[dimensional_index])
+        dimensional_index += 1
+    for collection_dimension_index in range(collection_dimension_count):
+        if data_shape[dimensional_index] <= 1:
+            collection_dimension_count -= 1
+        else:
+            new_dimensional_calibrations.append(dimensional_calibrations[dimensional_index])
+        dimensional_index += 1
+    for datum_dimension_index in range(datum_dimension_count):
+        if data_shape[dimensional_index] <= 1:
+            datum_dimension_count -= 1
+        else:
+            new_dimensional_calibrations.append(dimensional_calibrations[dimensional_index])
+        dimensional_index += 1
+
+    data = data_and_metadata.data
+    if not Image.is_data_valid(data):
+        return None
+    data = numpy.squeeze(data)
+
+    data_descriptor = DataAndMetadata.DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
+
+    return DataAndMetadata.new_data_and_metadata(data, data_and_metadata.intensity_calibration, new_dimensional_calibrations, data_descriptor=data_descriptor)
+
+
 def function_resize(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType, mode: str=None) -> DataAndMetadata.DataAndMetadata:
     """Resize a data and metadata to shape, padding if larger, cropping if smaller.
 

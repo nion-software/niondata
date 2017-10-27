@@ -344,6 +344,65 @@ class TestCore(unittest.TestCase):
         self.assertEqual(xdata.dimensional_calibrations[0].convert_to_calibrated_value(2), xdata2.dimensional_calibrations[0].convert_to_calibrated_value(0))
         self.assertEqual(xdata.dimensional_calibrations[1].convert_to_calibrated_value(0), xdata2.dimensional_calibrations[1].convert_to_calibrated_value(2))
 
+    def test_squeeze_removes_datum_dimension(self):
+        # first dimension
+        data = numpy.random.randn(1, 4)
+        c0 = Calibration.Calibration(offset=1, scale=2, units="a")
+        c1 = Calibration.Calibration(offset=1, scale=2, units="b")
+        xdata = DataAndMetadata.new_data_and_metadata(data, dimensional_calibrations=[c0, c1])
+        xdata2 = Core.function_squeeze(xdata)
+        self.assertEqual(xdata2.data_shape, (4, ))
+        self.assertEqual(xdata2.dimensional_calibrations[0].units, "b")
+        self.assertEqual(xdata2.datum_dimension_count, 1)
+        # second dimension
+        data = numpy.random.randn(5, 1)
+        c0 = Calibration.Calibration(offset=1, scale=2, units="a")
+        c1 = Calibration.Calibration(offset=1, scale=2, units="b")
+        xdata = DataAndMetadata.new_data_and_metadata(data, dimensional_calibrations=[c0, c1])
+        xdata2 = Core.function_squeeze(xdata)
+        self.assertEqual(xdata2.data_shape, (5, ))
+        self.assertEqual(xdata2.dimensional_calibrations[0].units, "a")
+        self.assertEqual(xdata2.datum_dimension_count, 1)
+
+    def test_squeeze_removes_collection_dimension(self):
+        # first dimension
+        data = numpy.random.randn(1, 4, 3)
+        c0 = Calibration.Calibration(offset=1, scale=2, units="a")
+        c1 = Calibration.Calibration(offset=1, scale=2, units="b")
+        c3 = Calibration.Calibration(offset=1, scale=2, units="c")
+        xdata = DataAndMetadata.new_data_and_metadata(data, dimensional_calibrations=[c0, c1, c3], data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 1))
+        xdata2 = Core.function_squeeze(xdata)
+        self.assertEqual(xdata2.data_shape, (4, 3))
+        self.assertEqual(xdata2.dimensional_calibrations[0].units, "b")
+        self.assertEqual(xdata2.dimensional_calibrations[1].units, "c")
+        self.assertEqual(xdata2.collection_dimension_count, 1)
+        self.assertEqual(xdata2.datum_dimension_count, 1)
+        # second dimension
+        data = numpy.random.randn(5, 1, 6)
+        c0 = Calibration.Calibration(offset=1, scale=2, units="a")
+        c1 = Calibration.Calibration(offset=1, scale=2, units="b")
+        c3 = Calibration.Calibration(offset=1, scale=2, units="c")
+        xdata = DataAndMetadata.new_data_and_metadata(data, dimensional_calibrations=[c0, c1, c3], data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 1))
+        xdata2 = Core.function_squeeze(xdata)
+        self.assertEqual(xdata2.data_shape, (5, 6))
+        self.assertEqual(xdata2.dimensional_calibrations[0].units, "a")
+        self.assertEqual(xdata2.dimensional_calibrations[1].units, "c")
+        self.assertEqual(xdata2.collection_dimension_count, 1)
+        self.assertEqual(xdata2.datum_dimension_count, 1)
+
+    def test_squeeze_removes_sequence_dimension(self):
+        data = numpy.random.randn(1, 4, 3)
+        c0 = Calibration.Calibration(offset=1, scale=2, units="a")
+        c1 = Calibration.Calibration(offset=1, scale=2, units="b")
+        c3 = Calibration.Calibration(offset=1, scale=2, units="c")
+        xdata = DataAndMetadata.new_data_and_metadata(data, dimensional_calibrations=[c0, c1, c3], data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
+        xdata2 = Core.function_squeeze(xdata)
+        self.assertEqual(xdata2.data_shape, (4, 3))
+        self.assertEqual(xdata2.dimensional_calibrations[0].units, "b")
+        self.assertEqual(xdata2.dimensional_calibrations[1].units, "c")
+        self.assertFalse(xdata2.is_sequence)
+        self.assertEqual(xdata2.datum_dimension_count, 2)
+
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

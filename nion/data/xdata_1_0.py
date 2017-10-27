@@ -42,6 +42,9 @@ def moveaxis(data_and_metadata: DataAndMetadata.DataAndMetadata, src_axis: int, 
 def reshape(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
     return Core.function_reshape(data_and_metadata, shape)
 
+def squeeze(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_squeeze(data_and_metadata)
+
 def rescale(data_and_metadata: DataAndMetadata.DataAndMetadata, data_range: Core.DataRangeType=None) -> DataAndMetadata.DataAndMetadata:
     return Core.function_rescale(data_and_metadata, data_range)
 
