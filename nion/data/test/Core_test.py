@@ -1,6 +1,7 @@
 # standard libraries
 import copy
 import logging
+import random
 import unittest
 
 # third party libraries
@@ -293,6 +294,8 @@ class TestCore(unittest.TestCase):
         self.assertAlmostEqual(numpy.sum(shifts, axis=0)[0], 3.4, 0)
 
     def test_sequence_align_works_on_2d_data_without_errors(self):
+        random_state = numpy.random.get_state()
+        numpy.random.seed(1)
         data = numpy.random.randn(64, 64)
         data[30:40, 30:40] += 10
         xdata = DataAndMetadata.new_data_and_metadata(data)
@@ -306,8 +309,11 @@ class TestCore(unittest.TestCase):
         shifts_total = numpy.sum(shifts, axis=0)
         self.assertAlmostEqual(shifts_total[0], 0.0)
         self.assertAlmostEqual(shifts_total[1], 0.0)
+        numpy.random.set_state(random_state)
 
     def test_sequence_align_works_on_1d_data_without_errors(self):
+        random_state = numpy.random.get_state()
+        numpy.random.seed(1)
         data = numpy.random.randn(64)
         data[30:40] += 10
         xdata = DataAndMetadata.new_data_and_metadata(data)
@@ -320,6 +326,7 @@ class TestCore(unittest.TestCase):
         shifts = Core.function_sequence_register_translation(aligned_sxdata, 100, True).data
         shifts_total = numpy.sum(shifts, axis=0)
         self.assertAlmostEqual(shifts_total[0], 0.0)
+        numpy.random.set_state(random_state)
 
     def test_resize_works_to_make_one_dimension_larger_and_one_smaller(self):
         data = numpy.random.randn(64, 64)
