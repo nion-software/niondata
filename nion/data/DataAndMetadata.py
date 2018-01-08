@@ -109,6 +109,25 @@ class DataMetadata:
         assert isinstance(self.metadata, dict)
         assert len(dimensional_calibrations) == len(dimensional_shape)
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        if self.data_shape_and_dtype != other.data_shape_and_dtype:
+            return False
+        if self.data_descriptor != other.data_descriptor:
+            return False
+        if self.intensity_calibration != other.intensity_calibration:
+            return False
+        if self.dimensional_calibrations != other.dimensional_calibrations:
+            return False
+        if self.timezone != other.timezone:
+            return False
+        if self.timezone_offset != other.timezone_offset:
+            return False
+        if self.metadata != other.metadata:
+            return False
+        return True
+
     @property
     def data_shape(self) -> ShapeType:
         data_shape_and_dtype = self.data_shape_and_dtype
@@ -792,6 +811,18 @@ class ScalarAndMetadata:
     @property
     def value(self):
         return self.value_fn()
+
+
+def is_equal(left, right):
+    if left is right:
+        return True
+    if (left is None) != (right is None):
+        return False
+    if not isinstance(right, left.__class__):
+        return False
+    if not left.data_metadata == right.data_metadata:
+        return False
+    return numpy.array_equal(left.data, right.data)
 
 
 def extract_data(evaluated_input):
