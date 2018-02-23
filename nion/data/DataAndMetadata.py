@@ -683,91 +683,70 @@ class DataAndMetadata:
         return None
 
     def __unary_op(self, op):
-        def calculate_data():
-            return op(self.data)
-
-        return DataAndMetadata(calculate_data,
-                               self.data_shape_and_dtype,
-                               self.intensity_calibration,
-                               self.dimensional_calibrations,
-                               dict(), datetime.datetime.utcnow())
+        return new_data_and_metadata(op(self.data), self.intensity_calibration, self.dimensional_calibrations)
 
     def __binary_op(self, op, other):
-        def calculate_data():
-            return op(self.data, extract_data(other))
-
-        return DataAndMetadata(calculate_data,
-                               self.data_shape_and_dtype,
-                               self.intensity_calibration,
-                               self.dimensional_calibrations,
-                               dict(), datetime.datetime.utcnow())
+        return new_data_and_metadata(op(self.data, extract_data(other)), self.intensity_calibration, self.dimensional_calibrations)
 
     def __rbinary_op(self, op, other):
-        def calculate_data():
-            return op(extract_data(other), self.data)
-
-        return DataAndMetadata(calculate_data,
-                               self.data_shape_and_dtype,
-                               self.intensity_calibration,
-                               self.dimensional_calibrations,
-                               dict(), datetime.datetime.utcnow())
+        return new_data_and_metadata(op(extract_data(other), self.data), self.intensity_calibration, self.dimensional_calibrations)
 
     def __abs__(self):
-        return self.__unary_op(operator.abs)
+        return self.__unary_op(numpy.abs)
 
     def __neg__(self):
-        return self.__unary_op(operator.neg)
+        return self.__unary_op(numpy.negative)
 
     def __pos__(self):
-        return self.__unary_op(operator.pos)
+        return self.__unary_op(numpy.positive)
 
     def __add__(self, other):
-        return self.__binary_op(operator.add, other)
+        return self.__binary_op(numpy.add, other)
 
     def __radd__(self, other):
-        return self.__rbinary_op(operator.add, other)
+        return self.__rbinary_op(numpy.add, other)
 
     def __sub__(self, other):
-        return self.__binary_op(operator.sub, other)
+        return self.__binary_op(numpy.subtract, other)
 
     def __rsub__(self, other):
-        return self.__rbinary_op(operator.sub, other)
+        return self.__rbinary_op(numpy.subtract, other)
 
     def __mul__(self, other):
-        return self.__binary_op(operator.mul, other)
+        return self.__binary_op(numpy.multiply, other)
 
     def __rmul__(self, other):
-        return self.__rbinary_op(operator.mul, other)
+        return self.__rbinary_op(numpy.multiply, other)
 
     def __div__(self, other):
-        return self.__binary_op(operator.truediv, other)
+        return self.__binary_op(numpy.divide, other)
 
     def __rdiv__(self, other):
-        return self.__rbinary_op(operator.truediv, other)
+        return self.__rbinary_op(numpy.divide, other)
 
     def __truediv__(self, other):
-        return self.__binary_op(operator.truediv, other)
+        return self.__binary_op(numpy.divide, other)
 
     def __rtruediv__(self, other):
-        return self.__rbinary_op(operator.truediv, other)
+        return self.__rbinary_op(numpy.divide, other)
 
     def __floordiv__(self, other):
-        return self.__binary_op(operator.floordiv, other)
+        return self.__binary_op(numpy.floor_divide, other)
 
     def __rfloordiv__(self, other):
-        return self.__rbinary_op(operator.floordiv, other)
+        return self.__rbinary_op(numpy.floor_divide, other)
 
     def __mod__(self, other):
-        return self.__binary_op(operator.mod, other)
+        return self.__binary_op(numpy.mod, other)
 
     def __rmod__(self, other):
-        return self.__rbinary_op(operator.mod, other)
+        return self.__rbinary_op(numpy.mod, other)
 
     def __pow__(self, other):
-        return self.__binary_op(operator.pow, other)
+        return self.__binary_op(numpy.power, other)
 
     def __rpow__(self, other):
-        return self.__rbinary_op(operator.pow, other)
+        return self.__rbinary_op(numpy.power, other)
 
     def __complex__(self):
         raise Exception("Use astype(data, complex128) instead.")

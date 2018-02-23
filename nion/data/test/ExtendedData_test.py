@@ -1,5 +1,8 @@
 # standard libraries
+import h5py
 import logging
+import os
+import shutil
 import unittest
 
 # third party libraries
@@ -8,6 +11,14 @@ import numpy
 # local libraries
 from nion.data import Calibration
 from nion.data import DataAndMetadata
+
+
+def db_make_directory_if_needed(directory_path):
+    if os.path.exists(directory_path):
+        if not os.path.isdir(directory_path):
+            raise OSError("Path is not a directory:", directory_path)
+    else:
+        os.makedirs(directory_path)
 
 
 class TestExtendedData(unittest.TestCase):
@@ -57,6 +68,56 @@ class TestExtendedData(unittest.TestCase):
         self.assertAlmostEqual(xdata[3].dimensional_calibrations[1].scale, xdata.dimensional_calibrations[2].scale)
         self.assertEqual(xdata[3].dimensional_calibrations[1].units, xdata.dimensional_calibrations[2].units)
 
+    def test_xdata_backed_by_ndarray_works_with_all_operators(self):
+        xdata = DataAndMetadata.new_data_and_metadata(numpy.ones((4, 4)))
+        results = list()
+        results.append(abs(xdata))
+        results.append(-xdata)
+        results.append(+xdata)
+        results.append(xdata + 5)
+        results.append(5 + xdata)
+        results.append(xdata - 5)
+        results.append(5 - xdata)
+        results.append(xdata * 5)
+        results.append(5 * xdata)
+        results.append(xdata / 5)
+        results.append(5 / xdata)
+        results.append(xdata // 5)
+        results.append(5 // xdata)
+        results.append(xdata % 5)
+        results.append(5 % xdata)
+        results.append(xdata ** 5)
+        results.append(5 ** xdata)
+
+    def test_xdata_backed_by_hdf5_dataset_works_with_all_operators(self):
+        current_working_directory = os.getcwd()
+        workspace_dir = os.path.join(current_working_directory, "__Test")
+        db_make_directory_if_needed(workspace_dir)
+        try:
+            f = h5py.File(os.path.join(workspace_dir, "file.h5"))
+            dataset = f.create_dataset("data", data=numpy.ones((4, 4)))
+            xdata = DataAndMetadata.new_data_and_metadata(dataset)
+            results = list()
+            results.append(abs(xdata))
+            results.append(-xdata)
+            results.append(+xdata)
+            results.append(xdata + 5)
+            results.append(5 + xdata)
+            results.append(xdata - 5)
+            results.append(5 - xdata)
+            results.append(xdata * 5)
+            results.append(5 * xdata)
+            results.append(xdata / 5)
+            results.append(5 / xdata)
+            results.append(xdata // 5)
+            results.append(5 // xdata)
+            results.append(xdata % 5)
+            results.append(5 % xdata)
+            results.append(xdata ** 5)
+            results.append(5 ** xdata)
+        finally:
+            # print(f"rmtree {workspace_dir}")
+            shutil.rmtree(workspace_dir)
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
