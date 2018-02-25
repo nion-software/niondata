@@ -378,6 +378,9 @@ class DataAndMetadata:
         memo[id(self)] = deepcopy
         return deepcopy
 
+    def __array__(self, dtype=None):
+        return self.data.__array__(dtype)
+
     @classmethod
     def from_data(cls, data: numpy.ndarray, intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None,
                   metadata: dict = None, timestamp: datetime.datetime = None, data_descriptor: DataDescriptor=None, timezone: str = None, timezone_offset: str = None):

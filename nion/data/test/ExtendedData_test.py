@@ -119,6 +119,14 @@ class TestExtendedData(unittest.TestCase):
             # print(f"rmtree {workspace_dir}")
             shutil.rmtree(workspace_dir)
 
+    def test_numpy_functions_work_directly_with_xdata(self):
+        data = numpy.ones((100, 100), dtype=numpy.int)
+        data[50, 50] = 2
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        self.assertEqual(1, numpy.amin(xdata))
+        self.assertEqual(2, numpy.amax(xdata))
+
+
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
     unittest.main()
