@@ -234,9 +234,7 @@ def function_autocorrelate(data_and_metadata: DataAndMetadata.DataAndMetadata) -
     if data_and_metadata is None:
         return None
 
-    dimensional_calibrations = [Calibration.Calibration() for _ in data_and_metadata.data_shape]
-
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), Calibration.Calibration(), dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), Calibration.Calibration(), data_and_metadata.dimensional_calibrations)
 
 
 def function_crosscorrelate(*args) -> DataAndMetadata.DataAndMetadata:
@@ -271,9 +269,7 @@ def function_crosscorrelate(*args) -> DataAndMetadata.DataAndMetadata:
     if data_and_metadata1 is None or data_and_metadata2 is None:
         return None
 
-    dimensional_calibrations = [Calibration.Calibration() for _ in data_and_metadata1.data_shape]
-
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), Calibration.Calibration(), dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), Calibration.Calibration(), data_and_metadata1.dimensional_calibrations)
 
 
 def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool) -> typing.Tuple[float, ...]:
