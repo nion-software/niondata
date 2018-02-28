@@ -413,9 +413,8 @@ class TestCore(unittest.TestCase):
     def test_auto_correlation_keeps_calibration(self):
         # configure dimensions so that the pixels go from -16S to 16S
         dimensional_calibrations = [Calibration.Calibration(-16, 2, "S"), Calibration.Calibration(-16, 2, "S")]
-        xdata1 = DataAndMetadata.new_data_and_metadata(numpy.random.randn(16, 16), dimensional_calibrations=dimensional_calibrations)
-        xdata2 = DataAndMetadata.new_data_and_metadata(numpy.random.randn(16, 16), dimensional_calibrations=dimensional_calibrations)
-        result = Core.function_autocorrelate(xdata1)
+        xdata = DataAndMetadata.new_data_and_metadata(numpy.random.randn(16, 16), dimensional_calibrations=dimensional_calibrations)
+        result = Core.function_autocorrelate(xdata)
         self.assertIsNot(dimensional_calibrations, result.dimensional_calibrations)  # verify
         self.assertEqual(dimensional_calibrations, result.dimensional_calibrations)
 
@@ -428,6 +427,20 @@ class TestCore(unittest.TestCase):
         self.assertIsNot(dimensional_calibrations, result.dimensional_calibrations)  # verify
         self.assertEqual(dimensional_calibrations, result.dimensional_calibrations)
 
+    def test_histogram_calibrates_x_axis(self):
+        dimensional_calibrations = [Calibration.Calibration(-16, 2, "S"), Calibration.Calibration(-16, 2, "S")]
+        intensity_calibration = Calibration.Calibration(2, 3, units="L")
+        data = numpy.ones((16, 16), numpy.uint32)
+        data[:2, :2] = 4
+        data[-2:, -2:] = 8
+        xdata = DataAndMetadata.new_data_and_metadata(data, intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations)
+        result = Core.function_histogram(xdata, 16)
+        self.assertEqual(1, len(result.dimensional_calibrations))
+        x_calibration = result.dimensional_calibrations[-1]
+        self.assertEqual(x_calibration.units, intensity_calibration.units)
+        self.assertEqual(result.intensity_calibration, Calibration.Calibration())
+        self.assertEqual(5, x_calibration.convert_to_calibrated_value(0))
+        self.assertEqual(26, x_calibration.convert_to_calibrated_value(16))
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

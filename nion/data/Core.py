@@ -1149,21 +1149,23 @@ def function_histogram(data_and_metadata: DataAndMetadata.DataAndMetadata, bins:
     data_shape = data_and_metadata.data_shape
     data_dtype = data_and_metadata.data_dtype
 
-    def calculate_data():
-        data = data_and_metadata.data
-        if not Image.is_data_valid(data):
-            return None
-        histogram_data = numpy.histogram(data, bins=bins)
-        return histogram_data[0].astype(numpy.int)
-
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
     if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
         return None
 
-    dimensional_calibrations = [Calibration.Calibration()]
+    data = data_and_metadata.data
+    if not Image.is_data_valid(data):
+        return None
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, dimensional_calibrations)
+    histogram_data = numpy.histogram(data, bins=bins)
+    min_x = data_and_metadata.intensity_calibration.convert_to_calibrated_value(histogram_data[1][0])
+    max_x = data_and_metadata.intensity_calibration.convert_to_calibrated_value(histogram_data[1][-1])
+    result_data = histogram_data[0].astype(numpy.int)
+
+    x_calibration = Calibration.Calibration(min_x, (max_x - min_x) / bins, data_and_metadata.intensity_calibration.units)
+
+    return DataAndMetadata.new_data_and_metadata(result_data, dimensional_calibrations=[x_calibration])
 
 
 def function_line_profile(data_and_metadata: DataAndMetadata.DataAndMetadata, vector: NormVectorType,
