@@ -5,7 +5,6 @@ import datetime
 import gettext
 import logging
 import numbers
-import operator
 import re
 import threading
 import typing
@@ -370,7 +369,7 @@ class DataAndMetadata:
         self.data_fn = data_fn
         assert isinstance(metadata, dict) if metadata is not None else True
         self.__data_metadata = DataMetadata(data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor,
-                                            timezone=timezone, timezone_offset=timezone)
+                                            timezone=timezone, timezone_offset=timezone_offset)
 
     def __deepcopy__(self, memo):
         # use numpy.copy so that it handles h5py arrays too (resulting in ndarray).
@@ -473,7 +472,7 @@ class DataAndMetadata:
         return final_count
 
     def clone_with_data(self, data: numpy.ndarray) -> "DataAndMetadata":
-        return new_data_and_metadata(data, self.intensity_calibration, self.dimensional_calibrations, data_descriptor=self.data_descriptor)
+        return new_data_and_metadata(data, intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations, data_descriptor=self.data_descriptor)
 
     @property
     def data_shape_and_dtype(self) -> typing.Tuple[ShapeType, numpy.dtype]:
@@ -686,13 +685,13 @@ class DataAndMetadata:
         return None
 
     def __unary_op(self, op):
-        return new_data_and_metadata(op(self.data), self.intensity_calibration, self.dimensional_calibrations)
+        return new_data_and_metadata(op(self.data), intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations)
 
     def __binary_op(self, op, other):
-        return new_data_and_metadata(op(self.data, extract_data(other)), self.intensity_calibration, self.dimensional_calibrations)
+        return new_data_and_metadata(op(self.data, extract_data(other)), intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations)
 
     def __rbinary_op(self, op, other):
-        return new_data_and_metadata(op(extract_data(other), self.data), self.intensity_calibration, self.dimensional_calibrations)
+        return new_data_and_metadata(op(extract_data(other), self.data), intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations)
 
     def __abs__(self):
         return self.__unary_op(numpy.abs)
@@ -1022,10 +1021,16 @@ def function_data_slice(data_and_metadata, key):
     data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
     # print(f"data descriptor {data_descriptor}")
 
-    return new_data_and_metadata(data, data_and_metadata.intensity_calibration, cropped_dimensional_calibrations, data_descriptor=data_descriptor)
+    return new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=cropped_dimensional_calibrations, data_descriptor=data_descriptor)
 
 
-def new_data_and_metadata(data, intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None,
-                          metadata: dict = None, timestamp: datetime.datetime = None, data_descriptor: DataDescriptor = None) -> DataAndMetadata:
+def new_data_and_metadata(data,
+                          intensity_calibration: Calibration.Calibration = None,
+                          dimensional_calibrations: CalibrationListType = None,
+                          metadata: dict = None,
+                          timestamp: datetime.datetime = None,
+                          data_descriptor: DataDescriptor = None,
+                          timezone: str = None,
+                          timezone_offset: str = None) -> DataAndMetadata:
     """Return a new data and metadata from an ndarray. Takes ownership of data."""
-    return DataAndMetadata.from_data(data, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor)
+    return DataAndMetadata.from_data(data, intensity_calibration, dimensional_calibrations, metadata, timestamp=timestamp, timezone=timezone, timezone_offset=timezone_offset, data_descriptor=data_descriptor)

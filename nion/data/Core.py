@@ -42,7 +42,7 @@ def column(data_and_metadata: DataAndMetadata.DataAndMetadata, start: int, stop:
         stop_1 = stop if stop is not None else data_shape(data_and_metadata)[1]
         return numpy.meshgrid(numpy.linspace(start_1, stop_1, data_shape(data_and_metadata)[1]), numpy.linspace(start_0, stop_0, data_shape(data_and_metadata)[0]), sparse=True)[0]
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
 def row(data_and_metadata: DataAndMetadata.DataAndMetadata, start: int, stop: int) -> DataAndMetadata.DataAndMetadata:
@@ -53,7 +53,7 @@ def row(data_and_metadata: DataAndMetadata.DataAndMetadata, start: int, stop: in
         stop_1 = stop if stop is not None else data_shape(data_and_metadata)[1]
         return numpy.meshgrid(numpy.linspace(start_1, stop_1, data_shape(data_and_metadata)[1]), numpy.linspace(start_0, stop_0, data_shape(data_and_metadata)[0]), sparse=True)[1]
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
 def radius(data_and_metadata: DataAndMetadata.DataAndMetadata, normalize: bool=True) -> DataAndMetadata.DataAndMetadata:
@@ -65,7 +65,7 @@ def radius(data_and_metadata: DataAndMetadata.DataAndMetadata, normalize: bool=T
         icol, irow = numpy.meshgrid(numpy.linspace(start_1, stop_1, data_shape(data_and_metadata)[1]), numpy.linspace(start_0, stop_0, data_shape(data_and_metadata)[0]), sparse=True)
         return numpy.sqrt(icol * icol + irow * irow)
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
 def full(shape: DataAndMetadata.ShapeType, fill_value, dtype: numpy.dtype=None) -> DataAndMetadata.DataAndMetadata:
@@ -167,7 +167,7 @@ def function_fft(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndM
                                                         "1/" + dimensional_calibration.units) for
         dimensional_calibration, data_shape_n in zip(src_dimensional_calibrations, data_shape)]
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), Calibration.Calibration(), dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), dimensional_calibrations=dimensional_calibrations)
 
 
 def function_ifft(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
@@ -208,7 +208,7 @@ def function_ifft(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAnd
                                                         remove_one_slash(dimensional_calibration.units)) for
         dimensional_calibration, data_shape_n in zip(src_dimensional_calibrations, data_shape)]
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), Calibration.Calibration(), dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), dimensional_calibrations=dimensional_calibrations)
 
 
 def function_autocorrelate(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
@@ -234,7 +234,7 @@ def function_autocorrelate(data_and_metadata: DataAndMetadata.DataAndMetadata) -
     if data_and_metadata is None:
         return None
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), Calibration.Calibration(), data_and_metadata.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
 def function_crosscorrelate(*args) -> DataAndMetadata.DataAndMetadata:
@@ -269,7 +269,7 @@ def function_crosscorrelate(*args) -> DataAndMetadata.DataAndMetadata:
     if data_and_metadata1 is None or data_and_metadata2 is None:
         return None
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), Calibration.Calibration(), data_and_metadata1.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), dimensional_calibrations=data_and_metadata1.dimensional_calibrations)
 
 
 def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool) -> typing.Tuple[float, ...]:
@@ -422,7 +422,7 @@ def function_fourier_mask(data_and_metadata: DataAndMetadata.DataAndMetadata, ma
                 raise
         return None
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
 def function_sobel(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
@@ -446,7 +446,7 @@ def function_sobel(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAn
         else:
             return scipy.ndimage.sobel(data)
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
 def function_laplace(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
@@ -470,7 +470,7 @@ def function_laplace(data_and_metadata: DataAndMetadata.DataAndMetadata) -> Data
         else:
             return scipy.ndimage.laplace(data)
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
 def function_gaussian_blur(data_and_metadata: DataAndMetadata.DataAndMetadata, sigma: float) -> DataAndMetadata.DataAndMetadata:
@@ -482,7 +482,7 @@ def function_gaussian_blur(data_and_metadata: DataAndMetadata.DataAndMetadata, s
             return None
         return scipy.ndimage.gaussian_filter(data, sigma=sigma)
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
 def function_median_filter(data_and_metadata: DataAndMetadata.DataAndMetadata, size: int) -> DataAndMetadata.DataAndMetadata:
@@ -508,7 +508,7 @@ def function_median_filter(data_and_metadata: DataAndMetadata.DataAndMetadata, s
         else:
             return scipy.ndimage.median_filter(data, size=size)
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
 def function_uniform_filter(data_and_metadata: DataAndMetadata.DataAndMetadata, size: int) -> DataAndMetadata.DataAndMetadata:
@@ -534,7 +534,7 @@ def function_uniform_filter(data_and_metadata: DataAndMetadata.DataAndMetadata, 
         else:
             return scipy.ndimage.uniform_filter(data, size=size)
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
 def function_transpose_flip(data_and_metadata: DataAndMetadata.DataAndMetadata, transpose: bool=False, flip_v: bool=False, flip_h: bool=False) -> DataAndMetadata.DataAndMetadata:
@@ -567,7 +567,7 @@ def function_transpose_flip(data_and_metadata: DataAndMetadata.DataAndMetadata, 
     else:
         dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
 def function_invert(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
@@ -593,7 +593,7 @@ def function_invert(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataA
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
 def function_crop(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: NormRectangleType) -> DataAndMetadata.DataAndMetadata:
@@ -622,7 +622,7 @@ def function_crop(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: No
             dimensional_calibration.scale, dimensional_calibration.units)
         cropped_dimensional_calibrations.append(cropped_calibration)
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, cropped_dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=cropped_dimensional_calibrations)
 
 
 def function_crop_interval(data_and_metadata: DataAndMetadata.DataAndMetadata, interval: NormIntervalType) -> DataAndMetadata.DataAndMetadata:
@@ -651,7 +651,7 @@ def function_crop_interval(data_and_metadata: DataAndMetadata.DataAndMetadata, i
         dimensional_calibration.scale, dimensional_calibration.units)
     cropped_dimensional_calibrations.append(cropped_calibration)
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, cropped_dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=cropped_dimensional_calibrations)
 
 
 def function_slice_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, slice_center: int, slice_width: int) -> DataAndMetadata.DataAndMetadata:
@@ -681,7 +681,7 @@ def function_slice_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, slice
 
     dimensional_calibrations = dimensional_calibrations[0:signal_index]
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
 def function_pick(data_and_metadata: DataAndMetadata.DataAndMetadata, position: DataAndMetadata.PositionType) -> DataAndMetadata.DataAndMetadata:
@@ -716,7 +716,7 @@ def function_pick(data_and_metadata: DataAndMetadata.DataAndMetadata, position: 
 
     dimensional_calibrations = dimensional_calibrations[data_and_metadata.datum_dimension_slice]
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
 def function_concatenate(data_and_metadata_list: typing.Sequence[DataAndMetadata.DataAndMetadata], axis: int=0) -> DataAndMetadata.DataAndMetadata:
@@ -759,7 +759,7 @@ def function_concatenate(data_and_metadata_list: typing.Sequence[DataAndMetadata
 
     intensity_calibration = data_and_metadata_list[0].intensity_calibration
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration, dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
 def function_hstack(data_and_metadata_list: typing.Sequence[DataAndMetadata.DataAndMetadata]) -> DataAndMetadata.DataAndMetadata:
@@ -829,7 +829,7 @@ def function_vstack(data_and_metadata_list: typing.Sequence[DataAndMetadata.Data
 
     data_descriptor = DataAndMetadata.DataDescriptor(data_descriptor.is_sequence, data_descriptor.collection_dimension_count + 1, data_descriptor.datum_dimension_count)
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration, dimensional_calibrations, data_descriptor=data_descriptor)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
 
 
 def function_moveaxis(data_and_metadata: DataAndMetadata.DataAndMetadata, src_axis: int, dst_axis: int) -> DataAndMetadata.DataAndMetadata:
@@ -839,7 +839,7 @@ def function_moveaxis(data_and_metadata: DataAndMetadata.DataAndMetadata, src_ax
 
     dimensional_calibrations.insert(dst_axis, dimensional_calibrations.pop(src_axis))
 
-    return DataAndMetadata.new_data_and_metadata(data, data_and_metadata.intensity_calibration, dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
 def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Union[int, typing.Sequence[int]]=None) -> DataAndMetadata.DataAndMetadata:
@@ -886,7 +886,7 @@ def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typin
 
     dimensional_calibrations = new_dimensional_calibrations
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
 def function_sum_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
@@ -909,7 +909,7 @@ def function_sum_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask
 
     result_data = numpy.sum(data * mask_data[..., numpy.newaxis], tuple(range(0, len(data_and_metadata.dimensional_shape) - 1)))
 
-    return DataAndMetadata.new_data_and_metadata(result_data, data_and_metadata.intensity_calibration, [data_and_metadata.dimensional_calibrations[-1]])
+    return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=[data_and_metadata.dimensional_calibrations[-1]])
 
 
 def function_reshape(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
@@ -965,7 +965,7 @@ def function_reshape(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: 
         for _ in range(len(shape)):
             new_dimensional_calibrations.append(Calibration.Calibration())
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, new_dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=new_dimensional_calibrations)
 
 
 def function_squeeze(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
@@ -1006,7 +1006,7 @@ def function_squeeze(data_and_metadata: DataAndMetadata.DataAndMetadata) -> Data
 
     data_descriptor = DataAndMetadata.DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
 
-    return DataAndMetadata.new_data_and_metadata(data, data_and_metadata.intensity_calibration, new_dimensional_calibrations, data_descriptor=data_descriptor)
+    return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=new_dimensional_calibrations, data_descriptor=data_descriptor)
 
 
 def function_resize(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType, mode: str=None) -> DataAndMetadata.DataAndMetadata:
@@ -1057,7 +1057,7 @@ def function_resize(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: D
             dimensional_calibration.scale, dimensional_calibration.units)
         resized_dimensional_calibrations.append(cropped_calibration)
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, resized_dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=resized_dimensional_calibrations)
 
 
 def function_rescale(data_and_metadata: DataAndMetadata.DataAndMetadata, data_range: DataRangeType=None) -> DataAndMetadata.DataAndMetadata:
@@ -1089,7 +1089,7 @@ def function_rescale(data_and_metadata: DataAndMetadata.DataAndMetadata, data_ra
 
     intensity_calibration = Calibration.Calibration()
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration, data_and_metadata.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
 def function_resample_2d(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
@@ -1120,7 +1120,7 @@ def function_resample_2d(data_and_metadata: DataAndMetadata.DataAndMetadata, sha
     dimensions = height, width
     resampled_dimensional_calibrations = [Calibration.Calibration(dimensional_calibrations[i].offset, dimensional_calibrations[i].scale * data_shape[i] / dimensions[i], dimensional_calibrations[i].units) for i in range(len(dimensional_calibrations))]
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), data_and_metadata.intensity_calibration, resampled_dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=resampled_dimensional_calibrations)
 
 
 def function_warp(data_and_metadata: DataAndMetadata.DataAndMetadata, coordinates: typing.Sequence[DataAndMetadata.DataAndMetadata]) -> DataAndMetadata.DataAndMetadata:
@@ -1237,7 +1237,7 @@ def function_line_profile(data_and_metadata: DataAndMetadata.DataAndMetadata, ve
     intensity_calibration = copy.deepcopy(data_and_metadata.intensity_calibration)
     intensity_calibration.scale /= actual_integration_width
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(data), intensity_calibration, dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(data), intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 def function_make_point(y: float, x: float) -> NormPointType:
     return y, x
@@ -1264,7 +1264,7 @@ def function_make_shape(*args) -> DataAndMetadata.ShapeType:
 
 def function_array(array_fn, data_and_metadata: DataAndMetadata.DataAndMetadata, *args, **kwargs) -> DataAndMetadata.DataAndMetadata:
     data = array_fn(data_and_metadata.data, *args, **kwargs)
-    return DataAndMetadata.new_data_and_metadata(data, data_and_metadata.intensity_calibration, data_and_metadata.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 def function_scalar(op, data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.ScalarAndMetadata:
     def calculate_value():
