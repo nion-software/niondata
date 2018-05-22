@@ -193,7 +193,7 @@ def function_ifft(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAnd
         # see https://gist.github.com/endolith/1257010
         if Image.is_data_1d(data):
             scaling = numpy.sqrt(data_shape[0])
-            return scipy.fftpack.fftshift(scipy.fftpack.ifft(data) * scaling)
+            return scipy.fftpack.ifft(scipy.fftpack.ifftshift(data) * scaling)
         elif Image.is_data_2d(data):
             data_copy = data.copy()  # let other threads use data while we're processing
             scaling = numpy.sqrt(data_shape[1] * data_shape[0])

@@ -71,19 +71,34 @@ class TestCore(unittest.TestCase):
         self.assertAlmostEqual(ifft.dimensional_calibrations[1].offset, 0.0)
 
     def test_fft_forward_and_back_is_consistent(self):
-        src_data = numpy.random.randn(256, 256)
-        a = DataAndMetadata.DataAndMetadata.from_data(src_data)
-        fft = Core.function_fft(a)
+        d = numpy.zeros((256, 256))
+        src = Core.function_squeeze(Core.radius(d))
+        fft = Core.function_fft(src)
         ifft = Core.function_ifft(fft)
-        src_data_2 = ifft.data
         # error increases for size of data
-        self.assertLess(numpy.amax(numpy.absolute(src_data - src_data_2)), 1E-12)
-        self.assertLess(numpy.absolute(numpy.sum(src_data - src_data_2)), 1E-12)
+        self.assertLess(numpy.amax(numpy.absolute(src.data - ifft.data)), 1E-11)
+        self.assertLess(numpy.absolute(numpy.sum(src.data - ifft.data)), 1E-11)
+
+    def test_fft_1d_forward_and_back_is_consistent(self):
+        d = numpy.zeros((256, 1))
+        src = Core.function_squeeze(Core.radius(d)) + numpy.array(range(d.shape[0]))
+        fft = Core.function_fft(src)
+        ifft = Core.function_ifft(fft)
+        # error increases for size of data
+        self.assertLess(numpy.amax(numpy.absolute(src.data - ifft.data)), 1E-11)
+        self.assertLess(numpy.absolute(numpy.sum(src.data - ifft.data)), 1E-11)
 
     def test_fft_rms_is_same_as_original(self):
-        src_data = numpy.random.randn(256, 256)
-        a = DataAndMetadata.DataAndMetadata.from_data(src_data)
-        fft = Core.function_fft(a)
+        d = numpy.random.randn(256, 256)
+        src_data = Core.radius(d)
+        fft = Core.function_fft(src_data)
+        src_data_2 = fft.data
+        self.assertLess(numpy.sqrt(numpy.mean(numpy.square(numpy.absolute(src_data)))) - numpy.sqrt(numpy.mean(numpy.square(numpy.absolute(src_data_2)))), 1E-12)
+
+    def test_fft_1d_rms_is_same_as_original(self):
+        d = numpy.random.randn(256, 1)
+        src_data = Core.function_squeeze(Core.radius(d))
+        fft = Core.function_fft(src_data)
         src_data_2 = fft.data
         self.assertLess(numpy.sqrt(numpy.mean(numpy.square(numpy.absolute(src_data)))) - numpy.sqrt(numpy.mean(numpy.square(numpy.absolute(src_data_2)))), 1E-12)
 
