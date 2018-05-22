@@ -9,6 +9,9 @@ from nion.data import Image
 
 
 def function_rgb_channel(data_and_metadata: DataAndMetadata.DataAndMetadata, channel: int) -> DataAndMetadata.DataAndMetadata:
+
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
+
     def calculate_data():
         data = data_and_metadata.data
         if channel < 0 or channel > 3:
@@ -32,6 +35,9 @@ def function_rgb_channel(data_and_metadata: DataAndMetadata.DataAndMetadata, cha
 
 def function_rgb_linear_combine(data_and_metadata: DataAndMetadata.DataAndMetadata, red_weight: float, green_weight: float,
                                 blue_weight: float) -> DataAndMetadata.DataAndMetadata:
+
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
+
     def calculate_data():
         data = data_and_metadata.data
         if not Image.is_data_valid(data):
@@ -49,9 +55,19 @@ def function_rgb_linear_combine(data_and_metadata: DataAndMetadata.DataAndMetada
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
-def function_rgb(red_data_and_metadata: DataAndMetadata.DataAndMetadata, green_data_and_metadata: DataAndMetadata.DataAndMetadata,
+def function_rgb(red_data_and_metadata: DataAndMetadata.DataAndMetadata,
+                 green_data_and_metadata: DataAndMetadata.DataAndMetadata,
                  blue_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
-    shape = tuple(red_data_and_metadata.data_shape)
+
+    red_data_and_metadata = DataAndMetadata.promote_ndarray(red_data_and_metadata)
+    green_data_and_metadata = DataAndMetadata.promote_ndarray(green_data_and_metadata)
+    blue_data_and_metadata = DataAndMetadata.promote_ndarray(blue_data_and_metadata)
+
+    shape = tuple(DataAndMetadata.determine_shape(red_data_and_metadata, green_data_and_metadata, blue_data_and_metadata))
+
+    red_data_and_metadata = DataAndMetadata.promote_constant(red_data_and_metadata, shape)
+    green_data_and_metadata = DataAndMetadata.promote_constant(green_data_and_metadata, shape)
+    blue_data_and_metadata = DataAndMetadata.promote_constant(blue_data_and_metadata, shape)
 
     def calculate_data():
         rgb_image = numpy.empty(shape + (3,), numpy.uint8)
@@ -79,9 +95,23 @@ def function_rgb(red_data_and_metadata: DataAndMetadata.DataAndMetadata, green_d
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=red_data_and_metadata.intensity_calibration, dimensional_calibrations=red_data_and_metadata.dimensional_calibrations)
 
 
-def function_rgba(red_data_and_metadata: DataAndMetadata.DataAndMetadata, green_data_and_metadata: DataAndMetadata.DataAndMetadata,
+def function_rgba(red_data_and_metadata: DataAndMetadata.DataAndMetadata,
+                  green_data_and_metadata: DataAndMetadata.DataAndMetadata,
                   blue_data_and_metadata: DataAndMetadata.DataAndMetadata,
                   alpha_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+
+    red_data_and_metadata = DataAndMetadata.promote_ndarray(red_data_and_metadata)
+    green_data_and_metadata = DataAndMetadata.promote_ndarray(green_data_and_metadata)
+    blue_data_and_metadata = DataAndMetadata.promote_ndarray(blue_data_and_metadata)
+    alpha_data_and_metadata = DataAndMetadata.promote_ndarray(alpha_data_and_metadata)
+
+    shape = tuple(DataAndMetadata.determine_shape(red_data_and_metadata, green_data_and_metadata, blue_data_and_metadata, alpha_data_and_metadata))
+
+    red_data_and_metadata = DataAndMetadata.promote_constant(red_data_and_metadata, shape)
+    green_data_and_metadata = DataAndMetadata.promote_constant(green_data_and_metadata, shape)
+    blue_data_and_metadata = DataAndMetadata.promote_constant(blue_data_and_metadata, shape)
+    alpha_data_and_metadata = DataAndMetadata.promote_constant(alpha_data_and_metadata, shape)
+
     shape = tuple(red_data_and_metadata.data_shape)
 
     def calculate_data():

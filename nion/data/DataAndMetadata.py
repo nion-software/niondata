@@ -881,6 +881,8 @@ def function_data_slice(data_and_metadata, key):
     if data_and_metadata is None:
         return None
 
+    data_and_metadata = promote_ndarray(data_and_metadata)
+
     def non_ellipses_count(slices):
         return sum(1 if not isinstance(slice, type(Ellipsis)) else 0 for slice in slices)
 
@@ -1022,6 +1024,33 @@ def function_data_slice(data_and_metadata, key):
     # print(f"data descriptor {data_descriptor}")
 
     return new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=cropped_dimensional_calibrations, data_descriptor=data_descriptor)
+
+
+def promote_ndarray(data):
+    if isinstance(data, DataAndMetadata):
+        return data
+    if isinstance(data, numpy.ndarray):
+        return new_data_and_metadata(data)
+    if hasattr(data, "__array__"):
+        return new_data_and_metadata(data)
+    return data
+
+
+def determine_shape(*datas):
+    for data in datas:
+        if data is not None and hasattr(data, "data_shape"):
+            return data.data_shape
+    return None
+
+
+def promote_constant(data, shape):
+    if isinstance(data, DataAndMetadata):
+        return data
+    if isinstance(data, numpy.ndarray):
+        return new_data_and_metadata(data)
+    if data is not None:
+        return new_data_and_metadata(numpy.full(shape, data))
+    return None
 
 
 def new_data_and_metadata(data,
