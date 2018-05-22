@@ -8,6 +8,8 @@ Changelog (niondata)
 
 - Fix FFT-1D scaling and shifting inconsistency.
 
+- Add average_region function (similar to sum_region).
+
 0.13.1 (2018-05-21)
 -------------------
 

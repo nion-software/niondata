@@ -988,6 +988,37 @@ def function_sum_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask
     return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=[data_and_metadata.dimensional_calibrations[-1]])
 
 
+def function_average_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
+    mask_data_and_metadata = DataAndMetadata.promote_ndarray(mask_data_and_metadata)
+
+    data_shape = data_and_metadata.data_shape
+    data_dtype = data_and_metadata.data_dtype
+
+    dimensional_calibrations = data_and_metadata.dimensional_calibrations
+
+    if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
+        return None
+
+    assert len(data_and_metadata.dimensional_shape) == 3
+    assert len(mask_data_and_metadata.dimensional_shape) == 2
+
+    data = data_and_metadata.data
+    mask_data = mask_data_and_metadata.data
+
+    assert data is not None
+    assert mask_data is not None
+
+    mask_sum = numpy.sum(mask_data)
+
+    if mask_sum == 0:
+        mask_sum = 1
+
+    result_data = numpy.sum(data * mask_data[..., numpy.newaxis], tuple(range(0, len(data_and_metadata.dimensional_shape) - 1))) / mask_sum
+
+    return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=[data_and_metadata.dimensional_calibrations[-1]])
+
+
 def function_reshape(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
     """Reshape a data and metadata to shape.
 

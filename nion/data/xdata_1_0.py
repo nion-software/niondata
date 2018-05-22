@@ -72,6 +72,9 @@ def sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Union[i
 def sum_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
     return Core.function_sum_region(data_and_metadata, mask_data_and_metadata)
 
+def average_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_average_region(data_and_metadata, mask_data_and_metadata)
+
 def resample_image(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
     return Core.function_resample_2d(data_and_metadata, shape)
 
