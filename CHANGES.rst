@@ -1,7 +1,7 @@
 Changelog (niondata)
 ====================
 
-0.13.2 (unreleased)
+0.13.2 (2018-05-23)
 -------------------
 
 - Automatically promote ndarray and constants (where possible) to xdata in operations.
