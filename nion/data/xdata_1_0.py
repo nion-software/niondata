@@ -57,6 +57,9 @@ def data_slice(data_and_metadata: DataAndMetadata.DataAndMetadata, key) -> DataA
 def crop(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: Core.NormRectangleType) -> DataAndMetadata.DataAndMetadata:
     return Core.function_crop(data_and_metadata, bounds)
 
+def crop_rotated(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: Core.NormRectangleType, angle: float) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_crop_rotated(data_and_metadata, bounds, angle)
+
 def crop_interval(data_and_metadata: DataAndMetadata.DataAndMetadata, interval: Core.NormIntervalType) -> DataAndMetadata.DataAndMetadata:
     return Core.function_crop_interval(data_and_metadata, interval)
 

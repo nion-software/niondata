@@ -457,6 +457,22 @@ class TestCore(unittest.TestCase):
         self.assertEqual(5, x_calibration.convert_to_calibrated_value(0))
         self.assertEqual(26, x_calibration.convert_to_calibrated_value(16))
 
+    def test_crop_out_of_bounds_produces_proper_size_data(self):
+        data = numpy.ones((16, 16), numpy.uint32)
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        result = Core.function_crop(xdata, ((0.75, 0.75), (0.5, 0.5)))
+        self.assertEqual((8, 8), result.data_shape)
+        self.assertEqual(0, numpy.amin(result))
+        self.assertEqual(1, numpy.amax(result))
+
+    def test_crop_rotated_produces_proper_size_data(self):
+        data = numpy.ones((16, 16), numpy.uint32)
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        result = Core.function_crop_rotated(xdata, ((0.75, 0.75), (0.5, 0.5)), 0.3)
+        self.assertEqual((8, 8), result.data_shape)
+        self.assertEqual(0, numpy.amin(result))
+        self.assertEqual(1, numpy.amax(result))
+
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
     unittest.main()

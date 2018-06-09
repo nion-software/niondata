@@ -1,6 +1,13 @@
 Changelog (niondata)
 ====================
 
+UNRELEASED
+----------
+
+- Change crop to always produce the same size crop, even if out of bounds. Fill out of bounds with zero.
+
+- Add crop_rotated to handle crop with rotation (slower).
+
 0.13.2 (2018-05-23)
 -------------------
 

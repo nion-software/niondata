@@ -654,25 +654,65 @@ def function_invert(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataA
 
 
 def function_crop(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: NormRectangleType) -> DataAndMetadata.DataAndMetadata:
+    bounds = Geometry.FloatRect.make(bounds)
+
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
-    data_shape = data_and_metadata.data_shape
+    data_shape = Geometry.IntSize.make(data_and_metadata.data_shape)
     data_dtype = data_and_metadata.data_dtype
-
-    def calculate_data():
-        data = data_and_metadata.data
-        if not Image.is_data_valid(data):
-            return None
-        data_shape = data_and_metadata.data_shape
-        bounds_int = ((int(data_shape[0] * bounds[0][0]), int(data_shape[1] * bounds[0][1])),
-            (int(data_shape[0] * bounds[1][0]), int(data_shape[1] * bounds[1][1])))
-        return data[bounds_int[0][0]:bounds_int[0][0] + bounds_int[1][0],
-            bounds_int[0][1]:bounds_int[0][1] + bounds_int[1][1]].copy()
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
-    if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
+    data = data_and_metadata.data
+
+    if not Image.is_shape_and_dtype_valid(list(data_shape), data_dtype) or dimensional_calibrations is None:
         return None
+
+    if not Image.is_data_valid(data):
+        return None
+
+    oheight = int(data_shape.height * bounds.height)
+    owidth = int(data_shape.width * bounds.width)
+
+    top = int(data_shape.height * bounds.top)
+    left = int(data_shape.width * bounds.left)
+    height = int(data_shape.height * bounds.height)
+    width = int(data_shape.width * bounds.width)
+
+    dtop = 0
+    dleft = 0
+    dheight = height
+    dwidth = width
+
+    if top < 0:
+        dheight += top
+        dtop -= top
+        height += top
+        top = 0
+    if top + height > data_shape.height:
+        dheight -= (top + height - data_shape.height)
+        height = data_shape.height - top
+    if left < 0:
+        dwidth += left
+        dleft -= left
+        width += left
+        left = 0
+    if left + width > data_shape.width:
+        dwidth -= (left + width- data_shape.width)
+        width = data_shape.width - left
+
+    if data_and_metadata.is_data_rgb:
+        new_data = numpy.zeros((oheight, owidth, 3), dtype=data.dtype)
+        if height > 0 and width > 0:
+            new_data[dtop:dtop + dheight, dleft:dleft + dwidth] = data[top:top + height, left:left + width]
+    elif data_and_metadata.is_data_rgba:
+        new_data = numpy.zeros((oheight, owidth, 4), dtype=data.dtype)
+        if height > 0 and width > 0:
+            new_data[dtop:dtop + dheight, dleft:dleft + dwidth] = data[top:top + height, left:left + width]
+    else:
+        new_data = numpy.zeros((oheight, owidth), dtype=data.dtype)
+        if height > 0 and width > 0:
+            new_data[dtop:dtop + dheight, dleft:dleft + dwidth] = data[top:top + height, left:left + width]
 
     cropped_dimensional_calibrations = list()
     for index, dimensional_calibration in enumerate(dimensional_calibrations):
@@ -681,7 +721,61 @@ def function_crop(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: No
             dimensional_calibration.scale, dimensional_calibration.units)
         cropped_dimensional_calibrations.append(cropped_calibration)
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=cropped_dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(new_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=cropped_dimensional_calibrations)
+
+
+def function_crop_rotated(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: NormRectangleType, angle: float) -> DataAndMetadata.DataAndMetadata:
+    bounds = Geometry.FloatRect.make(bounds)
+
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
+
+    data_shape = Geometry.IntSize.make(data_and_metadata.data_shape)
+    data_dtype = data_and_metadata.data_dtype
+
+    dimensional_calibrations = data_and_metadata.dimensional_calibrations
+
+    data = data_and_metadata.data
+
+    if not Image.is_shape_and_dtype_valid(list(data_shape), data_dtype) or dimensional_calibrations is None:
+        return None
+
+    if not Image.is_data_valid(data):
+        return None
+
+    top = int(data_shape.height * bounds.top)
+    left = int(data_shape.width * bounds.left)
+    height = int(data_shape.height * bounds.height)
+    width = int(data_shape.width * bounds.width)
+
+    x, y = numpy.meshgrid(numpy.arange(-width // 2, width - width // 2), numpy.arange(-height // 2, height - height // 2))
+
+    angle_sin = math.sin(angle)
+    angle_cos = math.cos(angle)
+
+    coords = [top + height // 2 + (y * angle_cos - x * angle_sin), left + width // 2 + (x * angle_cos + y * angle_sin)]
+
+    if data_and_metadata.is_data_rgb:
+        new_data = numpy.zeros(coords[0].shape + (3,), numpy.uint8)
+        new_data[..., 0] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 0], coords)
+        new_data[..., 1] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 1], coords)
+        new_data[..., 2] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 2], coords)
+    elif data_and_metadata.is_data_rgba:
+        new_data = numpy.zeros(coords[0].shape + (4,), numpy.uint8)
+        new_data[..., 0] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 0], coords)
+        new_data[..., 1] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 1], coords)
+        new_data[..., 2] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 2], coords)
+        new_data[..., 3] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 3], coords)
+    else:
+        new_data = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data, coords)
+
+    cropped_dimensional_calibrations = list()
+    for index, dimensional_calibration in enumerate(dimensional_calibrations):
+        cropped_calibration = Calibration.Calibration(
+            dimensional_calibration.offset + data_shape[index] * bounds[0][index] * dimensional_calibration.scale,
+            dimensional_calibration.scale, dimensional_calibration.units)
+        cropped_dimensional_calibrations.append(cropped_calibration)
+
+    return DataAndMetadata.new_data_and_metadata(new_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=cropped_dimensional_calibrations)
 
 
 def function_crop_interval(data_and_metadata: DataAndMetadata.DataAndMetadata, interval: NormIntervalType) -> DataAndMetadata.DataAndMetadata:
