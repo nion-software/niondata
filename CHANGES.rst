@@ -4,6 +4,8 @@ Changelog (niondata)
 UNRELEASED
 ----------
 
+- Add calibration and data_descriptor creation methods to xdata_1_0.
+
 - Change crop to always produce the same size crop, even if out of bounds. Fill out of bounds with zero.
 
 - Add crop_rotated to handle crop with rotation (slower).

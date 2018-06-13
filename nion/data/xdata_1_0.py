@@ -285,6 +285,12 @@ def new_with_data(data: numpy.ndarray, *,
                                                  timestamp=timestamp,
                                                  data_descriptor=data_descriptor)
 
+def calibration(*, offset=0.0, scale=1.0, units=None):
+    return Calibration.Calibration(offset, scale, units)
+
+def data_descriptor(*, is_sequence=False, collection_dims=0, datum_dims=1) -> DataAndMetadata.DataDescriptor:
+    return DataAndMetadata.DataDescriptor(is_sequence, collection_dims, datum_dims)
+
 def map_function(fn, data_and_metadata: DataAndMetadata.DataAndMetadata, *args, **kwargs) -> DataAndMetadata.DataAndMetadata:
     return Core.function_array(fn, data_and_metadata, *args, **kwargs)
 
