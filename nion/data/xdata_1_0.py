@@ -45,6 +45,9 @@ def reshape(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMe
 def squeeze(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
     return Core.function_squeeze(data_and_metadata)
 
+def redimension(data_and_metadata: DataAndMetadata.DataAndMetadata, data_descriptor: DataAndMetadata.DataDescriptor) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_redimension(data_and_metadata, data_descriptor)
+
 def rescale(data_and_metadata: DataAndMetadata.DataAndMetadata, data_range: Core.DataRangeType=None) -> DataAndMetadata.DataAndMetadata:
     return Core.function_rescale(data_and_metadata, data_range)
 

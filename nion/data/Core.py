@@ -1204,14 +1204,27 @@ def function_squeeze(data_and_metadata: DataAndMetadata.DataAndMetadata) -> Data
             new_dimensional_calibrations.append(dimensional_calibrations[dimensional_index])
         dimensional_index += 1
 
+    data_descriptor = DataAndMetadata.DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
+
     data = data_and_metadata.data
     if not Image.is_data_valid(data):
         return None
     data = numpy.squeeze(data)
 
-    data_descriptor = DataAndMetadata.DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
-
     return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=new_dimensional_calibrations, data_descriptor=data_descriptor)
+
+
+def function_redimension(data_and_metadata: DataAndMetadata.DataAndMetadata, data_descriptor: DataAndMetadata.DataDescriptor) -> DataAndMetadata.DataAndMetadata:
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
+
+    if data_and_metadata.data_descriptor.expected_dimension_count != data_descriptor.expected_dimension_count:
+        return None
+
+    data = data_and_metadata.data
+    if not Image.is_data_valid(data):
+        return None
+
+    return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations, data_descriptor=data_descriptor)
 
 
 def function_resize(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType, mode: str=None) -> DataAndMetadata.DataAndMetadata:

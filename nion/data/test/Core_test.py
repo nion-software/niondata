@@ -473,6 +473,12 @@ class TestCore(unittest.TestCase):
         self.assertEqual(0, numpy.amin(result))
         self.assertEqual(1, numpy.amax(result))
 
+    def test_redimension_basic_functionality(self):
+        data = numpy.ones((100, 100), dtype=numpy.int)
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        xdata_redim = Core.function_redimension(xdata, DataAndMetadata.DataDescriptor(True, 0, 1))
+        self.assertEqual(xdata.data_descriptor.expected_dimension_count, xdata_redim.data_descriptor.expected_dimension_count)
+
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
     unittest.main()

@@ -4,6 +4,8 @@ Changelog (niondata)
 UNRELEASED
 ----------
 
+- Add redimension function (changes data description, keeps data layout in memory the same).
+
 - Ensure that data_descriptor is a copy, not a reference, when accessed from DataAndMetadata.
 
 - Add calibration and data_descriptor creation methods to xdata_1_0.
