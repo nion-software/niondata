@@ -4,6 +4,8 @@ Changelog (niondata)
 UNRELEASED
 ----------
 
+- Ensure that data_descriptor is a copy, not a reference, when accessed from DataAndMetadata.
+
 - Add calibration and data_descriptor creation methods to xdata_1_0.
 
 - Change crop to always produce the same size crop, even if out of bounds. Fill out of bounds with zero.

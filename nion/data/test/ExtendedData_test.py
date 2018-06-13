@@ -126,6 +126,13 @@ class TestExtendedData(unittest.TestCase):
         self.assertEqual(1, numpy.amin(xdata))
         self.assertEqual(2, numpy.amax(xdata))
 
+    def test_data_descriptor_is_a_copy(self):
+        data = numpy.ones((100, 100), dtype=numpy.int)
+        data[50, 50] = 2
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        xdata.data_descriptor.is_sequence = True
+        self.assertFalse(xdata.data_descriptor.is_sequence)
+
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

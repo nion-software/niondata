@@ -231,6 +231,9 @@ class DataMetadata:
     def _set_dimensional_calibrations(self, dimensional_calibrations: CalibrationListType) -> None:
         self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
 
+    def _set_data_descriptor(self, data_descriptor: DataDescriptor) -> None:
+        self.data_descriptor = copy.deepcopy(data_descriptor)
+
     def _set_metadata(self, metadata: dict) -> None:
         self.metadata = copy.deepcopy(metadata)
 
@@ -496,7 +499,7 @@ class DataAndMetadata:
 
     @property
     def data_descriptor(self) -> DataDescriptor:
-        return self.__data_metadata.data_descriptor
+        return copy.deepcopy(self.__data_metadata.data_descriptor)
 
     @property
     def is_sequence(self) -> bool:
@@ -591,6 +594,9 @@ class DataAndMetadata:
 
     def _set_dimensional_calibrations(self, dimensional_calibrations: CalibrationListType) -> None:
         self.__data_metadata._set_dimensional_calibrations(dimensional_calibrations)
+
+    def _set_data_descriptor(self, data_descriptor: DataDescriptor) -> None:
+        self.__data_metadata._set_data_descriptor(data_descriptor)
 
     def _set_metadata(self, metadata: dict) -> None:
         self.__data_metadata._set_metadata(metadata)
