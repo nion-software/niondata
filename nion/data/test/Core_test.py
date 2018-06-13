@@ -479,6 +479,12 @@ class TestCore(unittest.TestCase):
         xdata_redim = Core.function_redimension(xdata, DataAndMetadata.DataDescriptor(True, 0, 1))
         self.assertEqual(xdata.data_descriptor.expected_dimension_count, xdata_redim.data_descriptor.expected_dimension_count)
 
+    def test_squeeze_does_not_remove_last_datum_dimension(self):
+        data = numpy.ones((1, 1, 1, 1), dtype=numpy.int)
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        xdata_squeeze= Core.function_squeeze(xdata)
+        self.assertEqual(1, xdata_squeeze.data_descriptor.expected_dimension_count)
+
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
     unittest.main()

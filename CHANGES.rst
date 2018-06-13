@@ -4,7 +4,9 @@ Changelog (niondata)
 UNRELEASED
 ----------
 
-- Add redimension function (changes data description, keeps data layout in memory the same).
+- Fix squeeze to not remove last datum dimension.
+
+- Add re-dimension function (changes data description, keeps data layout in memory the same).
 
 - Ensure that data_descriptor is a copy, not a reference, when accessed from DataAndMetadata.
 

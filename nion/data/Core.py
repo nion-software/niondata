@@ -1185,21 +1185,25 @@ def function_squeeze(data_and_metadata: DataAndMetadata.DataAndMetadata) -> Data
     dimensional_index = 0
 
     # fix the data descriptor and the dimensions
+    indexes = list()
     if is_sequence:
         if data_shape[dimensional_index] <= 1:
             is_sequence = 0
+            indexes.append(dimensional_index)
         else:
             new_dimensional_calibrations.append(dimensional_calibrations[dimensional_index])
         dimensional_index += 1
     for collection_dimension_index in range(collection_dimension_count):
         if data_shape[dimensional_index] <= 1:
             collection_dimension_count -= 1
+            indexes.append(dimensional_index)
         else:
             new_dimensional_calibrations.append(dimensional_calibrations[dimensional_index])
         dimensional_index += 1
     for datum_dimension_index in range(datum_dimension_count):
-        if data_shape[dimensional_index] <= 1:
+        if data_shape[dimensional_index] <= 1 and datum_dimension_count > 1:
             datum_dimension_count -= 1
+            indexes.append(dimensional_index)
         else:
             new_dimensional_calibrations.append(dimensional_calibrations[dimensional_index])
         dimensional_index += 1
@@ -1209,7 +1213,8 @@ def function_squeeze(data_and_metadata: DataAndMetadata.DataAndMetadata) -> Data
     data = data_and_metadata.data
     if not Image.is_data_valid(data):
         return None
-    data = numpy.squeeze(data)
+
+    data = numpy.squeeze(data, axis=tuple(indexes))
 
     return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=new_dimensional_calibrations, data_descriptor=data_descriptor)
 
