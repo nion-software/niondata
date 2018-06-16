@@ -1,8 +1,8 @@
 Changelog (niondata)
 ====================
 
-UNRELEASED
-----------
+0.13.3 (2018-06-15)
+-------------------
 
 - Fix squeeze to not remove last datum dimension.
 
