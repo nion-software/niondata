@@ -1258,7 +1258,7 @@ def function_resize(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: D
                 slices.append(slice(left, left + new_size))
             else:
                 slices.append(slice(None))
-        data = data[slices]
+        data = data[tuple(slices)]
         data_shape = data_and_metadata.data_shape
         pads = list()
         for data_size, new_size in zip(data_shape, shape):
