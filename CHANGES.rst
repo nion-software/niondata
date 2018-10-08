@@ -1,6 +1,11 @@
 Changelog (niondata)
 ====================
 
+0.13.4 (UNRELEASED)
+-------------------
+
+- Provide more descriptive data dimensions string.
+
 0.13.3 (2018-06-15)
 -------------------
 

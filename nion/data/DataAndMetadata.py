@@ -308,15 +308,26 @@ class DataMetadata:
             return True
         return False
 
+    def __get_size_str(self, data_shape: typing.Sequence[int], is_spatial: bool = False) -> str:
+        spatial_shape_str = " x ".join([str(d) for d in data_shape])
+        if is_spatial and len(data_shape) == 1:
+            spatial_shape_str += " x 1"
+        return "(" + spatial_shape_str + ")"
+
     @property
     def size_and_data_format_as_string(self) -> str:
         try:
             dimensional_shape = self.dimensional_shape
             data_dtype = self.data_dtype
             if dimensional_shape is not None and data_dtype is not None:
-                spatial_shape_str = " x ".join([str(d) for d in dimensional_shape])
-                if len(dimensional_shape) == 1:
-                    spatial_shape_str += " x 1"
+                shape_str_list = list()
+                if self.is_sequence:
+                    shape_str_list.append("S" + self.__get_size_str(self.sequence_dimension_shape))
+                if self.collection_dimension_count > 0:
+                    shape_str_list.append("C" + self.__get_size_str(self.collection_dimension_shape))
+                if self.datum_dimension_count > 0:
+                    shape_str_list.append("D" + self.__get_size_str(self.datum_dimension_shape, True))
+                shape_str = " x ".join(shape_str_list)
                 dtype_names = {
                     numpy.bool: _("Boolean (1-bit)"),
                     numpy.bool_: _("Boolean (1-bit)"),
@@ -339,7 +350,7 @@ class DataMetadata:
                     if not self.data_dtype.type in dtype_names:
                         logging.debug("Unknown dtype %s", self.data_dtype.type)
                     data_size_and_data_format_as_string = dtype_names[self.data_dtype.type] if self.data_dtype.type in dtype_names else _("Unknown Data Type")
-                return "{0}, {1}".format(spatial_shape_str, data_size_and_data_format_as_string)
+                return "{0}, {1}".format(shape_str, data_size_and_data_format_as_string)
             return _("No Data")
         except Exception as e:
             import traceback
