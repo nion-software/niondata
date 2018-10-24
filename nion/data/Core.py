@@ -329,37 +329,53 @@ def function_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata
     return function_shift(target, function_register(src, target, upsample_factor, True))
 
 
-def function_sequence_register_translation(src: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool) -> DataAndMetadata.DataAndMetadata:
+def function_sequence_register_translation(src: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     src = DataAndMetadata.promote_ndarray(src)
-    if not src.is_sequence:
+    d_rank = src.datum_dimension_count
+    if len(src.data_shape) <= d_rank:
         return None
-    c = src.sequence_dimension_shape[0]
-    dim = src.data_shape[1:]
-    if len(dim) < 1 or len(dim) > 2:
+    if d_rank < 1 or d_rank > 2:
         return None
-    result = numpy.empty((c - 1, len(dim)))
+    src_shape = tuple(src.data_shape)
+    s_shape = src_shape[0:-d_rank]
+    c = int(numpy.product(s_shape))
+    result = numpy.empty(s_shape + (d_rank, ))
     previous_data = None
+    src_data = src.data
     for i in range(c):
+        ii = numpy.unravel_index(i, s_shape) + (Ellipsis, )
         if previous_data is None:
-            previous_data = src.data[i, ...]
+            previous_data = src_data[ii]
+            result[0, ...] = 0
         else:
-            current_data = src.data[i, ...]
-            result[i - 1, ...] = function_register(previous_data, current_data, upsample_factor, subtract_means)
+            current_data = src_data[ii]
+            result[ii] = function_register(previous_data, current_data, upsample_factor, subtract_means)
             previous_data = current_data
     intensity_calibration = src.dimensional_calibrations[1]  # not the sequence dimension
     return DataAndMetadata.new_data_and_metadata(result, intensity_calibration=intensity_calibration)
 
 
-def function_sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int) -> DataAndMetadata.DataAndMetadata:
+def function_sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     src = DataAndMetadata.promote_ndarray(src)
+    d_rank = src.datum_dimension_count
+    if len(src.data_shape) <= d_rank:
+        return None
+    if d_rank < 1 or d_rank > 2:
+        return None
+    src_shape = list(src.data_shape)
+    s_shape = src_shape[0:-d_rank]
+    c = int(numpy.product(s_shape))
     translations = function_sequence_register_translation(src, upsample_factor, True)
     if not translations:
         return None
     result_data = numpy.copy(src.data)
-    for i in range(translations.data_shape[0]):
-        current_xdata = DataAndMetadata.new_data_and_metadata(numpy.copy(result_data[i + 1]))
-        cumulative_shift = numpy.sum(translations.data[0:i + 1], axis=0)
-        result_data[i + 1, ...] = function_shift(current_xdata, cumulative_shift).data
+    cumulative_shift = numpy.zeros((1) * d_rank)
+    for i in range(1, c):
+        ii = numpy.unravel_index(i, s_shape) + (Ellipsis, )
+        current_xdata = DataAndMetadata.new_data_and_metadata(numpy.copy(result_data[ii]))
+        translation = translations.data[numpy.unravel_index(i, s_shape)]
+        cumulative_shift += translation
+        result_data[ii] = function_shift(current_xdata, tuple(cumulative_shift)).data
     return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=src.intensity_calibration, dimensional_calibrations=src.dimensional_calibrations, data_descriptor=src.data_descriptor)
 
 

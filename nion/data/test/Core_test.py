@@ -288,7 +288,7 @@ class TestCore(unittest.TestCase):
             sdata[p, ...] = Core.function_shift(xdata, shift).data
         sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
         shifts = Core.function_sequence_register_translation(sxdata, 100, True).data
-        self.assertEqual(shifts.shape, (sdata.shape[0] - 1, 2))
+        self.assertEqual(shifts.shape, (sdata.shape[0], 2))
         self.assertAlmostEqual(shifts[sdata.shape[0] // 2][0], 1 / (sdata.shape[0] - 1) * 3.4, 1)
         self.assertAlmostEqual(shifts[sdata.shape[0] // 2][1], 1 / (sdata.shape[0] - 1) * -1.2, 1)
         self.assertAlmostEqual(numpy.sum(shifts, axis=0)[0], 3.4, 0)
@@ -304,9 +304,41 @@ class TestCore(unittest.TestCase):
             sdata[p, ...] = Core.function_shift(xdata, shift).data
         sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 1))
         shifts = Core.function_sequence_register_translation(sxdata, 100, True).data
-        self.assertEqual(shifts.shape, (sdata.shape[0] - 1, 1))
+        self.assertEqual(shifts.shape, (sdata.shape[0], 1))
         self.assertAlmostEqual(shifts[sdata.shape[0] // 2][0], 1 / (sdata.shape[0] - 1) * 3.4, 1)
         self.assertAlmostEqual(numpy.sum(shifts, axis=0)[0], 3.4, 0)
+
+    def test_sequence_register_produces_correctly_shaped_output_on_2dx1d_data(self):
+        random_state = numpy.random.get_state()
+        numpy.random.seed(1)
+        data = numpy.random.randn(64)
+        data[30:40] += 10
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        sdata = numpy.empty((6, 6, 64))
+        for p in range(sdata.shape[0]):
+            for q in range(sdata.shape[1]):
+                shift = [((p + q) / 2 / (sdata.shape[0] - 1) * -3.4)]
+                sdata[q, p, ...] = Core.function_shift(xdata, shift).data
+        sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 1))
+        shifts = Core.function_sequence_register_translation(sxdata, 100, True).data
+        self.assertEqual(shifts.shape, (6, 6, 1))
+        numpy.random.set_state(random_state)
+
+    def test_sequence_register_produces_correctly_shaped_output_on_2dx2d_data(self):
+        random_state = numpy.random.get_state()
+        numpy.random.seed(1)
+        data = numpy.random.randn(64, 64)
+        data[30:40, 30:40] += 10
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        sdata = numpy.empty((6, 6, 64, 64))
+        for p in range(sdata.shape[0]):
+            for q in range(sdata.shape[1]):
+                shift = (p / (sdata.shape[0] - 1) * -3.4, q / (sdata.shape[0] - 1) * 1.2)
+                sdata[q, p, ...] = Core.function_shift(xdata, shift).data
+        sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 2))
+        shifts = Core.function_sequence_register_translation(sxdata, 100, True).data
+        self.assertEqual(shifts.shape, (6, 6, 2))
+        numpy.random.set_state(random_state)
 
     def test_sequence_align_works_on_2d_data_without_errors(self):
         random_state = numpy.random.get_state()
@@ -341,6 +373,45 @@ class TestCore(unittest.TestCase):
         shifts = Core.function_sequence_register_translation(aligned_sxdata, 100, True).data
         shifts_total = numpy.sum(shifts, axis=0)
         self.assertAlmostEqual(shifts_total[0], 0.0)
+        numpy.random.set_state(random_state)
+
+    def test_sequence_align_works_on_2dx1d_data_without_errors(self):
+        random_state = numpy.random.get_state()
+        numpy.random.seed(1)
+        data = numpy.random.randn(64)
+        data[30:40] += 10
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        sdata = numpy.empty((6, 6, 64))
+        for p in range(sdata.shape[0]):
+            for q in range(sdata.shape[1]):
+                shift = [((p + q) / 2 / (sdata.shape[0] - 1) * -3.4)]
+                sdata[q, p, ...] = Core.function_shift(xdata, shift).data
+        sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 1))
+        aligned_sxdata = Core.function_sequence_align(sxdata, 100)
+        aligned_sxdata = DataAndMetadata.new_data_and_metadata(aligned_sxdata.data.reshape(36, 64), data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 1))
+        shifts = Core.function_sequence_register_translation(aligned_sxdata, 100, True).data
+        shifts_total = numpy.sum(shifts, axis=0)
+        self.assertAlmostEqual(shifts_total[0], 0.0)
+        numpy.random.set_state(random_state)
+
+    def test_sequence_align_works_on_2dx2d_data_without_errors(self):
+        random_state = numpy.random.get_state()
+        numpy.random.seed(1)
+        data = numpy.random.randn(64, 64)
+        data[30:40, 30:40] += 10
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        sdata = numpy.empty((6, 6, 64, 64))
+        for p in range(sdata.shape[0]):
+            for q in range(sdata.shape[1]):
+                shift = (p / (sdata.shape[0] - 1) * -3.4, q / (sdata.shape[0] - 1) * 1.2)
+                sdata[q, p, ...] = Core.function_shift(xdata, shift).data
+        sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 2))
+        aligned_sxdata = Core.function_sequence_align(sxdata, 100)
+        aligned_sxdata = DataAndMetadata.new_data_and_metadata(aligned_sxdata.data.reshape(36, 64, 64), data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
+        shifts = Core.function_sequence_register_translation(aligned_sxdata, 100, True).data
+        shifts_total = numpy.sum(shifts, axis=0)
+        self.assertAlmostEqual(shifts_total[0], 0.0, places=1)
+        self.assertAlmostEqual(shifts_total[1], 0.0, places=1)
         numpy.random.set_state(random_state)
 
     def test_resize_works_to_make_one_dimension_larger_and_one_smaller(self):

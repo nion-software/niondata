@@ -4,6 +4,8 @@ Changelog (niondata)
 0.13.4 (UNRELEASED)
 -------------------
 
+- Generalize align and register sequence to accept any combo of sequence and collection dimensions.
+
 - Provide more descriptive data dimensions string.
 
 0.13.3 (2018-06-15)
