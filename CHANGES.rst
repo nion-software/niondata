@@ -4,6 +4,8 @@ Changelog (niondata)
 0.13.4 (UNRELEASED)
 -------------------
 
+- Add measure_relative_translation function to xdata. Utilize in align.
+
 - Generalize align and register sequence to accept any combo of sequence and collection dimensions.
 
 - Provide more descriptive data dimensions string.

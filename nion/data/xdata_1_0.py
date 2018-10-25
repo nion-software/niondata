@@ -255,6 +255,9 @@ def align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndM
 def sequence_register_translation(src: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1, subtract_means: bool = True) -> DataAndMetadata.DataAndMetadata:
     return Core.function_sequence_register_translation(src, upsample_factor, subtract_means)
 
+def sequence_measure_relative_translation(src: DataAndMetadata.DataAndMetadata, ref: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1, subtract_means: bool = True) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_sequence_measure_relative_translation(src, ref, upsample_factor, subtract_means)
+
 def sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1) -> DataAndMetadata.DataAndMetadata:
     return Core.function_sequence_align(src, upsample_factor)
 
