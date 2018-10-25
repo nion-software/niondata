@@ -354,8 +354,8 @@ class TestCore(unittest.TestCase):
         aligned_sxdata = Core.function_sequence_align(sxdata, 100)
         shifts = Core.function_sequence_register_translation(aligned_sxdata, 100, True).data
         shifts_total = numpy.sum(shifts, axis=0)
-        self.assertAlmostEqual(shifts_total[0], 0.0)
-        self.assertAlmostEqual(shifts_total[1], 0.0)
+        self.assertAlmostEqual(shifts_total[0], 0.0, places=1)
+        self.assertAlmostEqual(shifts_total[1], 0.0, places=1)
         numpy.random.set_state(random_state)
 
     def test_sequence_align_works_on_1d_data_without_errors(self):
@@ -372,7 +372,7 @@ class TestCore(unittest.TestCase):
         aligned_sxdata = Core.function_sequence_align(sxdata, 100)
         shifts = Core.function_sequence_register_translation(aligned_sxdata, 100, True).data
         shifts_total = numpy.sum(shifts, axis=0)
-        self.assertAlmostEqual(shifts_total[0], 0.0)
+        self.assertAlmostEqual(shifts_total[0], 0.0, places=1)
         numpy.random.set_state(random_state)
 
     def test_sequence_align_works_on_2dx1d_data_without_errors(self):
