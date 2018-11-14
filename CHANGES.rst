@@ -1,7 +1,7 @@
 Changelog (niondata)
 ====================
 
-0.13.4 (UNRELEASED)
+0.13.4 (2018-11-13)
 -------------------
 
 - Add measure_relative_translation function to xdata. Utilize in align.
