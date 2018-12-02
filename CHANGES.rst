@@ -1,6 +1,11 @@
 Changelog (niondata)
 ====================
 
+0.13.5 (UNRELEASED)
+-------------------
+
+- Add setters for timezone, timezone_offset, and timestamp.
+
 0.13.4 (2018-11-13)
 -------------------
 

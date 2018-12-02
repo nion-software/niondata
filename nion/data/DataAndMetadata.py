@@ -619,13 +619,25 @@ class DataAndMetadata:
     def timestamp(self) -> datetime.datetime:
         return self.__data_metadata.timestamp
 
+    @timestamp.setter
+    def timestamp(self, value):
+        self.__data_metadata.timestamp = value
+
     @property
     def timezone(self) -> str:
         return self.__data_metadata.timezone
 
+    @timezone.setter
+    def timezone(self, value):
+        self.__data_metadata.timezone = value
+
     @property
     def timezone_offset(self) -> str:
         return self.__data_metadata.timezone_offset
+
+    @timezone_offset.setter
+    def timezone_offset(self, value):
+        self.__data_metadata.timezone_offset = value
 
     @property
     def is_data_1d(self) -> bool:
