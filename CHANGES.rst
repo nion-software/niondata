@@ -1,6 +1,11 @@
 Changelog (niondata)
 ====================
 
+0.13.6 (2018-12-12)
+-------------------
+
+- Add methods for better control of data ref count.
+
 0.13.5 (2018-12-11)
 -------------------
 

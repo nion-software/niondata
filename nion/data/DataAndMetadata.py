@@ -600,6 +600,18 @@ class DataAndMetadata:
         with self.__data_lock:
             self.__data_ref_count += data_ref_count
 
+    def _subtract_data_ref_count(self, data_ref_count: int) -> None:
+        with self.__data_lock:
+            self.__data_ref_count -= data_ref_count
+            assert self.__data_ref_count >= 0
+            if self.__data_ref_count == 0 and self.unloadable:
+                self.__data = None
+                self.__data_valid = False
+
+    @property
+    def _data_ref_count(self) -> int:
+        return self.__data_ref_count
+
     def _set_intensity_calibration(self, intensity_calibration: Calibration.Calibration) -> None:
         self.__data_metadata._set_intensity_calibration(intensity_calibration)
 
