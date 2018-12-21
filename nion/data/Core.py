@@ -1091,6 +1091,54 @@ def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typin
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
+def function_mean(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Union[int, typing.Sequence[int]]=None) -> DataAndMetadata.DataAndMetadata:
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
+
+    data_shape = data_and_metadata.data_shape
+    data_dtype = data_and_metadata.data_dtype
+
+    def calculate_data():
+        data = data_and_metadata.data
+        if not Image.is_data_valid(data):
+            return None
+        if Image.is_shape_and_dtype_rgb_type(data.shape, data.dtype):
+            if Image.is_shape_and_dtype_rgb(data.shape, data.dtype):
+                rgb_image = numpy.empty(data.shape[1:], numpy.uint8)
+                rgb_image[:,0] = numpy.average(data[...,0], axis)
+                rgb_image[:,1] = numpy.average(data[...,1], axis)
+                rgb_image[:,2] = numpy.average(data[...,2], axis)
+                return rgb_image
+            else:
+                rgba_image = numpy.empty(data.shape[1:], numpy.uint8)
+                rgba_image[:,0] = numpy.average(data[...,0], axis)
+                rgba_image[:,1] = numpy.average(data[...,1], axis)
+                rgba_image[:,2] = numpy.average(data[...,2], axis)
+                rgba_image[:,3] = numpy.average(data[...,3], axis)
+                return rgba_image
+        else:
+            return numpy.mean(data, axis)
+
+    dimensional_calibrations = data_and_metadata.dimensional_calibrations
+
+    if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
+        return None
+
+    new_dimensional_calibrations = list()
+
+    if isinstance(axis, numbers.Integral):
+        for index, dimensional_calibration in enumerate(dimensional_calibrations):
+            if index != axis:
+                new_dimensional_calibrations.append(dimensional_calibration)
+    elif isinstance(axis, collections.Sequence):
+        axes = tuple(axis)
+        for index, dimensional_calibration in enumerate(dimensional_calibrations):
+            if not index in axes:
+                new_dimensional_calibrations.append(dimensional_calibration)
+
+    dimensional_calibrations = new_dimensional_calibrations
+
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
+
 
 def function_sum_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
