@@ -1,6 +1,11 @@
 Changelog (niondata)
 ====================
 
+0.13.7 (UNRELEASED)
+-------------------
+
+- Added mean function. Add keepdim param to mean/sum. Allow negative indices.
+
 0.13.6 (2018-12-28)
 -------------------
 

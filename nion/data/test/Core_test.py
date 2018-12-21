@@ -130,6 +130,44 @@ class TestCore(unittest.TestCase):
         dst = Core.function_sum(src, (0, 1))
         self.assertEqual(dst.data_shape, dst.data.shape)
 
+    def test_sum_over_two_axes_returns_correct_calibrations(self):
+        dimensional_calibrations = [
+            Calibration.Calibration(1, 11, "one"),
+            Calibration.Calibration(2, 22, "two"),
+            Calibration.Calibration(3, 33, "three"),
+        ]
+        src = DataAndMetadata.new_data_and_metadata(numpy.ones((4, 4, 16)), dimensional_calibrations=dimensional_calibrations)
+        dst = Core.function_sum(src, 2)
+        self.assertEqual(2, len(dst.dimensional_calibrations))
+        self.assertEqual(dimensional_calibrations[0], dst.dimensional_calibrations[0])
+        self.assertEqual(dimensional_calibrations[1], dst.dimensional_calibrations[1])
+        dst = Core.function_sum(src, (0, 1))
+        self.assertEqual(1, len(dst.dimensional_calibrations))
+        self.assertEqual(dimensional_calibrations[2], dst.dimensional_calibrations[0])
+        dst = Core.function_sum(src, -1)
+        self.assertEqual(2, len(dst.dimensional_calibrations))
+        self.assertEqual(dimensional_calibrations[0], dst.dimensional_calibrations[0])
+        self.assertEqual(dimensional_calibrations[1], dst.dimensional_calibrations[1])
+
+    def test_mean_over_two_axes_returns_correct_calibrations(self):
+        dimensional_calibrations = [
+            Calibration.Calibration(1, 11, "one"),
+            Calibration.Calibration(2, 22, "two"),
+            Calibration.Calibration(3, 33, "three"),
+        ]
+        src = DataAndMetadata.new_data_and_metadata(numpy.ones((4, 4, 16)), dimensional_calibrations=dimensional_calibrations)
+        dst = Core.function_mean(src, 2)
+        self.assertEqual(2, len(dst.dimensional_calibrations))
+        self.assertEqual(dimensional_calibrations[0], dst.dimensional_calibrations[0])
+        self.assertEqual(dimensional_calibrations[1], dst.dimensional_calibrations[1])
+        dst = Core.function_mean(src, (0, 1))
+        self.assertEqual(1, len(dst.dimensional_calibrations))
+        self.assertEqual(dimensional_calibrations[2], dst.dimensional_calibrations[0])
+        dst = Core.function_mean(src, -1)
+        self.assertEqual(2, len(dst.dimensional_calibrations))
+        self.assertEqual(dimensional_calibrations[0], dst.dimensional_calibrations[0])
+        self.assertEqual(dimensional_calibrations[1], dst.dimensional_calibrations[1])
+
     def test_sum_over_rgb_produces_correct_data(self):
         data = numpy.zeros((3, 3, 4), numpy.uint8)
         data[1, 0] = (3, 3, 3, 3)
