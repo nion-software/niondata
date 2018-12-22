@@ -1075,12 +1075,18 @@ def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typin
     if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
         return None
 
-    dimensional_calibrations = dimensional_calibrations.copy()
+    new_dimensional_calibrations = list()
 
     if not keepdims or Image.is_shape_and_dtype_rgb_type(data_shape, data_dtype):
-        axis2 = numpy.atleast_1d(axis)
-        for index in axis2:
-            dimensional_calibrations.pop(index)
+        axes = numpy.atleast_1d(axis)
+        for i in range(len(axes)):
+            if axes[i] < 0:
+                axes[i] += len(dimensional_calibrations)
+        for i in range(len(dimensional_calibrations)):
+            if not i in axes:
+                new_dimensional_calibrations.append(dimensional_calibrations[i])
+
+    dimensional_calibrations = new_dimensional_calibrations
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
@@ -1116,12 +1122,18 @@ def function_mean(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typi
     if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
         return None
 
-    dimensional_calibrations = dimensional_calibrations.copy()
+    new_dimensional_calibrations = list()
 
     if not keepdims or Image.is_shape_and_dtype_rgb_type(data_shape, data_dtype):
-        axis2 = numpy.atleast_1d(axis)
-        for index in axis2:
-            dimensional_calibrations.pop(index)
+        axes = numpy.atleast_1d(axis)
+        for i in range(len(axes)):
+            if axes[i] < 0:
+                axes[i] += len(dimensional_calibrations)
+        for i in range(len(dimensional_calibrations)):
+            if not i in axes:
+                new_dimensional_calibrations.append(dimensional_calibrations[i])
+
+    dimensional_calibrations = new_dimensional_calibrations
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
