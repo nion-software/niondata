@@ -1078,8 +1078,8 @@ def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typin
     dimensional_calibrations = dimensional_calibrations.copy()
 
     if not keepdims or Image.is_shape_and_dtype_rgb_type(data_shape, data_dtype):
-        axis = numpy.atleast_1d(axis)
-        for index in axis:
+        axis2 = numpy.atleast_1d(axis)
+        for index in axis2:
             dimensional_calibrations.pop(index)
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
@@ -1119,8 +1119,8 @@ def function_mean(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typi
     dimensional_calibrations = dimensional_calibrations.copy()
 
     if not keepdims or Image.is_shape_and_dtype_rgb_type(data_shape, data_dtype):
-        axis = numpy.atleast_1d(axis)
-        for index in axis:
+        axis2 = numpy.atleast_1d(axis)
+        for index in axis2:
             dimensional_calibrations.pop(index)
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
