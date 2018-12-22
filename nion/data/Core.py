@@ -1043,7 +1043,7 @@ def function_moveaxis(data_and_metadata: DataAndMetadata.DataAndMetadata, src_ax
     return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
-def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Union[int, typing.Sequence[int]]=None, keepdims: bool=numpy._NoValue) -> DataAndMetadata.DataAndMetadata:
+def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Union[int, typing.Sequence[int]]=None, keepdims: bool=False) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     data_shape = data_and_metadata.data_shape
@@ -1077,14 +1077,14 @@ def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typin
 
     dimensional_calibrations = dimensional_calibrations.copy()
 
-    if keepdims is numpy._NoValue or not keepdims or Image.is_shape_and_dtype_rgb_type(data_shape, data_dtype):
+    if not keepdims or Image.is_shape_and_dtype_rgb_type(data_shape, data_dtype):
         axis = numpy.atleast_1d(axis)
         for index in axis:
             dimensional_calibrations.pop(index)
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
-def function_mean(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Union[int, typing.Sequence[int]]=None, keepdims: bool=numpy._NoValue) -> DataAndMetadata.DataAndMetadata:
+def function_mean(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Union[int, typing.Sequence[int]]=None, keepdims: bool=False) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     data_shape = data_and_metadata.data_shape
@@ -1118,7 +1118,7 @@ def function_mean(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typi
 
     dimensional_calibrations = dimensional_calibrations.copy()
 
-    if keepdims is numpy._NoValue or not keepdims or Image.is_shape_and_dtype_rgb_type(data_shape, data_dtype):
+    if not keepdims or Image.is_shape_and_dtype_rgb_type(data_shape, data_dtype):
         axis = numpy.atleast_1d(axis)
         for index in axis:
             dimensional_calibrations.pop(index)
