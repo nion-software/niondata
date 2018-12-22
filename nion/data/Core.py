@@ -1043,7 +1043,7 @@ def function_moveaxis(data_and_metadata: DataAndMetadata.DataAndMetadata, src_ax
     return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
-def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Union[int, typing.Sequence[int]]=None) -> DataAndMetadata.DataAndMetadata:
+def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Union[int, typing.Sequence[int]]=None, keepdims: bool=numpy._NoValue) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     data_shape = data_and_metadata.data_shape
@@ -1068,30 +1068,23 @@ def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typin
                 rgba_image[:,3] = numpy.average(data[...,3], axis)
                 return rgba_image
         else:
-            return numpy.sum(data, axis)
+            return numpy.sum(data, axis, keepdims=keepdims)
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
     if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
         return None
 
-    new_dimensional_calibrations = list()
+    dimensional_calibrations = dimensional_calibrations.copy()
 
-    if isinstance(axis, numbers.Integral):
-        for index, dimensional_calibration in enumerate(dimensional_calibrations):
-            if index != axis:
-                new_dimensional_calibrations.append(dimensional_calibration)
-    elif isinstance(axis, collections.Sequence):
-        axes = tuple(axis)
-        for index, dimensional_calibration in enumerate(dimensional_calibrations):
-            if not index in axes:
-                new_dimensional_calibrations.append(dimensional_calibration)
-
-    dimensional_calibrations = new_dimensional_calibrations
+    if keepdims is numpy._NoValue or not keepdims or Image.is_shape_and_dtype_rgb_type(data_shape, data_dtype):
+        axis = numpy.atleast_1d(axis)
+        for index in axis:
+            dimensional_calibrations.pop(index)
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
-def function_mean(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Union[int, typing.Sequence[int]]=None) -> DataAndMetadata.DataAndMetadata:
+def function_mean(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Union[int, typing.Sequence[int]]=None, keepdims: bool=numpy._NoValue) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     data_shape = data_and_metadata.data_shape
@@ -1116,26 +1109,19 @@ def function_mean(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typi
                 rgba_image[:,3] = numpy.average(data[...,3], axis)
                 return rgba_image
         else:
-            return numpy.mean(data, axis)
+            return numpy.mean(data, axis, keepdims=keepdims)
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
     if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
         return None
 
-    new_dimensional_calibrations = list()
+    dimensional_calibrations = dimensional_calibrations.copy()
 
-    if isinstance(axis, numbers.Integral):
-        for index, dimensional_calibration in enumerate(dimensional_calibrations):
-            if index != axis:
-                new_dimensional_calibrations.append(dimensional_calibration)
-    elif isinstance(axis, collections.Sequence):
-        axes = tuple(axis)
-        for index, dimensional_calibration in enumerate(dimensional_calibrations):
-            if not index in axes:
-                new_dimensional_calibrations.append(dimensional_calibration)
-
-    dimensional_calibrations = new_dimensional_calibrations
+    if keepdims is numpy._NoValue or not keepdims or Image.is_shape_and_dtype_rgb_type(data_shape, data_dtype):
+        axis = numpy.atleast_1d(axis)
+        for index in axis:
+            dimensional_calibrations.pop(index)
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
