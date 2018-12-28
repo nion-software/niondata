@@ -351,7 +351,7 @@ def create_rgba_image_from_array(array, normalize=True, data_range=None, display
                         numpy.subtract(clipped_array, nmin_new, out=clipped_array)
                         numpy.multiply(clipped_array, m, out=clipped_array)
                     else:
-                        clipped_array = clipped_array * m
+                        clipped_array = (clipped_array - nmin_new) * m
                     # 16ms
                     get_red_view(rgba_image)[:] = clipped_array
                     get_green_view(rgba_image)[:] = clipped_array

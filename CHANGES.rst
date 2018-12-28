@@ -1,8 +1,10 @@
 Changelog (niondata)
 ====================
 
-0.13.6 (2018-12-12)
+0.13.6 (UNRELEASED)
 -------------------
+
+- Fix display RGB calculation on integer images.
 
 - Add methods for better control of data ref count.
 

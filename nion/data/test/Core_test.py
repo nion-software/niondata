@@ -255,6 +255,12 @@ class TestCore(unittest.TestCase):
         data_and_metadata = DataAndMetadata.new_data_and_metadata(random_data)
         Core.function_display_rgba(data_and_metadata)
 
+    def test_create_rgba_image_from_uint16(self):
+        image = numpy.mgrid[22000:26096:256, 0:16][0].astype(numpy.uint16)
+        image_rgb = Core.function_display_rgba(DataAndMetadata.new_data_and_metadata(image), display_range=(22000, 26096)).data
+        # image_rgb = Image.create_rgba_image_from_array(image, display_limits=(22000, 26096))
+        self.assertGreater(image_rgb[15, 15], image_rgb[0, 0])
+
     def test_align_works_on_2d_data(self):
         data = numpy.random.randn(64, 64)
         data[30:40, 30:40] += 10
