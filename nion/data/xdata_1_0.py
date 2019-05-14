@@ -252,17 +252,17 @@ def register_translation(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAn
 def shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...]) -> DataAndMetadata.DataAndMetadata:
     return Core.function_shift(src, shift)
 
-def align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1) -> DataAndMetadata.DataAndMetadata:
-    return Core.function_align(src, target, upsample_factor)
+def align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1, bounds: typing.Union[Core.NormRectangleType, Core.NormIntervalType] = None) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_align(src, target, upsample_factor, bounds=bounds)
 
-def sequence_register_translation(src: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1, subtract_means: bool = True) -> DataAndMetadata.DataAndMetadata:
+def sequence_register_translation(src: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1, subtract_means: bool = True, bounds: typing.Union[Core.NormRectangleType, Core.NormIntervalType] = None) -> DataAndMetadata.DataAndMetadata:
     return Core.function_sequence_register_translation(src, upsample_factor, subtract_means)
 
-def sequence_measure_relative_translation(src: DataAndMetadata.DataAndMetadata, ref: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1, subtract_means: bool = True) -> DataAndMetadata.DataAndMetadata:
-    return Core.function_sequence_measure_relative_translation(src, ref, upsample_factor, subtract_means)
+def sequence_measure_relative_translation(src: DataAndMetadata.DataAndMetadata, ref: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1, subtract_means: bool = True, bounds: typing.Union[Core.NormRectangleType, Core.NormIntervalType] = None) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_sequence_measure_relative_translation(src, ref, upsample_factor, subtract_means, bounds=bounds)
 
-def sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1) -> DataAndMetadata.DataAndMetadata:
-    return Core.function_sequence_align(src, upsample_factor)
+def sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1, bounds: typing.Union[Core.NormRectangleType, Core.NormIntervalType] = None) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_sequence_align(src, upsample_factor, bounds=bounds)
 
 def sequence_integrate(src: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
     return Core.function_sequence_integrate(src)

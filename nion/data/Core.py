@@ -293,13 +293,26 @@ def function_crosscorrelate(*args) -> DataAndMetadata.DataAndMetadata:
     return DataAndMetadata.new_data_and_metadata(calculate_data(), dimensional_calibrations=data_and_metadata1.dimensional_calibrations)
 
 
-def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool) -> typing.Tuple[float, ...]:
+def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool, bounds: typing.Union[NormRectangleType, NormIntervalType]=None) -> typing.Tuple[float, ...]:
     xdata1 = DataAndMetadata.promote_ndarray(xdata1)
     xdata2 = DataAndMetadata.promote_ndarray(xdata2)
-
+    if bounds is not None:
+        d_rank = xdata1.datum_dimension_count
+        shape = xdata1.data.shape
+        bounds_pixels = numpy.rint(numpy.array(bounds) * numpy.array(shape)).astype(numpy.int_)
+        if d_rank == 1:
+            bounds_slice = slice(max(0, bounds_pixels[0]), min(shape[0], bounds_pixels[1]))
+        elif d_rank == 2:
+            bounds_slice = (slice(max(0, bounds_pixels[0][0]), min(shape[0], bounds_pixels[0][0]+bounds_pixels[1][0])),
+                            slice(max(0, bounds_pixels[0][1]), min(shape[1], bounds_pixels[0][1]+bounds_pixels[1][1])))
+        else:
+            bounds_slice = None
     # FUTURE: use scikit.image register_translation
     data1 = xdata1.data
     data2 = xdata2.data
+    if bounds is not None:
+        data1 = data1[bounds_slice]
+        data2 = data2[bounds_slice]
     if subtract_means:
         data1 = data1 - numpy.average(data1)
         data2 = data2 - numpy.average(data2)
@@ -308,8 +321,8 @@ def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMe
         data1 = data1[..., numpy.newaxis]
     if len(data2.shape) == 1:
         data2 = data2[..., numpy.newaxis]
-    return tuple(ImageRegistration.dftregistration(data1, data2, upsample_factor)[0:data_shape])
-
+    result = ImageRegistration.dftregistration(data1, data2, upsample_factor)[0:data_shape]
+    return result
 
 def function_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...]) -> DataAndMetadata.DataAndMetadata:
     src = DataAndMetadata.promote_ndarray(src)
@@ -322,14 +335,14 @@ def function_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[flo
     return DataAndMetadata.new_data_and_metadata(numpy.squeeze(shifted))
 
 
-def function_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int) -> DataAndMetadata.DataAndMetadata:
+def function_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> DataAndMetadata.DataAndMetadata:
     """Aligns target to src and returns align target, using Fourier space."""
     src = DataAndMetadata.promote_ndarray(src)
     target = DataAndMetadata.promote_ndarray(target)
-    return function_shift(target, function_register(src, target, upsample_factor, True))
+    return function_shift(target, function_register(src, target, upsample_factor, True, bounds=bounds))
 
 
-def function_sequence_register_translation(src: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+def function_sequence_register_translation(src: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     src = DataAndMetadata.promote_ndarray(src)
     d_rank = src.datum_dimension_count
     if len(src.data_shape) <= d_rank:
@@ -349,13 +362,13 @@ def function_sequence_register_translation(src: DataAndMetadata.DataAndMetadata,
             result[0, ...] = 0
         else:
             current_data = src_data[ii]
-            result[ii] = function_register(previous_data, current_data, upsample_factor, subtract_means)
+            result[ii] = function_register(previous_data, current_data, upsample_factor, subtract_means, bounds=bounds)
             previous_data = current_data
     intensity_calibration = src.dimensional_calibrations[1]  # not the sequence dimension
     return DataAndMetadata.new_data_and_metadata(result, intensity_calibration=intensity_calibration)
 
 
-def function_sequence_measure_relative_translation(src: DataAndMetadata.DataAndMetadata, ref: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+def function_sequence_measure_relative_translation(src: DataAndMetadata.DataAndMetadata, ref: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     src = DataAndMetadata.promote_ndarray(src)
     d_rank = src.datum_dimension_count
     if len(src.data_shape) <= d_rank:
@@ -370,12 +383,12 @@ def function_sequence_measure_relative_translation(src: DataAndMetadata.DataAndM
     for i in range(c):
         ii = numpy.unravel_index(i, s_shape) + (Ellipsis, )
         current_data = src_data[ii]
-        result[ii] = function_register(ref, current_data, upsample_factor, subtract_means)
+        result[ii] = function_register(ref, current_data, upsample_factor, subtract_means, bounds=bounds)
     intensity_calibration = src.dimensional_calibrations[1]  # not the sequence dimension
     return DataAndMetadata.new_data_and_metadata(result, intensity_calibration=intensity_calibration)
 
 
-def function_sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+def function_sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     src = DataAndMetadata.promote_ndarray(src)
     d_rank = src.datum_dimension_count
     if len(src.data_shape) <= d_rank:
@@ -386,7 +399,7 @@ def function_sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_facto
     s_shape = src_shape[0:-d_rank]
     c = int(numpy.product(s_shape))
     ref = src[numpy.unravel_index(0, s_shape) + (Ellipsis, )]
-    translations = function_sequence_measure_relative_translation(src, ref, upsample_factor, True)
+    translations = function_sequence_measure_relative_translation(src, ref, upsample_factor, True, bounds=bounds)
     if not translations:
         return None
     result_data = numpy.copy(src.data)
