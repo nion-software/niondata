@@ -311,6 +311,28 @@ class TestCore(unittest.TestCase):
         result = Core.function_align(data, xdata_shifted, 100) - xdata_shifted
         self.assertAlmostEqual(result.data.mean(), 0)
 
+    def test_align_with_bounds_works_on_2d_data(self):
+        random_state = numpy.random.get_state()
+        numpy.random.seed(1)
+        data = numpy.random.randn(64, 64)
+        data[10:20, 10:20] += 10
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        shift = (-3.4, 1.2)
+        xdata_shifted = Core.function_shift(xdata, shift)
+        xdata.data[40:50, 40:50] += 100
+        xdata_shifted.data[40:50, 40:50] += 10
+        bounds = ((5/64, 5/64), (20/64, 20/64))
+        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True, bounds=bounds)
+        self.assertAlmostEqual(shift[0], measured_shift[0], 1)
+        self.assertAlmostEqual(shift[1], measured_shift[1], 1)
+        # Now test that without bounds we find no shift (because the more intense feature does not shift)
+        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True, bounds=None)
+        self.assertAlmostEqual(measured_shift[0], 0, 1)
+        self.assertAlmostEqual(measured_shift[1], 0, 1)
+        result = Core.function_align(data, xdata_shifted, 100, bounds=bounds) - xdata_shifted
+        self.assertAlmostEqual(result.data.mean(), 0)
+        numpy.random.set_state(random_state)
+
     def test_align_works_on_1d_data(self):
         data = numpy.random.randn(64)
         data[30:40] += 10
@@ -321,6 +343,26 @@ class TestCore(unittest.TestCase):
         self.assertAlmostEqual(shift[0], measured_shift[0], 1)
         result = Core.function_align(data, xdata_shifted, 100) - xdata_shifted
         self.assertAlmostEqual(result.data.mean(), 0)
+
+    def test_align_with_bounds_works_on_1d_data(self):
+        random_state = numpy.random.get_state()
+        numpy.random.seed(1)
+        data = numpy.random.randn(64)
+        data[10:20] += 10
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        shift = (-3.4,)
+        xdata_shifted = Core.function_shift(xdata, shift)
+        xdata.data[40:50] += 100
+        xdata_shifted.data[40:50] += 100
+        bounds = (5/64, 25/64)
+        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True, bounds=bounds)
+        self.assertAlmostEqual(shift[0], measured_shift[0], 1)
+        # Now test that without bounds we find no shift (because the more intense feature does not shift)
+        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True, bounds=None)
+        self.assertAlmostEqual(measured_shift[0], 0, 1)
+        result = Core.function_align(data, xdata_shifted, 100, bounds=bounds) - xdata_shifted
+        self.assertAlmostEqual(result.data.mean(), 0)
+        numpy.random.set_state(random_state)
 
     def test_sequence_register_works_on_2d_data(self):
         data = numpy.random.randn(64, 64)

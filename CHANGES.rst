@@ -1,6 +1,11 @@
 Changelog (niondata)
 ====================
 
+0.13.8 (Unreleased)
+-------------------
+
+- Added optional registration area bounds to align and register functions.
+
 0.13.7 (2019-02-27)
 -------------------
 
