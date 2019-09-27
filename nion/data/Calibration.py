@@ -141,7 +141,7 @@ class Calibration(object):
 
     def convert_to_calibrated_value_str(self, value, include_units=True, value_range=None, samples=None, display_inverted=False):
         if hasattr(value, 'dtype') and not value.shape:  # convert NumPy types to Python scalar types
-            value = numpy.asscalar(value)
+            value = value.item()
         if isinstance(value, integer_types) or isinstance(value, float):
             calibrated_value = self.convert_to_calibrated_value(value)
             if value_range and samples:
