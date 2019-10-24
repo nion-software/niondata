@@ -6,7 +6,7 @@ import os
 
 setuptools.setup(
     name="niondata",
-    version="0.13.7",
+    version="0.13.8",
     author="Nion Software",
     author_email="swift@nion.com",
     description="A data processing library for Nion Swift.",
