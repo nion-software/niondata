@@ -984,7 +984,7 @@ def function_data_slice(data_and_metadata, key):
         normalized_slice = normalized_slices[slice_index]
         if normalized_slice[0]:  # if_collapsible
             dimensional_calibration_index += 1
-        else:
+        elif dimensional_calibration_index < len(data_and_metadata.dimensional_calibrations):
             if normalized_slice[1]:  # is_newaxis
                 cropped_calibration = Calibration.Calibration()
             else:

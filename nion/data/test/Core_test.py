@@ -299,6 +299,41 @@ class TestCore(unittest.TestCase):
         # image_rgb = Image.create_rgba_image_from_array(image, display_limits=(22000, 26096))
         self.assertGreater(image_rgb[15, 15], image_rgb[0, 0])
 
+    def test_create_display_from_rgba_sequence_should_work(self):
+        data = (numpy.random.rand(4, 64, 64, 3) * 255).astype(numpy.uint8)
+        xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
+        display_data, modified = Core.function_display_data_no_copy(xdata, 0)
+        self.assertIsNotNone(display_data)
+        self.assertTrue(modified)
+
+    def test_slice_of_2d_works(self):
+        data = numpy.random.rand(64, 64)
+        xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=DataAndMetadata.DataDescriptor(False, 0, 2))
+        self.assertTrue(numpy.array_equal(data[1, ...], xdata[1, ...]))
+        self.assertTrue(numpy.array_equal(data[1, ...], xdata[1]))
+        # slicing out a single value is not yet supported
+        # self.assertTrue(numpy.array_equal(data[1, 2], xdata[1, 2]))
+
+    def test_slice_of_sequence_works(self):
+        data = numpy.random.rand(4, 64, 64)
+        xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
+        self.assertTrue(numpy.array_equal(data[1, ...], xdata[1, ...]))
+        self.assertTrue(numpy.array_equal(data[1, ...], xdata[1]))
+        self.assertTrue(numpy.array_equal(data[1, 30, ...], xdata[1, 30, ...]))
+        self.assertTrue(numpy.array_equal(data[1, 30, ...], xdata[1, 30]))
+        # slicing out a single value is not yet supported
+        # self.assertTrue(numpy.array_equal(data[1, 30, 20], xdata[1, 30, 20]))
+
+    def test_rgb_slice_of_sequence_works(self):
+        data = (numpy.random.rand(4, 64, 64, 3) * 255).astype(numpy.uint8)
+        xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
+        self.assertTrue(numpy.array_equal(data[1, ...], xdata[1, ...]))
+        self.assertTrue(numpy.array_equal(data[1, ...], xdata[1]))
+        self.assertTrue(numpy.array_equal(data[1, 30, ...], xdata[1, 30, ...]))
+        self.assertTrue(numpy.array_equal(data[1, 30, ...], xdata[1, 30]))
+        # slicing out a single value is not yet supported
+        # self.assertTrue(numpy.array_equal(data[1, 30, 20], xdata[1, 30, 20]))
+
     def test_align_works_on_2d_data(self):
         data = numpy.random.randn(64, 64)
         data[30:40, 30:40] += 10

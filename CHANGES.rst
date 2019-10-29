@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+0.13.9 (UNRELEASED)
+-------------------
+- Support slicing on RGB sequences (for display data).
+
 0.13.8 (2019-10-24)
 -------------------
 - Added optional registration area bounds to align and register functions.
