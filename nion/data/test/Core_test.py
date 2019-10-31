@@ -306,6 +306,11 @@ class TestCore(unittest.TestCase):
         self.assertIsNotNone(display_data)
         self.assertTrue(modified)
 
+    def test_ability_to_take_1d_slice_with_newaxis(self):
+        data = numpy.random.rand(64)
+        xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=DataAndMetadata.DataDescriptor(False, 0, 1))
+        self.assertTrue(numpy.array_equal(data[..., numpy.newaxis], xdata[..., numpy.newaxis]))
+
     def test_slice_of_2d_works(self):
         data = numpy.random.rand(64, 64)
         xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=DataAndMetadata.DataDescriptor(False, 0, 2))

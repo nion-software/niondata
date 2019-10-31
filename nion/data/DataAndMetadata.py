@@ -984,16 +984,17 @@ def function_data_slice(data_and_metadata, key):
         normalized_slice = normalized_slices[slice_index]
         if normalized_slice[0]:  # if_collapsible
             dimensional_calibration_index += 1
-        elif dimensional_calibration_index < len(data_and_metadata.dimensional_calibrations):
+        else:
             if normalized_slice[1]:  # is_newaxis
                 cropped_calibration = Calibration.Calibration()
-            else:
+                cropped_dimensional_calibrations.append(cropped_calibration)
+            elif dimensional_calibration_index < len(data_and_metadata.dimensional_calibrations):
                 dimensional_calibration = data_and_metadata.dimensional_calibrations[dimensional_calibration_index]
                 cropped_calibration = Calibration.Calibration(
                     dimensional_calibration.offset + normalized_slice[2].start * dimensional_calibration.scale,
                     dimensional_calibration.scale / normalized_slice[2].step, dimensional_calibration.units)
                 dimensional_calibration_index += 1
-            cropped_dimensional_calibrations.append(cropped_calibration)
+                cropped_dimensional_calibrations.append(cropped_calibration)
 
     is_sequence = data_and_metadata.data_descriptor.is_sequence
     collection_dimension_count = data_and_metadata.data_descriptor.collection_dimension_count
