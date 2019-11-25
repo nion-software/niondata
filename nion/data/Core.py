@@ -294,8 +294,16 @@ def function_crosscorrelate(*args) -> DataAndMetadata.DataAndMetadata:
 
 
 def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool, bounds: typing.Union[NormRectangleType, NormIntervalType]=None) -> typing.Tuple[float, ...]:
+    # FUTURE: use scikit.image register_translation
     xdata1 = DataAndMetadata.promote_ndarray(xdata1)
     xdata2 = DataAndMetadata.promote_ndarray(xdata2)
+    # data shape and descriptors should match
+    assert xdata1.data_shape == xdata2.data_shape
+    assert xdata1.data_descriptor == xdata2.data_descriptor
+    # get the raw data
+    data1 = xdata1.data
+    data2 = xdata2.data
+    # take the slice if there is one
     if bounds is not None:
         d_rank = xdata1.datum_dimension_count
         shape = xdata1.data.shape
@@ -307,32 +315,52 @@ def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMe
                             slice(max(0, bounds_pixels[0][1]), min(shape[1], bounds_pixels[0][1]+bounds_pixels[1][1])))
         else:
             bounds_slice = None
-    # FUTURE: use scikit.image register_translation
-    data1 = xdata1.data
-    data2 = xdata2.data
-    if bounds is not None:
         data1 = data1[bounds_slice]
         data2 = data2[bounds_slice]
+    # subtract the means if desired
     if subtract_means:
         data1 = data1 - numpy.average(data1)
         data2 = data2 - numpy.average(data2)
-    data_shape = len(data1.shape)
+    # adjust the dimensions so 1D data is always nx1
+    add_before = 0
+    while len(data1.shape) > 1 and data1.shape[0] == 1:
+        data1 = numpy.squeeze(data1, axis=0)
+        data2 = numpy.squeeze(data2, axis=0)
+        add_before += 1
+    add_after = 0
+    while len(data1.shape) > 1 and data1.shape[-1] == 1:
+        data1 = numpy.squeeze(data1, axis=-1)
+        data2 = numpy.squeeze(data2, axis=-1)
+        add_after += 1
+    do_squeeze = False
     if len(data1.shape) == 1:
         data1 = data1[..., numpy.newaxis]
-    if len(data2.shape) == 1:
         data2 = data2[..., numpy.newaxis]
-    result = ImageRegistration.dftregistration(data1, data2, upsample_factor)[0:data_shape]
+        do_squeeze = True
+    # carry out the registration
+    result = ImageRegistration.dftregistration(data1, data2, upsample_factor)#[0:d_rank]
+    # adjust results to match input data
+    if do_squeeze:
+        result = result[0:-1]
+    for _ in range(add_before):
+        result = (numpy.zeros_like(result[0]), ) + result
+    for _ in range(add_after):
+        result = result + (numpy.zeros_like(result[0]), )
     return result
+
 
 def function_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...]) -> DataAndMetadata.DataAndMetadata:
     src = DataAndMetadata.promote_ndarray(src)
     src_data = numpy.fft.fftn(src.data)
+    do_squeeze = False
     if len(src_data.shape) == 1:
         src_data = src_data[..., numpy.newaxis]
         shift = tuple(shift) + (1,)
+        do_squeeze = True
     # NOTE: fourier_shift assumes non-fft-shifted data.
     shifted = numpy.fft.ifftn(scipy.ndimage.fourier_shift(src_data, shift)).real
-    return DataAndMetadata.new_data_and_metadata(numpy.squeeze(shifted))
+    shifted = numpy.squeeze(shifted) if do_squeeze else shifted
+    return DataAndMetadata.new_data_and_metadata(shifted)
 
 
 def function_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> DataAndMetadata.DataAndMetadata:
@@ -343,7 +371,10 @@ def function_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata
 
 
 def function_sequence_register_translation(src: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+    # measures shift relative to last position in sequence
+    # only works on sequences
     src = DataAndMetadata.promote_ndarray(src)
+    assert src.is_sequence
     d_rank = src.datum_dimension_count
     if len(src.data_shape) <= d_rank:
         return None
@@ -365,10 +396,11 @@ def function_sequence_register_translation(src: DataAndMetadata.DataAndMetadata,
             result[ii] = function_register(previous_data, current_data, upsample_factor, subtract_means, bounds=bounds)
             previous_data = current_data
     intensity_calibration = src.dimensional_calibrations[1]  # not the sequence dimension
-    return DataAndMetadata.new_data_and_metadata(result, intensity_calibration=intensity_calibration)
+    return DataAndMetadata.new_data_and_metadata(result, intensity_calibration=intensity_calibration, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 1))
 
 
 def function_sequence_measure_relative_translation(src: DataAndMetadata.DataAndMetadata, ref: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+    # measures shift at each point in sequence/collection relative to reference
     src = DataAndMetadata.promote_ndarray(src)
     d_rank = src.datum_dimension_count
     if len(src.data_shape) <= d_rank:
@@ -381,11 +413,45 @@ def function_sequence_measure_relative_translation(src: DataAndMetadata.DataAndM
     result = numpy.empty(s_shape + (d_rank, ))
     src_data = src.data
     for i in range(c):
-        ii = numpy.unravel_index(i, s_shape) + (Ellipsis, )
+        ii = numpy.unravel_index(i, s_shape)
         current_data = src_data[ii]
         result[ii] = function_register(ref, current_data, upsample_factor, subtract_means, bounds=bounds)
     intensity_calibration = src.dimensional_calibrations[1]  # not the sequence dimension
-    return DataAndMetadata.new_data_and_metadata(result, intensity_calibration=intensity_calibration)
+    return DataAndMetadata.new_data_and_metadata(result, intensity_calibration=intensity_calibration, data_descriptor=DataAndMetadata.DataDescriptor(src.is_sequence, src.collection_dimension_count, 1))
+
+
+def function_squeeze_measurement(src: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    # squeezes a measurement of a sequence or collection so that it can be sensibly displayed
+    src = DataAndMetadata.promote_ndarray(src)
+    data = src.data
+    descriptor = src.data_descriptor
+    calibrations = list(src.dimensional_calibrations)
+    if descriptor.is_sequence and data.shape[0] == 1:
+        data = numpy.squeeze(data, axis=0)
+        descriptor = DataAndMetadata.DataDescriptor(False, descriptor.collection_dimension_count, descriptor.datum_dimension_count)
+        calibrations.pop(0)
+    for index in reversed(descriptor.collection_dimension_indexes):
+        if data.shape[index] == 1:
+            data = numpy.squeeze(data, axis=index)
+            descriptor = DataAndMetadata.DataDescriptor(descriptor.is_sequence, descriptor.collection_dimension_count - 1, descriptor.datum_dimension_count)
+            calibrations.pop(index)
+    for index in reversed(descriptor.datum_dimension_indexes):
+        if data.shape[index] == 1:
+            if descriptor.datum_dimension_count > 1:
+                data = numpy.squeeze(data, axis=index)
+                descriptor = DataAndMetadata.DataDescriptor(descriptor.is_sequence, descriptor.collection_dimension_count, descriptor.datum_dimension_count - 1)
+                calibrations.pop(index)
+            elif descriptor.collection_dimension_count > 0:
+                data = numpy.squeeze(data, axis=index)
+                descriptor = DataAndMetadata.DataDescriptor(descriptor.is_sequence, 0, descriptor.collection_dimension_count)
+                calibrations.pop(index)
+            elif descriptor.is_sequence:
+                data = numpy.squeeze(data, axis=index)
+                descriptor = DataAndMetadata.DataDescriptor(False, 0, 1)
+                calibrations.pop(index)
+    intensity_calibration = src.intensity_calibration
+    intensity_calibration.offset = 0.0
+    return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=intensity_calibration, dimensional_calibrations=calibrations, data_descriptor=descriptor)
 
 
 def function_sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:

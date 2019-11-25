@@ -261,6 +261,9 @@ def sequence_register_translation(src: DataAndMetadata.DataAndMetadata, upsample
 def sequence_measure_relative_translation(src: DataAndMetadata.DataAndMetadata, ref: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1, subtract_means: bool = True, bounds: typing.Union[Core.NormRectangleType, Core.NormIntervalType] = None) -> DataAndMetadata.DataAndMetadata:
     return Core.function_sequence_measure_relative_translation(src, ref, upsample_factor, subtract_means, bounds=bounds)
 
+def sequence_squeeze_measurement(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_squeeze_measurement(data_and_metadata)
+
 def sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1, bounds: typing.Union[Core.NormRectangleType, Core.NormIntervalType] = None) -> DataAndMetadata.DataAndMetadata:
     return Core.function_sequence_align(src, upsample_factor, bounds=bounds)
 

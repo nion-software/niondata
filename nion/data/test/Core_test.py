@@ -384,6 +384,102 @@ class TestCore(unittest.TestCase):
         result = Core.function_align(data, xdata_shifted, 100) - xdata_shifted
         self.assertAlmostEqual(result.data.mean(), 0)
 
+    def test_shift_nx1_data_produces_nx1_data(self):
+        data = numpy.random.randn(64)
+        data[30:40,] += 10
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        shift = (-3.4, )
+        xdata_shifted = Core.function_shift(xdata, shift)
+        self.assertEqual(xdata.data_shape, xdata_shifted.data_shape)
+
+        data = numpy.random.randn(64, 1)
+        data[30:40, 0] += 10
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        shift = (-3.4, 0.0)
+        xdata_shifted = Core.function_shift(xdata, shift)
+        self.assertEqual(xdata.data_shape, xdata_shifted.data_shape)
+
+        data = numpy.random.randn(1, 64)
+        data[0, 30:40] += 10
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        shift = (0.0, -3.4)
+        xdata_shifted = Core.function_shift(xdata, shift)
+        self.assertEqual(xdata.data_shape, xdata_shifted.data_shape)
+
+    def test_align_works_on_nx1_data(self):
+        data = numpy.random.randn(64, 1)
+        data[30:40, 0] += 10
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        shift = (-3.4, 0.0)
+        xdata_shifted = Core.function_shift(xdata, shift)
+        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True)
+        self.assertAlmostEqual(shift[0], measured_shift[0], 1)
+        self.assertAlmostEqual(shift[1], measured_shift[1], 1)
+        result = Core.function_align(data, xdata_shifted, 100) - xdata_shifted
+        self.assertAlmostEqual(result.data.mean(), 0)
+
+        data = numpy.random.randn(1, 64)
+        data[0, 30:40] += 10
+        xdata = DataAndMetadata.new_data_and_metadata(data)
+        shift = (0.0, -3.4)
+        xdata_shifted = Core.function_shift(xdata, shift)
+        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True)
+        self.assertAlmostEqual(shift[0], measured_shift[0], 1)
+        self.assertAlmostEqual(shift[1], measured_shift[1], 1)
+        result = Core.function_align(data, xdata_shifted, 100) - xdata_shifted
+        self.assertAlmostEqual(result.data.mean(), 0)
+
+    def test_measure_works_on_navigable_data(self):
+        sequence_collection_shapes = (
+            (10, ()),
+            (0, (10,)),
+            (4, (4,)),
+            (0, (4, 4)),
+            (4, (4, 4))
+        )
+        data_shapes = (
+            (64,),
+            (1, 64),
+            (64, 1),
+            (16, 16)
+        )
+        shapes = (tuple(list(scs) + [ds]) for scs in sequence_collection_shapes for ds in data_shapes)
+        for sequence_len, collection_shape, data_shape in shapes:
+            # print(f"{sequence_len}, {collection_shape}, {data_shape}")
+            s_shape = (sequence_len, *collection_shape) if sequence_len else collection_shape
+            sequence_data = numpy.zeros((s_shape + data_shape))
+            sequence_xdata = DataAndMetadata.new_data_and_metadata(sequence_data, data_descriptor=DataAndMetadata.DataDescriptor(sequence_len > 0, len(collection_shape), len(data_shape)))
+            sequence_xdata = Core.function_squeeze(sequence_xdata)
+            random_state = numpy.random.get_state()
+            numpy.random.seed(1)
+            data = numpy.random.randn(*data_shape)
+            numpy.random.set_state(random_state)
+            d_index = [slice(30, 40) for _ in range(len(data_shape))]
+            data[tuple(d_index)] += 10
+            xdata = DataAndMetadata.new_data_and_metadata(data)
+            s_total = numpy.product(s_shape)
+            for i in range(s_total):
+                ii = numpy.unravel_index(i, s_shape)
+                shift = 3.5 * i / s_total
+                # construct shifts so that it is shifting the first data dimension where the dimension length > 1
+                shifts = list()
+                for dd in range(len(data_shape)):
+                    if data_shape[dd] > 1:
+                        shifts.append(shift)
+                        shift = 0.0
+                    else:
+                        shifts.append(0.0)
+                sequence_data[ii] = Core.function_shift(xdata, tuple(shifts))
+            measured = Core.function_sequence_measure_relative_translation(sequence_xdata, sequence_xdata[numpy.unravel_index(0, sequence_xdata.navigation_dimension_shape)], 100, False)
+            self.assertEqual(sequence_xdata.is_sequence, measured.is_sequence)
+            self.assertEqual(sequence_xdata.collection_dimension_shape, measured.collection_dimension_shape)
+            self.assertEqual(1, measured.datum_dimension_count)
+            self.assertAlmostEqual(0.0, numpy.amin(-measured))
+            s_max = numpy.product(s_shape)
+            expected_max = 3.5 * (s_max - 1) / s_max
+            self.assertAlmostEqual(expected_max, numpy.amax(-measured), 1)
+            measured_squeezed = Core.function_squeeze_measurement(measured)
+
     def test_align_with_bounds_works_on_1d_data(self):
         random_state = numpy.random.get_state()
         numpy.random.seed(1)
@@ -446,7 +542,7 @@ class TestCore(unittest.TestCase):
                 shift = [((p + q) / 2 / (sdata.shape[0] - 1) * -3.4)]
                 sdata[q, p, ...] = Core.function_shift(xdata, shift).data
         sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 1))
-        shifts = Core.function_sequence_register_translation(sxdata, 100, True).data
+        shifts = Core.function_sequence_measure_relative_translation(sxdata, sxdata[0, 0], 100, True).data
         self.assertEqual(shifts.shape, (6, 6, 1))
         numpy.random.set_state(random_state)
 
@@ -462,7 +558,7 @@ class TestCore(unittest.TestCase):
                 shift = (p / (sdata.shape[0] - 1) * -3.4, q / (sdata.shape[0] - 1) * 1.2)
                 sdata[q, p, ...] = Core.function_shift(xdata, shift).data
         sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 2))
-        shifts = Core.function_sequence_register_translation(sxdata, 100, True).data
+        shifts = Core.function_sequence_measure_relative_translation(sxdata, sxdata[0, 0], 100, True).data
         self.assertEqual(shifts.shape, (6, 6, 2))
         numpy.random.set_state(random_state)
 

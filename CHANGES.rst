@@ -3,6 +3,8 @@ Changelog (niondata)
 
 0.13.9 (UNRELEASED)
 -------------------
+- Improve handling of squeeze/calibration for sequence measurements.
+- Add new navigation properties (combo of is_sequence and collection) to data.
 - Support slicing on RGB sequences (for display data).
 
 0.13.8 (2019-10-24)
