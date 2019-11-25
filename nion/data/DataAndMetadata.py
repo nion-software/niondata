@@ -48,6 +48,14 @@ class DataDescriptor:
         return self.collection_dimension_count > 0
 
     @property
+    def navigation_dimension_count(self) -> int:
+        return self.collection_dimension_count + (1 if self.is_sequence else 0)
+
+    @property
+    def is_navigable(self) -> bool:
+        return self.navigation_dimension_count > 0
+
+    @property
     def sequence_dimension_index_slice(self) -> slice:
         return slice(0, 1) if self.is_sequence else slice(0, 0)
 
@@ -57,9 +65,28 @@ class DataDescriptor:
         return slice(sequence_dimension_index_slice.stop, sequence_dimension_index_slice.stop + self.collection_dimension_count)
 
     @property
+    def navigation_dimension_index_slice(self) -> slice:
+        return slice(0, self.navigation_dimension_count)
+
+    @property
     def datum_dimension_index_slice(self) -> slice:
         collection_dimension_index_slice = self.collection_dimension_index_slice
         return slice(collection_dimension_index_slice.stop, collection_dimension_index_slice.stop + self.datum_dimension_count)
+
+    @property
+    def collection_dimension_indexes(self) -> typing.Sequence[int]:
+        return range(1, 1 + self.collection_dimension_count) if self.is_sequence else range(self.collection_dimension_count)
+
+    @property
+    def navigation_dimension_indexes(self) -> typing.Sequence[int]:
+        return range(self.navigation_dimension_count)
+
+    @property
+    def datum_dimension_indexes(self) -> typing.Sequence[int]:
+        if self.is_sequence:
+            return range(1 + self.collection_dimension_count, 1 + self.collection_dimension_count + self.datum_dimension_count)
+        else:
+            return range(self.collection_dimension_count, self.collection_dimension_count + self.datum_dimension_count)
 
 
 class DataMetadata:
@@ -154,8 +181,16 @@ class DataMetadata:
         return self.data_descriptor.is_collection
 
     @property
+    def is_navigable(self) -> bool:
+        return self.data_descriptor.is_navigable
+
+    @property
     def collection_dimension_count(self) -> int:
         return self.data_descriptor.collection_dimension_count
+
+    @property
+    def navigation_dimension_count(self) -> int:
+        return self.data_descriptor.navigation_dimension_count
 
     @property
     def datum_dimension_count(self) -> int:
@@ -174,6 +209,10 @@ class DataMetadata:
         return self.dimensional_shape[self.data_descriptor.collection_dimension_index_slice]
 
     @property
+    def navigation_dimension_shape(self) -> ShapeType:
+        return self.dimensional_shape[self.data_descriptor.navigation_dimension_index_slice]
+
+    @property
     def datum_dimension_shape(self) -> ShapeType:
         return self.dimensional_shape[self.data_descriptor.datum_dimension_index_slice]
 
@@ -187,18 +226,23 @@ class DataMetadata:
 
     @property
     def collection_dimension_indexes(self) -> typing.Sequence[int]:
-        return range(1, 1 + self.collection_dimension_count) if self.is_sequence else range(self.collection_dimension_count)
+        return self.data_descriptor.collection_dimension_indexes
 
     @property
     def collection_dimension_slice(self) -> slice:
         return slice(1, 1 + self.collection_dimension_count) if self.is_sequence else slice(0, self.collection_dimension_count)
 
     @property
+    def navigation_dimension_indexes(self) -> typing.Sequence[int]:
+        return self.data_descriptor.navigation_dimension_indexes
+
+    @property
+    def navigation_dimension_slice(self) -> slice:
+        return slice(0, self.navigation_dimension_count)
+
+    @property
     def datum_dimension_indexes(self) -> typing.Sequence[int]:
-        if self.is_sequence:
-            return range(1 + self.collection_dimension_count, 1 + self.collection_dimension_count + self.datum_dimension_count)
-        else:
-            return range(self.collection_dimension_count, self.collection_dimension_count + self.datum_dimension_count)
+        return self.data_descriptor.datum_dimension_indexes
 
     @property
     def datum_dimension_slice(self) -> slice:
@@ -208,12 +252,16 @@ class DataMetadata:
             return slice(self.collection_dimension_count, self.collection_dimension_count + self.datum_dimension_count)
 
     @property
-    def sequence_dimensional_calibration(self) -> Calibration.Calibration:
+    def sequence_dimensional_calibration(self) -> typing.Optional[Calibration.Calibration]:
         return self.dimensional_calibrations[self.data_descriptor.sequence_dimension_index_slice] if self.is_sequence else None
 
     @property
     def collection_dimensional_calibrations(self) -> CalibrationListType:
         return self.dimensional_calibrations[self.data_descriptor.collection_dimension_index_slice]
+
+    @property
+    def navigation_dimensional_calibrations(self) -> CalibrationListType:
+        return self.dimensional_calibrations[self.data_descriptor.navigation_dimension_index_slice]
 
     @property
     def datum_dimensional_calibrations(self) -> CalibrationListType:
@@ -521,8 +569,16 @@ class DataAndMetadata:
         return self.__data_metadata.is_collection
 
     @property
+    def is_navigable(self) -> bool:
+        return self.__data_metadata.is_navigable
+
+    @property
     def collection_dimension_count(self) -> int:
         return self.__data_metadata.collection_dimension_count
+
+    @property
+    def navigation_dimension_count(self) -> int:
+        return self.__data_metadata.navigation_dimension_count
 
     @property
     def datum_dimension_count(self) -> int:
@@ -539,6 +595,10 @@ class DataAndMetadata:
     @property
     def collection_dimension_shape(self) -> ShapeType:
         return self.__data_metadata.collection_dimension_shape
+
+    @property
+    def navigation_dimension_shape(self) -> ShapeType:
+        return self.__data_metadata.navigation_dimension_shape
 
     @property
     def datum_dimension_shape(self) -> ShapeType:
@@ -561,6 +621,14 @@ class DataAndMetadata:
         return self.__data_metadata.collection_dimension_slice
 
     @property
+    def navigation_dimension_indexes(self) -> typing.Sequence[int]:
+        return self.__data_metadata.navigation_dimension_indexes
+
+    @property
+    def navigation_dimension_slice(self) -> slice:
+        return self.__data_metadata.navigation_dimension_slice
+
+    @property
     def datum_dimension_indexes(self) -> typing.Sequence[int]:
         return self.__data_metadata.datum_dimension_indexes
 
@@ -575,6 +643,10 @@ class DataAndMetadata:
     @property
     def collection_dimensional_calibrations(self) -> CalibrationListType:
         return self.__data_metadata.collection_dimensional_calibrations
+
+    @property
+    def navigation_dimensional_calibrations(self) -> CalibrationListType:
+        return self.__data_metadata.navigation_dimensional_calibrations
 
     @property
     def datum_dimensional_calibrations(self) -> CalibrationListType:
