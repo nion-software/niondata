@@ -1,7 +1,7 @@
 Changelog (niondata)
 ====================
 
-0.13.9 (UNRELEASED)
+0.13.9 (2019-11-27)
 -------------------
 - Improve handling of squeeze/calibration for sequence measurements.
 - Add new navigation properties (combo of is_sequence and collection) to data.
