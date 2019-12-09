@@ -94,7 +94,7 @@ class TestExtendedData(unittest.TestCase):
         workspace_dir = os.path.join(current_working_directory, "__Test")
         db_make_directory_if_needed(workspace_dir)
         try:
-            with h5py.File(os.path.join(workspace_dir, "file.h5")) as f:
+            with h5py.File(os.path.join(workspace_dir, "file.h5"), "w") as f:
                 dataset = f.create_dataset("data", data=numpy.ones((4, 4)))
                 xdata = DataAndMetadata.new_data_and_metadata(dataset)
                 results = list()

@@ -7,7 +7,7 @@ import numpy
 integer_types = (int,)
 
 
-class Calibration(object):
+class Calibration:
 
     """
         Represents a transformation from one coordinate system to another.
@@ -168,7 +168,7 @@ class Calibration(object):
     def convert_to_calibrated_size_str(self, size, include_units=True, value_range=None, samples=None):
         units_str = (" " + self.units) if include_units and self.__units else ""
         if hasattr(size, 'dtype') and not size.shape:  # convert NumPy types to Python scalar types
-            size = numpy.asscalar(size)
+            size = size.item()
         if isinstance(size, integer_types) or isinstance(size, float):
             calibrated_value = self.convert_to_calibrated_size(size)
             if value_range and samples:
