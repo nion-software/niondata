@@ -1721,3 +1721,32 @@ def function_display_rgba(data_and_metadata: DataAndMetadata.DataAndMetadata, di
     assert len(Image.dimensional_shape_from_data(data_2d)) == 2
     rgba_data = Image.create_rgba_image_from_array(data_2d, display_limits=display_range, lookup=color_table)
     return DataAndMetadata.new_data_and_metadata(rgba_data)
+
+def function_extract_datum(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None) -> DataAndMetadata.DataAndMetadata:
+    dimensional_shape = data_and_metadata.dimensional_shape
+    next_dimension = 0
+    if data_and_metadata.is_sequence:
+        # next dimension is treated as a sequence index, which may be time or just a sequence index
+        sequence_index = min(max(sequence_index, 0), dimensional_shape[next_dimension])
+        data_and_metadata = DataAndMetadata.function_data_slice(data_and_metadata, [sequence_index, Ellipsis])
+        next_dimension += 1
+    if data_and_metadata and data_and_metadata.is_collection:
+        collection_dimension_count = data_and_metadata.collection_dimension_count
+        # next dimensions are treated as collection indexes.
+        collection_slice = [collection_index for collection_index in collection_index][0:collection_dimension_count] + [Ellipsis, ]
+        data_and_metadata = DataAndMetadata.function_data_slice(data_and_metadata, collection_slice)
+    return data_and_metadata
+
+def function_convert_to_scalar(data_and_metadata: DataAndMetadata.DataAndMetadata, complex_display_type: str=None) -> DataAndMetadata.DataAndMetadata:
+    if data_and_metadata and data_and_metadata.is_data_complex_type:
+        if complex_display_type == "real":
+            data_and_metadata = function_array(numpy.real, data_and_metadata)
+        elif complex_display_type == "imaginary":
+            data_and_metadata = function_array(numpy.imag, data_and_metadata)
+        elif complex_display_type == "absolute":
+            data_and_metadata = function_array(numpy.absolute, data_and_metadata)
+        else:  # default, log-absolute
+            def log_absolute(d):
+                return numpy.log(numpy.abs(d).astype(numpy.float64) + numpy.nextafter(0,1))
+            data_and_metadata = function_array(log_absolute, data_and_metadata)
+    return data_and_metadata
