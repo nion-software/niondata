@@ -16,8 +16,7 @@ from nion.data import Image
 
 _ = gettext.gettext
 
-
-ShapeType = typing.Sequence[int]
+ShapeType = typing.Tuple[int, ...]
 Shape2dType = typing.Tuple[int, int]
 Shape3dType = typing.Tuple[int, int, int]
 PositionType = typing.Sequence[int]
@@ -165,7 +164,7 @@ class DataMetadata:
         return data_shape_and_dtype[1] if data_shape_and_dtype is not None else None
 
     @property
-    def dimensional_shape(self) -> ShapeType:
+    def dimensional_shape(self) -> typing.Optional[ShapeType]:
         data_shape_and_dtype = self.data_shape_and_dtype
         if data_shape_and_dtype is not None:
             data_shape, data_dtype = self.data_shape_and_dtype
@@ -254,6 +253,10 @@ class DataMetadata:
     @property
     def sequence_dimensional_calibration(self) -> typing.Optional[Calibration.Calibration]:
         return self.dimensional_calibrations[self.data_descriptor.sequence_dimension_index_slice] if self.is_sequence else None
+
+    @property
+    def sequence_dimensional_calibrations(self) -> CalibrationListType:
+        return self.dimensional_calibrations[self.data_descriptor.sequence_dimension_index_slice] if self.is_sequence else list()
 
     @property
     def collection_dimensional_calibrations(self) -> CalibrationListType:
@@ -521,7 +524,7 @@ class DataAndMetadata:
             if initial_count == 0 and not self.__data_valid:
                 self.__data = self.data_fn()
                 self.__data_valid = True
-        return initial_count+1
+        return initial_count + 1
 
     def decrement_data_ref_count(self) -> int:
         with self.__data_lock:
@@ -639,6 +642,10 @@ class DataAndMetadata:
     @property
     def sequence_dimensional_calibration(self) -> Calibration.Calibration:
         return self.__data_metadata.sequence_dimensional_calibration
+
+    @property
+    def sequence_dimensional_calibrations(self) -> CalibrationListType:
+        return self.__data_metadata.sequence_dimensional_calibrations
 
     @property
     def collection_dimensional_calibrations(self) -> CalibrationListType:
@@ -889,14 +896,14 @@ class ScalarAndMetadata:
         self.metadata = copy.deepcopy(metadata) if metadata is not None else dict()
 
     @classmethod
-    def from_value(cls, value):
-        calibration = Calibration.Calibration()
+    def from_value(cls, value, calibration: Calibration.Calibration = None) -> "ScalarAndMetadata":
+        calibration = calibration or Calibration.Calibration()
         metadata = dict()
         timestamp = datetime.datetime.utcnow()
         return cls(lambda: value, calibration, metadata, timestamp)
 
     @classmethod
-    def from_value_fn(cls, value_fn):
+    def from_value_fn(cls, value_fn) -> "ScalarAndMetadata":
         calibration = Calibration.Calibration()
         metadata = dict()
         timestamp = datetime.datetime.utcnow()
@@ -929,7 +936,7 @@ def extract_data(evaluated_input):
 
 def key_to_list(key):
     if not isinstance(key, tuple):
-        key = (key, )
+        key = (key,)
     l = list()
     for k in key:
         if isinstance(k, slice):
@@ -971,7 +978,7 @@ def list_to_key(l):
         else:
             key.append(slice(d.get("start"), d.get("stop"), d.get("step")))
     if len(key) == 1:
-        return (key[0], )
+        return (key[0],)
     return tuple(key)
 
 
@@ -1005,7 +1012,7 @@ def function_data_slice(data_and_metadata, key):
     def ellipses_count(slices):
         return sum(1 if isinstance(slice, type(Ellipsis)) else 0 for slice in slices)
 
-    def normalize_slice(index: int, s: slice, shape: typing.List[int], ellipse_count: int):
+    def normalize_slice(index: int, s: slice, shape: ShapeType, ellipse_count: int):
         size = shape[index] if index < len(shape) else 1
         is_collapsible = False  # if the index is fixed, it will disappear in final data
         is_new_axis = False
@@ -1016,7 +1023,7 @@ def function_data_slice(data_and_metadata, key):
                 slices.append((False, False, slice(0, shape[index + ellipse_index], 1)))
             return slices
         elif isinstance(s, numbers.Integral):
-            s = slice(s, s + 1, 1)
+            s = slice(int(s), int(s + 1), 1)
             is_collapsible = True
         elif s is None:
             s = slice(0, size, 1)
@@ -1034,7 +1041,7 @@ def function_data_slice(data_and_metadata, key):
     slices = list_to_key(key)
 
     if ellipses_count(slices) == 0 and len(slices) < len(data_and_metadata.dimensional_shape):
-        slices = slices + (Ellipsis, )
+        slices = slices + (Ellipsis,)
 
     ellipse_count = len(data_and_metadata.data_shape) - non_ellipses_count(slices) + new_axis_count(slices)  # how many slices go into the ellipse
     normalized_slices = list()  # type: typing.List[(bool, bool, slice)]
