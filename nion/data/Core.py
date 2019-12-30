@@ -172,7 +172,7 @@ def function_fft(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndM
     assert len(src_dimensional_calibrations) == len(
         Image.dimensional_shape_from_shape_and_dtype(data_shape, data_dtype))
 
-    dimensional_calibrations = [Calibration.Calibration(-0.5 / dimensional_calibration.scale, 1.0 / (dimensional_calibration.scale * data_shape_n),
+    dimensional_calibrations = [Calibration.Calibration((-0.5 - 0.5 * data_shape_n) / (dimensional_calibration.scale * data_shape_n), 1.0 / (dimensional_calibration.scale * data_shape_n),
                                                         "1/" + dimensional_calibration.units) for
         dimensional_calibration, data_shape_n in zip(src_dimensional_calibrations, data_shape)]
 
