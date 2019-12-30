@@ -541,6 +541,27 @@ def function_sequence_extract(src: DataAndMetadata.DataAndMetadata, position: in
     return src[channel]
 
 
+def function_make_elliptical_mask(data_shape: DataAndMetadata.ShapeType, center: NormPointType, size: NormSizeType, rotation: float) -> DataAndMetadata.DataAndMetadata:
+    data_shape = Geometry.IntSize.make(data_shape)
+    data_rect = Geometry.FloatRect(origin=Geometry.FloatPoint(), size=Geometry.FloatSize.make(data_shape))
+    center = Geometry.map_point(Geometry.FloatPoint.make(center), Geometry.FloatRect.unit_rect(), data_rect)
+    size = Geometry.map_size(Geometry.FloatSize.make(size), Geometry.FloatRect.unit_rect(), data_rect)
+    mask = numpy.zeros((data_shape.height, data_shape.width))
+    bounds = Geometry.FloatRect.from_center_and_size(center, size)
+    if bounds.height <= 0 or bounds.width <= 0:
+        return DataAndMetadata.new_data_and_metadata(mask)
+    a, b = bounds.center.y, bounds.center.x
+    y, x = numpy.ogrid[-a:data_shape.height - a, -b:data_shape.width - b]
+    if rotation:
+        angle_sin = math.sin(rotation)
+        angle_cos = math.cos(rotation)
+        mask_eq = ((x * angle_cos - y * angle_sin) ** 2) / ((bounds.width / 2) * (bounds.width / 2)) + ((y * angle_cos + x * angle_sin) ** 2) / ((bounds.height / 2) * (bounds.height / 2)) <= 1
+    else:
+        mask_eq = x * x / ((bounds.width / 2) * (bounds.width / 2)) + y * y / ((bounds.height / 2) * (bounds.height / 2)) <= 1
+    mask[mask_eq] = 1
+    return DataAndMetadata.new_data_and_metadata(mask)
+
+
 def function_fourier_mask(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
     mask_data_and_metadata = DataAndMetadata.promote_ndarray(mask_data_and_metadata)

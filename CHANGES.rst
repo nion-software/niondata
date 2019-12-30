@@ -3,6 +3,7 @@ Changelog (niondata)
 
 0.13.10 (UNRELEASED)
 --------------------
+- Add function to generate elliptical masks.
 - Change FFT to put calibration origin at 0.5, 0.5 pixels from center.
 
 0.13.9 (2019-11-27)
