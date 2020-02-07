@@ -1045,12 +1045,13 @@ def function_concatenate(data_and_metadata_list: typing.Sequence[DataAndMetadata
     if any([data_and_metadata.data_shape != partial_shape[1:] is None for data_and_metadata in data_and_metadata_list]):
         return None
 
-    dimensional_calibrations = list()
-    for index, dimensional_calibration in enumerate(data_and_metadata_list[0].dimensional_calibrations):
-        if index != axis:
-            dimensional_calibrations.append(Calibration.Calibration())
-        else:
-            dimensional_calibrations.append(dimensional_calibration)
+    dimensional_calibrations = [None] * len(data_and_metadata_list[0].dimensional_calibrations)
+    for data_and_metadata in data_and_metadata_list:
+        for index, calibration in enumerate(data_and_metadata.dimensional_calibrations):
+            if dimensional_calibrations[index] is None:
+                dimensional_calibrations[index] = calibration
+            elif dimensional_calibrations[index] != calibration:
+                dimensional_calibrations[index] = Calibration.Calibration()
 
     intensity_calibration = data_and_metadata_list[0].intensity_calibration
 

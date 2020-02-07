@@ -3,6 +3,7 @@ Changelog (niondata)
 
 0.13.10 (UNRELEASED)
 --------------------
+- Fix calibration bug in xdata concatenate (and some cases of hstack, vstack).
 - Add function to generate elliptical masks.
 - Change FFT to put calibration origin at 0.5, 0.5 pixels from center.
 

@@ -112,6 +112,21 @@ class TestCore(unittest.TestCase):
         self.assertEqual(tuple(c0.data.shape), tuple(c0.data_shape))
         self.assertTrue(numpy.array_equal(c0.data, numpy.concatenate([src_data1, src_data2], 0)))
 
+    def test_concatenate_calibrations(self):
+        src_data1 = numpy.zeros((4, 8, 16))
+        src_data2 = numpy.zeros((4, 8, 16))
+        dimensional_calibrations = (Calibration.Calibration(units="a"), Calibration.Calibration(units="b"), Calibration.Calibration(units="c"))
+        a1 = DataAndMetadata.DataAndMetadata.from_data(src_data1, dimensional_calibrations=dimensional_calibrations)
+        a2 = DataAndMetadata.DataAndMetadata.from_data(src_data2, dimensional_calibrations=dimensional_calibrations)
+        vstack = Core.function_concatenate([a1, a2], axis=0)
+        self.assertEqual("a", vstack.dimensional_calibrations[0].units)
+        self.assertEqual("b", vstack.dimensional_calibrations[1].units)
+        self.assertEqual("c", vstack.dimensional_calibrations[2].units)
+        vstack = Core.function_concatenate([a1[0:2], a2[2:4]], axis=0)
+        self.assertFalse(vstack.dimensional_calibrations[0].units)
+        self.assertEqual("b", vstack.dimensional_calibrations[1].units)
+        self.assertEqual("c", vstack.dimensional_calibrations[2].units)
+
     def test_vstack_and_hstack_work_with_1d_inputs(self):
         src_data1 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float)
         src_data2 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float)
