@@ -349,7 +349,13 @@ def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMe
     return result
 
 
-def function_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...]) -> DataAndMetadata.DataAndMetadata:
+def function_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...], *, order: int = 1) -> DataAndMetadata.DataAndMetadata:
+    src = DataAndMetadata.promote_ndarray(src)
+    shifted = scipy.ndimage.shift(src.data, shift, order=order, cval=numpy.mean(src.data))
+    return DataAndMetadata.new_data_and_metadata(numpy.squeeze(shifted))
+
+
+def function_fourier_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...]) -> DataAndMetadata.DataAndMetadata:
     src = DataAndMetadata.promote_ndarray(src)
     src_data = numpy.fft.fftn(src.data)
     do_squeeze = False
@@ -368,6 +374,13 @@ def function_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata
     src = DataAndMetadata.promote_ndarray(src)
     target = DataAndMetadata.promote_ndarray(target)
     return function_shift(target, function_register(src, target, upsample_factor, True, bounds=bounds))
+
+
+def function_fourier_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> DataAndMetadata.DataAndMetadata:
+    """Aligns target to src and returns align target, using Fourier space."""
+    src = DataAndMetadata.promote_ndarray(src)
+    target = DataAndMetadata.promote_ndarray(target)
+    return function_fourier_shift(target, function_register(src, target, upsample_factor, True, bounds=bounds))
 
 
 def function_sequence_register_translation(src: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
@@ -474,6 +487,29 @@ def function_sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_facto
         current_xdata = DataAndMetadata.new_data_and_metadata(numpy.copy(result_data[ii]))
         translation = translations.data[numpy.unravel_index(i, s_shape)]
         result_data[ii] = function_shift(current_xdata, tuple(translation)).data
+    return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=src.intensity_calibration, dimensional_calibrations=src.dimensional_calibrations, data_descriptor=src.data_descriptor)
+
+
+def function_sequence_fourier_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+    src = DataAndMetadata.promote_ndarray(src)
+    d_rank = src.datum_dimension_count
+    if len(src.data_shape) <= d_rank:
+        return None
+    if d_rank < 1 or d_rank > 2:
+        return None
+    src_shape = list(src.data_shape)
+    s_shape = src_shape[0:-d_rank]
+    c = int(numpy.product(s_shape))
+    ref = src[numpy.unravel_index(0, s_shape) + (Ellipsis, )]
+    translations = function_sequence_measure_relative_translation(src, ref, upsample_factor, True, bounds=bounds)
+    if not translations:
+        return None
+    result_data = numpy.copy(src.data)
+    for i in range(1, c):
+        ii = numpy.unravel_index(i, s_shape) + (Ellipsis, )
+        current_xdata = DataAndMetadata.new_data_and_metadata(numpy.copy(result_data[ii]))
+        translation = translations.data[numpy.unravel_index(i, s_shape)]
+        result_data[ii] = function_fourier_shift(current_xdata, tuple(translation)).data
     return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=src.intensity_calibration, dimensional_calibrations=src.dimensional_calibrations, data_descriptor=src.data_descriptor)
 
 

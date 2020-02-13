@@ -3,6 +3,7 @@ Changelog (niondata)
 
 0.13.10 (UNRELEASED)
 --------------------
+- Change shift/align functions to use spline-1st-order; add Fourier variants as alternative.
 - Fix calibration bug in xdata concatenate (and some cases of hstack, vstack).
 - Add function to generate elliptical masks.
 - Change FFT to put calibration origin at 0.5, 0.5 pixels from center.
