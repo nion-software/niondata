@@ -1,7 +1,7 @@
 Changelog (niondata)
 ====================
 
-0.13.10 (UNRELEASED)
+0.13.10 (2020-02-26)
 --------------------
 - Change shift/align functions to use spline-1st-order; add Fourier variants as alternative.
 - Fix calibration bug in xdata concatenate (and some cases of hstack, vstack).

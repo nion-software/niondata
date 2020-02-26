@@ -6,7 +6,7 @@ import os
 
 setuptools.setup(
     name="niondata",
-    version="0.13.9",
+    version="0.13.10",
     author="Nion Software",
     author_email="swift@nion.com",
     description="A data processing library for Nion Swift.",
@@ -18,6 +18,8 @@ setuptools.setup(
     classifiers=[
         "Development Status :: 2 - Pre-Alpha"
     ],
-    include_package_data=True,
+    data_files=[
+        ('', ["LICENSE.txt"]),
+    ],
     test_suite="nion.data.test"
 )
