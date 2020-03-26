@@ -1030,9 +1030,12 @@ def function_pick(data_and_metadata: DataAndMetadata.DataAndMetadata, position: 
             if not (0 <= pos_i < collection_dimension):
                 return numpy.zeros(datum_dimensions, dtype=data.dtype)
             position_i.append(pos_i)
+        if data_and_metadata.is_sequence:
+            return data[(slice(None),) + tuple(position_i + [...])].copy()
         return data[tuple(position_i + [...])].copy()
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
+    data_descriptor = DataAndMetadata.DataDescriptor(data_and_metadata.is_sequence, 0, data_and_metadata.datum_dimension_count)
 
     if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
         return None
@@ -1043,9 +1046,13 @@ def function_pick(data_and_metadata: DataAndMetadata.DataAndMetadata, position: 
     if data_and_metadata.datum_dimension_count == 0:
         return None
 
-    dimensional_calibrations = dimensional_calibrations[data_and_metadata.datum_dimension_slice]
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
+    if data_and_metadata.is_sequence:
+        dimensional_calibrations = [dimensional_calibrations[0]] + dimensional_calibrations[data_and_metadata.datum_dimension_slice]
+    else:
+        dimensional_calibrations = dimensional_calibrations[data_and_metadata.datum_dimension_slice]
+
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
 
 
 def function_concatenate(data_and_metadata_list: typing.Sequence[DataAndMetadata.DataAndMetadata], axis: int=0) -> DataAndMetadata.DataAndMetadata:
@@ -1287,18 +1294,28 @@ def function_sum_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask
     if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
         return None
 
-    assert len(data_and_metadata.dimensional_shape) == 3
+    if data_and_metadata.is_sequence:
+        assert len(data_and_metadata.dimensional_shape) == 4
+    else:
+        assert len(data_and_metadata.dimensional_shape) == 3
     assert len(mask_data_and_metadata.dimensional_shape) == 2
 
     data = data_and_metadata.data
-    mask_data = mask_data_and_metadata.data
+    mask_data = mask_data_and_metadata.data.astype(numpy.bool)
 
     assert data is not None
-    assert mask_data is not None
 
-    result_data = numpy.sum(data * mask_data[..., numpy.newaxis], tuple(range(0, len(data_and_metadata.dimensional_shape) - 1)))
+    start_index = 1 if data_and_metadata.is_sequence else 0
+    result_data = numpy.sum(data, axis=tuple(range(start_index, len(data_and_metadata.dimensional_shape) - 1)), where=mask_data[..., numpy.newaxis])
 
-    return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=[data_and_metadata.dimensional_calibrations[-1]])
+    data_descriptor = DataAndMetadata.DataDescriptor(data_and_metadata.is_sequence, 0, data_and_metadata.datum_dimension_count)
+
+    if data_and_metadata.is_sequence:
+        dimensional_calibrations = [dimensional_calibrations[0]] + dimensional_calibrations[data_and_metadata.datum_dimension_slice]
+    else:
+        dimensional_calibrations = dimensional_calibrations[data_and_metadata.datum_dimension_slice]
+
+    return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
 
 
 def function_average_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
@@ -1313,23 +1330,33 @@ def function_average_region(data_and_metadata: DataAndMetadata.DataAndMetadata, 
     if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
         return None
 
-    assert len(data_and_metadata.dimensional_shape) == 3
+    if data_and_metadata.is_sequence:
+        assert len(data_and_metadata.dimensional_shape) == 4
+    else:
+        assert len(data_and_metadata.dimensional_shape) == 3
     assert len(mask_data_and_metadata.dimensional_shape) == 2
 
     data = data_and_metadata.data
-    mask_data = mask_data_and_metadata.data
+    mask_data = mask_data_and_metadata.data.astype(numpy.bool)
 
     assert data is not None
-    assert mask_data is not None
 
     mask_sum = numpy.sum(mask_data)
 
     if mask_sum == 0:
         mask_sum = 1
 
-    result_data = numpy.sum(data * mask_data[..., numpy.newaxis], tuple(range(0, len(data_and_metadata.dimensional_shape) - 1))) / mask_sum
+    start_index = 1 if data_and_metadata.is_sequence else 0
+    result_data = numpy.sum(data, axis=tuple(range(start_index, len(data_and_metadata.dimensional_shape) - 1)), where=mask_data[..., numpy.newaxis]) / mask_sum
 
-    return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=[data_and_metadata.dimensional_calibrations[-1]])
+    data_descriptor = DataAndMetadata.DataDescriptor(data_and_metadata.is_sequence, 0, data_and_metadata.datum_dimension_count)
+
+    if data_and_metadata.is_sequence:
+        dimensional_calibrations = [dimensional_calibrations[0]] + dimensional_calibrations[data_and_metadata.datum_dimension_slice]
+    else:
+        dimensional_calibrations = dimensional_calibrations[data_and_metadata.datum_dimension_slice]
+
+    return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
 
 
 def function_reshape(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:

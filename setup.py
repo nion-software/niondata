@@ -13,7 +13,7 @@ setuptools.setup(
     long_description=open("README.rst").read(),
     url="https://github.com/nion-software/niondata",
     packages=["nion.data", "nion.data.test"],
-    install_requires=['scipy', 'numpy>=1.16', 'nionutils'],
+    install_requires=['scipy', 'numpy>=1.17', 'nionutils'],
     license='Apache 2.0',
     classifiers=[
         "Development Status :: 2 - Pre-Alpha"
