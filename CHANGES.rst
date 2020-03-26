@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+0.13.11 (UNRELEASED)
+--------------------
+- Make pick functions work for sequences of spectrum images.
+
 0.13.10 (2020-02-26)
 --------------------
 - Change shift/align functions to use spline-1st-order; add Fourier variants as alternative.
