@@ -5,6 +5,6 @@
 
 -e git://github.com/nion-software/nionutils.git#egg=nionutils
 
-numpy
+numpy>=1.16
 scipy
 h5py
