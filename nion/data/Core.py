@@ -518,7 +518,7 @@ def function_sequence_integrate(src: DataAndMetadata.DataAndMetadata) -> DataAnd
     if not src.is_sequence:
         return None
     dim = src.data_shape[1:]
-    if len(dim) < 1 or len(dim) > 2:
+    if len(dim) < 1:
         return None
     result = numpy.sum(src.data, axis=0)
     intensity_calibration = src.intensity_calibration
@@ -533,7 +533,7 @@ def function_sequence_trim(src: DataAndMetadata.DataAndMetadata, trim_start: int
         return None
     c = src.sequence_dimension_shape[0]
     dim = src.data_shape[1:]
-    if len(dim) < 1 or len(dim) > 2:
+    if len(dim) < 1:
         return None
     cs = max(0, int(trim_start))
     ce = min(c, max(cs + 1, int(trim_end)))
@@ -571,7 +571,7 @@ def function_sequence_extract(src: DataAndMetadata.DataAndMetadata, position: in
         return None
     c = src.sequence_dimension_shape[0]
     dim = src.data_shape[1:]
-    if len(dim) < 1 or len(dim) > 2:
+    if len(dim) < 1:
         return None
     channel = max(0, min(c, int(position)))
     return src[channel]
