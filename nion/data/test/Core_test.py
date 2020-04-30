@@ -880,6 +880,42 @@ class TestCore(unittest.TestCase):
         xdata_squeeze= Core.function_squeeze(xdata)
         self.assertEqual(1, xdata_squeeze.data_descriptor.expected_dimension_count)
 
+    def test_match_template_for_1d_data(self):
+        data = numpy.random.RandomState(42).randn(100)
+        image_xdata = DataAndMetadata.new_data_and_metadata(data)
+        template_xdata = DataAndMetadata.new_data_and_metadata(data[40:60])
+        ccorr_xdata = Core.function_match_template(image_xdata, template_xdata)
+        self.assertTrue(ccorr_xdata.is_data_1d)
+        self.assertEqual(numpy.argmax(ccorr_xdata.data), 50)
+        self.assertAlmostEqual(numpy.amax(ccorr_xdata.data), 1.0, places=1)
+
+    def test_match_template_for_2d_data(self):
+        data = numpy.random.RandomState(42).randn(100, 100)
+        image_xdata = DataAndMetadata.new_data_and_metadata(data)
+        template_xdata = DataAndMetadata.new_data_and_metadata(data[40:60, 15:20])
+        ccorr_xdata = Core.function_match_template(image_xdata, template_xdata)
+        self.assertTrue(ccorr_xdata.is_data_2d)
+        self.assertTupleEqual(numpy.unravel_index(numpy.argmax(ccorr_xdata.data), ccorr_xdata.data_shape), (50, 17))
+        self.assertAlmostEqual(numpy.amax(ccorr_xdata.data), 1.0, places=1)
+
+    def test_register_template_for_1d_data(self):
+        data = numpy.random.RandomState(42).randn(100)
+        image_xdata = DataAndMetadata.new_data_and_metadata(data)
+        template_xdata = DataAndMetadata.new_data_and_metadata(data[40:60])
+        ccoeff, max_pos = Core.function_register_template(image_xdata, template_xdata)
+        self.assertEqual(len(max_pos), 1)
+        self.assertAlmostEqual(max_pos[0], 50, places=1)
+        self.assertAlmostEqual(ccoeff, 1.0, places=1)
+
+    def test_register_template_for_2d_data(self):
+        data = numpy.random.RandomState(42).randn(100, 100)
+        image_xdata = DataAndMetadata.new_data_and_metadata(data)
+        template_xdata = DataAndMetadata.new_data_and_metadata(data[40:60, 15:20])
+        ccoeff, max_pos = Core.function_register_template(image_xdata, template_xdata)
+        self.assertEqual(len(max_pos), 2)
+        self.assertTrue(numpy.allclose(max_pos, (50, 17), atol=0.1))
+        self.assertAlmostEqual(ccoeff, 1.0, places=1)
+
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
     unittest.main()

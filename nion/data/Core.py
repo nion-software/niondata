@@ -22,6 +22,7 @@ from nion.data import Calibration
 from nion.data import DataAndMetadata
 from nion.data import Image
 from nion.data import ImageRegistration
+from nion.data import TemplateMatching
 from nion.utils import Geometry
 
 
@@ -347,6 +348,45 @@ def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMe
     for _ in range(add_after):
         result = result + (numpy.zeros_like(result[0]), )
     return result
+
+
+def function_match_template(image_xdata: DataAndMetadata.DataAndMetadata, template_xdata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    """
+    Calculates the normalized cross-correlation for a template with an image. The returned xdata will have the same
+    shape as `image_xdata`.
+    Inputs can be 1D or 2D and the template must be smaller than or the same size as the image.
+    """
+    image_xdata = DataAndMetadata.promote_ndarray(image_xdata)
+    template_xdata = DataAndMetadata.promote_ndarray(template_xdata)
+    assert image_xdata.is_data_2d or image_xdata.is_data_1d
+    assert template_xdata.is_data_2d or template_xdata.is_data_1d
+    assert image_xdata.data_descriptor == template_xdata.data_descriptor
+    # The template needs to be the smaller of the two if they have different shape
+    assert numpy.less_equal(template_xdata.data_shape, image_xdata.data_shape).all()
+    image = image_xdata.data
+    template = template_xdata.data
+    squeeze = False
+    if image_xdata.is_data_1d:
+        image = image[..., numpy.newaxis]
+        template = template[..., numpy.newaxis]
+        squeeze = True
+    ccorr = TemplateMatching.match_template(image, template)
+    if squeeze:
+        ccorr = numpy.squeeze(ccorr)
+    return DataAndMetadata.new_data_and_metadata(ccorr, dimensional_calibrations=image_xdata.dimensional_calibrations)
+
+
+def function_register_template(image_xdata: DataAndMetadata.DataAndMetadata, template_xdata: DataAndMetadata.DataAndMetadata) -> typing.Tuple[float, typing.Tuple[float, ...]]:
+    """
+    Calculates and returns the position of a template on an image. The returned values are the intensity if the
+    normalized cross-correlation peak (between -1 and 1) and the sub-pixel position of the template on the image.
+    The sub-pixel position is calculated by fitting a parabola to the tip of the cross-correlation peak.
+    Inputs can be 1D or 2D and the template must be smaller than or the same size as the image.
+    """
+    ccorr_xdata = function_match_template(image_xdata, template_xdata)
+    error, ccoeff, max_pos = TemplateMatching.find_ccorr_max(ccorr_xdata.data)
+    if not error:
+        return ccoeff, max_pos
 
 
 def function_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...], *, order: int = 1) -> DataAndMetadata.DataAndMetadata:
