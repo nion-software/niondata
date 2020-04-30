@@ -249,6 +249,12 @@ def invert(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadat
 def register_translation(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMetadata.DataAndMetadata, upsample_factor: int = 1, subtract_means: bool = True) -> typing.Tuple[float, ...]:
     return Core.function_register(xdata1, xdata2, upsample_factor, subtract_means)
 
+def match_template(image_xdata: DataAndMetadata.DataAndMetadata, template_xdata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_match_template(image_xdata, template_xdata)
+
+def register_template(image_xdata: DataAndMetadata.DataAndMetadata, template_xdata: DataAndMetadata.DataAndMetadata) -> typing.Tuple[float, typing.Tuple[float, ...]]:
+    return Core.function_register_template(image_xdata, template_xdata)
+
 def shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...], *, order: int=1) -> DataAndMetadata.DataAndMetadata:
     return Core.function_shift(src, shift, order=order)
 
