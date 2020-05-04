@@ -1137,6 +1137,7 @@ def function_concatenate(data_and_metadata_list: typing.Sequence[DataAndMetadata
     form of the numpy function of the same name.
 
     Keeps intensity calibration of first source item.
+    Keeps data descriptor of first source item.
 
     Keeps dimensional calibration in axis dimension.
     """
@@ -1170,8 +1171,9 @@ def function_concatenate(data_and_metadata_list: typing.Sequence[DataAndMetadata
                 dimensional_calibrations[index] = Calibration.Calibration()
 
     intensity_calibration = data_and_metadata_list[0].intensity_calibration
+    data_descriptor = data_and_metadata_list[0].data_descriptor
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
 
 
 def function_hstack(data_and_metadata_list: typing.Sequence[DataAndMetadata.DataAndMetadata]) -> DataAndMetadata.DataAndMetadata:
