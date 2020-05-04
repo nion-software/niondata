@@ -916,6 +916,25 @@ class TestCore(unittest.TestCase):
         self.assertTrue(numpy.allclose(max_pos, (50, 17), atol=0.1))
         self.assertAlmostEqual(ccoeff, 1.0, places=1)
 
+    def test_sequence_join(self):
+        xdata_list = [DataAndMetadata.new_data_and_metadata(numpy.ones((16, 32)), data_descriptor=DataAndMetadata.DataDescriptor(False, 1, 1))]
+        xdata_list.append(DataAndMetadata.new_data_and_metadata(numpy.ones((2, 16, 32)), data_descriptor=DataAndMetadata.DataDescriptor(True, 1, 1)))
+        xdata_list.append(DataAndMetadata.new_data_and_metadata(numpy.ones((1, 16, 32)), data_descriptor=DataAndMetadata.DataDescriptor(True, 1, 1)))
+        sequence_xdata = Core.function_sequence_join(xdata_list)
+        self.assertTrue(sequence_xdata.is_sequence)
+        self.assertTrue(sequence_xdata.is_collection)
+        self.assertSequenceEqual(sequence_xdata.data_shape, (4, 16, 32))
+
+    def test_sequence_split(self):
+        sequence_xdata = DataAndMetadata.new_data_and_metadata(numpy.ones((3, 16, 32)), data_descriptor=DataAndMetadata.DataDescriptor(True, 1, 1))
+        xdata_list = Core.function_sequence_split(sequence_xdata)
+        self.assertEqual(len(xdata_list), 3)
+        for xdata in xdata_list:
+            self.assertSequenceEqual(xdata.data_shape, (16, 32))
+            self.assertTrue(xdata.is_collection)
+            self.assertFalse(xdata.is_sequence)
+
+
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
     unittest.main()
