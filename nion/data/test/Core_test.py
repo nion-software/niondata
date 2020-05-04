@@ -112,6 +112,34 @@ class TestCore(unittest.TestCase):
         self.assertEqual(tuple(c0.data.shape), tuple(c0.data_shape))
         self.assertTrue(numpy.array_equal(c0.data, numpy.concatenate([src_data1, src_data2], 0)))
 
+    def test_concatenate_propagates_data_descriptor(self):
+        data1 = numpy.ones((16, 32))
+        data2 = numpy.ones((8, 32))
+
+        data_descriptor = DataAndMetadata.DataDescriptor(True, 0, 1)
+        xdata1 = DataAndMetadata.new_data_and_metadata(data1, data_descriptor=data_descriptor)
+        xdata2 = DataAndMetadata.new_data_and_metadata(data2, data_descriptor=data_descriptor)
+        concatenated = Core.function_concatenate([xdata1, xdata2])
+        self.assertTrue(concatenated.is_sequence)
+        self.assertFalse(concatenated.is_collection)
+        self.assertEqual(concatenated.datum_dimension_count, 1)
+
+        data_descriptor = DataAndMetadata.DataDescriptor(False, 1, 1)
+        xdata1 = DataAndMetadata.new_data_and_metadata(data1, data_descriptor=data_descriptor)
+        xdata2 = DataAndMetadata.new_data_and_metadata(data2, data_descriptor=data_descriptor)
+        concatenated = Core.function_concatenate([xdata1, xdata2])
+        self.assertFalse(concatenated.is_sequence)
+        self.assertTrue(concatenated.is_collection)
+        self.assertEqual(concatenated.datum_dimension_count, 1)
+
+        data_descriptor = DataAndMetadata.DataDescriptor(False, 0, 2)
+        xdata1 = DataAndMetadata.new_data_and_metadata(data1, data_descriptor=data_descriptor)
+        xdata2 = DataAndMetadata.new_data_and_metadata(data2, data_descriptor=data_descriptor)
+        concatenated = Core.function_concatenate([xdata1, xdata2])
+        self.assertFalse(concatenated.is_sequence)
+        self.assertFalse(concatenated.is_collection)
+        self.assertEqual(concatenated.datum_dimension_count, 2)
+
     def test_concatenate_calibrations(self):
         src_data1 = numpy.zeros((4, 8, 16))
         src_data2 = numpy.zeros((4, 8, 16))
