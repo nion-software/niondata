@@ -294,8 +294,14 @@ def sequence_insert(src1: DataAndMetadata.DataAndMetadata, src2: DataAndMetadata
 def sequence_concatenate(src1: DataAndMetadata.DataAndMetadata, src2: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
     return Core.function_sequence_concatenate(src1, src2)
 
+def sequence_join(data_and_metadata_list: typing.Sequence[DataAndMetadata.DataAndMetadata]) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_sequence_join(data_and_metadata_list)
+
 def sequence_extract(src: DataAndMetadata.DataAndMetadata, position: int) -> DataAndMetadata.DataAndMetadata:
     return Core.function_sequence_extract(src, position)
+
+def sequence_split(src: DataAndMetadata.DataAndMetadata) -> typing.List[DataAndMetadata.DataAndMetadata]:
+    return Core.function_sequence_split(src)
 
 # utility functions
 

@@ -605,6 +605,26 @@ def function_sequence_concatenate(src1: DataAndMetadata.DataAndMetadata, src2: D
     return function_sequence_insert(src1, src2, src1.data_shape[0])
 
 
+def function_sequence_join(data_and_metadata_list: typing.Sequence[DataAndMetadata.DataAndMetadata]) -> DataAndMetadata.DataAndMetadata:
+    if not data_and_metadata_list:
+        return None
+    data_and_metadata_list = [DataAndMetadata.promote_ndarray(data_and_metadata) for data_and_metadata in data_and_metadata_list]
+    def ensure_sequence(xdata):
+        if xdata.is_sequence:
+            return xdata
+        sequence_data = numpy.reshape(xdata.data, (1,) + xdata.data.shape)
+        dimensional_calibrations = [Calibration.Calibration()] + xdata.dimensional_calibrations
+        data_descriptor = DataAndMetadata.DataDescriptor(True, xdata.collection_dimension_count, xdata.datum_dimension_count)
+        return DataAndMetadata.new_data_and_metadata(sequence_data, dimensional_calibrations=dimensional_calibrations, intensity_calibration=xdata.intensity_calibration, data_descriptor=data_descriptor)
+    sequence_xdata_list = [ensure_sequence(xdata) for xdata in data_and_metadata_list]
+    xdata_0 = sequence_xdata_list[0]
+    non_sequence_shape_0 = xdata_0.data_shape[1:]
+    for xdata in sequence_xdata_list[1:]:
+        if xdata.data_shape[1:] != non_sequence_shape_0:
+            return None
+    return function_concatenate(sequence_xdata_list)
+
+
 def function_sequence_extract(src: DataAndMetadata.DataAndMetadata, position: int) -> DataAndMetadata.DataAndMetadata:
     src = DataAndMetadata.promote_ndarray(src)
     if not src.is_sequence:
@@ -615,6 +635,19 @@ def function_sequence_extract(src: DataAndMetadata.DataAndMetadata, position: in
         return None
     channel = max(0, min(c, int(position)))
     return src[channel]
+
+
+def function_sequence_split(src: DataAndMetadata.DataAndMetadata) -> typing.List[DataAndMetadata.DataAndMetadata]:
+    src = DataAndMetadata.promote_ndarray(src)
+    if not src.is_sequence:
+        return None
+    dim = src.data_shape[1:]
+    if len(dim) < 1:
+        return None
+    dimensional_calibrations = copy.deepcopy(src.dimensional_calibrations[1:])
+    data_descriptor = DataAndMetadata.DataDescriptor(False, src.collection_dimension_count, src.datum_dimension_count)
+
+    return [DataAndMetadata.new_data_and_metadata(data, dimensional_calibrations=copy.deepcopy(dimensional_calibrations), intensity_calibration=copy.deepcopy(src.intensity_calibration), data_descriptor=copy.copy(data_descriptor)) for data in src.data]
 
 
 def function_make_elliptical_mask(data_shape: DataAndMetadata.ShapeType, center: NormPointType, size: NormSizeType, rotation: float) -> DataAndMetadata.DataAndMetadata:
