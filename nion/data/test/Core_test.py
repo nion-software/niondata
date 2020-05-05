@@ -932,7 +932,7 @@ class TestCore(unittest.TestCase):
         template_xdata = DataAndMetadata.new_data_and_metadata(data[40:60])
         ccoeff, max_pos = Core.function_register_template(image_xdata, template_xdata)
         self.assertEqual(len(max_pos), 1)
-        self.assertAlmostEqual(max_pos[0], 50, places=1)
+        self.assertAlmostEqual(max_pos[0], 0, places=1)
         self.assertAlmostEqual(ccoeff, 1.0, places=1)
 
     def test_register_template_for_2d_data(self):
@@ -941,7 +941,7 @@ class TestCore(unittest.TestCase):
         template_xdata = DataAndMetadata.new_data_and_metadata(data[40:60, 15:20])
         ccoeff, max_pos = Core.function_register_template(image_xdata, template_xdata)
         self.assertEqual(len(max_pos), 2)
-        self.assertTrue(numpy.allclose(max_pos, (50, 17), atol=0.1))
+        self.assertTrue(numpy.allclose(max_pos, (0, -33), atol=0.1))
         self.assertAlmostEqual(ccoeff, 1.0, places=1)
 
     def test_sequence_join(self):
