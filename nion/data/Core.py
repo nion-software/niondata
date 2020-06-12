@@ -387,6 +387,7 @@ def function_register_template(image_xdata: DataAndMetadata.DataAndMetadata, tem
     error, ccoeff, max_pos = TemplateMatching.find_ccorr_max(ccorr_xdata.data)
     if not error:
         return ccoeff, tuple(max_pos[i] - image_xdata.data_shape[i] * 0.5 for i in range(len(image_xdata.data_shape)))
+    return 0.0, (0.0, ) * len(image_xdata.data_shape)
 
 
 def function_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...], *, order: int = 1) -> DataAndMetadata.DataAndMetadata:
