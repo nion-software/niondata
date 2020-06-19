@@ -988,12 +988,12 @@ def function_crop_rotated(data_and_metadata: DataAndMetadata.DataAndMetadata, bo
     if not Image.is_data_valid(data):
         return None
 
-    top = int(data_shape.height * bounds.top)
-    left = int(data_shape.width * bounds.left)
-    height = int(data_shape.height * bounds.height)
-    width = int(data_shape.width * bounds.width)
+    top = round(data_shape.height * bounds.top)
+    left = round(data_shape.width * bounds.left)
+    height = round(data_shape.height * bounds.height)
+    width = round(data_shape.width * bounds.width)
 
-    x, y = numpy.meshgrid(numpy.arange(-width // 2, width - width // 2), numpy.arange(-height // 2, height - height // 2))
+    x, y = numpy.meshgrid(numpy.arange(-(width // 2), width - width // 2), numpy.arange(-(height // 2), height - height // 2))
 
     angle_sin = math.sin(angle)
     angle_cos = math.cos(angle)

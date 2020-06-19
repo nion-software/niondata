@@ -1,7 +1,7 @@
 # standard libraries
 import copy
 import logging
-import random
+import math
 import unittest
 
 # third party libraries
@@ -895,6 +895,14 @@ class TestCore(unittest.TestCase):
         self.assertEqual((8, 8), result.data_shape)
         self.assertEqual(0, numpy.amin(result))
         self.assertEqual(1, numpy.amax(result))
+        # test rounding. case from actual failing code.
+        xdata = DataAndMetadata.new_data_and_metadata(numpy.ones((76, 256), numpy.uint32))
+        result = Core.function_crop_rotated(xdata, ((0.5, 0.5), (1 / 76, math.sqrt(2) / 2)), math.radians(45))
+        self.assertEqual((1, 181), result.data_shape)
+        # another case where height was zero.
+        xdata = DataAndMetadata.new_data_and_metadata(numpy.ones((49, 163), numpy.uint32))
+        result = Core.function_crop_rotated(xdata, ((0.5, 0.5), (1 / 49, 115 / 163)), -0.8096358402621856)
+        self.assertEqual((1, 115), result.data_shape)
 
     def test_redimension_basic_functionality(self):
         data = numpy.ones((100, 100), dtype=numpy.int)
