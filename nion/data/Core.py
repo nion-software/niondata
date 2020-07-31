@@ -1641,6 +1641,44 @@ def function_rescale(data_and_metadata: DataAndMetadata.DataAndMetadata, data_ra
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
+def function_rebin_2d(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
+
+    height = int(shape[0])
+    width = int(shape[1])
+
+    data_shape = data_and_metadata.data_shape
+    data_dtype = data_and_metadata.data_dtype
+
+    dimensional_calibrations = data_and_metadata.dimensional_calibrations
+
+    if not Image.is_shape_and_dtype_valid(data_shape, data_dtype) or dimensional_calibrations is None:
+        return None
+
+    if not Image.is_shape_and_dtype_2d(data_shape, data_dtype):
+        return None
+
+    height = min(height, data_shape[0])
+    width = min(width, data_shape[1])
+
+    def calculate_data():
+        data = data_and_metadata.data
+        if not Image.is_data_valid(data):
+            return None
+        if not Image.is_data_2d(data):
+            return None
+        if data.shape[0] == height and data.shape[1] == width:
+            return data.copy()
+
+        shape = height, data.shape[0] // height, width, data.shape[1] // width
+        return data.reshape(shape).mean(-1).mean(1)
+
+    dimensions = height, width
+    rebinned_dimensional_calibrations = [Calibration.Calibration(dimensional_calibrations[i].offset, dimensional_calibrations[i].scale * data_shape[i] / dimensions[i], dimensional_calibrations[i].units) for i in range(len(dimensional_calibrations))]
+
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=rebinned_dimensional_calibrations)
+
+
 def function_resample_2d(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 

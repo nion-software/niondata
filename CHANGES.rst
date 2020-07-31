@@ -3,6 +3,7 @@ Changelog (niondata)
 
 0.13.11 (UNRELEASED)
 --------------------
+- Add xdata function rebin_image.
 - Make pick functions work for sequences of spectrum images.
 
 0.13.10 (2020-02-26)
