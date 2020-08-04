@@ -89,7 +89,10 @@ def rebin_1d(src: numpy.ndarray, len: int, retained: dict=None) -> numpy.ndarray
             retained["src_len"] = src_len
             retained["len"] = len
             retained["w"] = w
-        return sum((w * src).transpose()) * len / src_len
+        weighted_src = w * src
+        # This ensures that nans are handled properly: Only propagate nans that fall within a bin (i.e. where weight != 0)
+        weighted_src[w==0] = 0
+        return numpy.sum(weighted_src, axis=1) * len / src_len
     else:
         # linear
         result = numpy.empty((len, ), dtype=numpy.double)
