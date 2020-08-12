@@ -30,6 +30,8 @@ def scale_multidimensional(image, scaled_size):
 
 # size is c-indexed (height, width)
 def scaled(image, size, method='linear'):
+    size = tuple(size)
+
     if method=='nearest':
         return scale_multidimensional(image, size)
 
