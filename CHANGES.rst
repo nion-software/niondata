@@ -4,7 +4,12 @@ Changelog (niondata)
 0.13.11 (UNRELEASED)
 --------------------
 - Introduce calibrated coordinates and reference frames (preliminary).
+- Improve handling of NaNs in rebin_1d.
 - Add xdata function rebin_image.
+- Fix issue with bounds when rotating data.
+- Fix issues with concatenate and data descriptor.
+- Add xdata functions to split/join sequences.
+- Add template matching functions to xdata.
 - Make pick functions work for sequences of spectrum images.
 
 0.13.10 (2020-02-26)
