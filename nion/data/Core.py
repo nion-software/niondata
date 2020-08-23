@@ -1949,3 +1949,22 @@ def function_convert_to_scalar(data_and_metadata: DataAndMetadata.DataAndMetadat
                 return numpy.log(numpy.abs(d).astype(numpy.float64) + numpy.nextafter(0,1))
             data_and_metadata = function_array(log_absolute, data_and_metadata)
     return data_and_metadata
+
+
+def get_calibrated_interval_domain(reference_frame: Calibration.ReferenceFrameAxis,
+                                   interval: Calibration.CalibratedInterval) -> DataAndMetadata.DataAndMetadata:
+    start = reference_frame.convert_to_calibrated(interval.start).value
+    end = reference_frame.convert_to_calibrated(interval.end).value
+    start_px = int(reference_frame.convert_to_pixel(interval.start).value)
+    stop_px = int(reference_frame.convert_to_pixel(interval.end).value)
+    return DataAndMetadata.new_data_and_metadata(numpy.linspace(start, end, (stop_px - start_px), endpoint=False),
+                                                 dimensional_calibrations=[reference_frame.calibration])
+
+
+def get_calibrated_interval_slice(spectrum: DataAndMetadata.DataAndMetadata,
+                                  reference_frame: Calibration.ReferenceFrameAxis,
+                                  interval: Calibration.CalibratedInterval) -> DataAndMetadata.DataAndMetadata:
+    assert spectrum.is_datum_1d
+    start_px = int(reference_frame.convert_to_pixel(interval.start).value)
+    stop_px = int(reference_frame.convert_to_pixel(interval.end).value)
+    return spectrum[..., start_px:stop_px]

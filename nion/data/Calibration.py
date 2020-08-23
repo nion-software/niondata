@@ -1,8 +1,10 @@
-# standard libraries
-import math
+from __future__ import annotations
 
-# third party libraries
+# standard libraries
+import enum
+import math
 import numpy
+
 
 integer_types = (int,)
 
@@ -185,3 +187,67 @@ class Calibration:
         else:
             result = None
         return result
+
+
+class CoordinateType(enum.IntEnum):
+    CALIBRATED = 0
+    NORMALIZED = 1
+    PIXEL = 2
+
+
+
+class Coordinate:
+    def __init__(self, coordinate_type: CoordinateType, value: float):
+        self.coordinate_type = coordinate_type
+        self.value = value
+        self.int_value = int(value)
+
+    def __repr__(self):
+        return f"{str(self.coordinate_type).split('.')[-1]}:{self.value}"
+
+
+class ReferenceFrameAxis:
+    def __init__(self, calibration: Calibration, n: int):
+        self.calibration = calibration
+        self.n = n
+
+    def convert_to_calibrated(self, c: Coordinate) -> Coordinate:
+        if c.coordinate_type == CoordinateType.CALIBRATED:
+            return Coordinate(CoordinateType.CALIBRATED, c.value)
+        if c.coordinate_type == CoordinateType.NORMALIZED:
+            return Coordinate(CoordinateType.CALIBRATED, self.calibration.convert_to_calibrated_value(c.value * self.n))
+        if c.coordinate_type == CoordinateType.PIXEL:
+            return Coordinate(CoordinateType.CALIBRATED, self.calibration.convert_to_calibrated_value(c.value / self.n))
+        raise NotImplementedError()
+
+    def convert_to_pixel(self, c: Coordinate) -> Coordinate:
+        if c.coordinate_type == CoordinateType.CALIBRATED:
+            return Coordinate(CoordinateType.PIXEL, self.calibration.convert_from_calibrated_value(c.value))
+        if c.coordinate_type == CoordinateType.NORMALIZED:
+            return Coordinate(CoordinateType.PIXEL, c.value * self.n)
+        if c.coordinate_type == CoordinateType.PIXEL:
+            return Coordinate(CoordinateType.PIXEL, c.value)
+        raise NotImplementedError()
+
+    def convert_to_normalized(self, c: Coordinate) -> Coordinate:
+        if c.coordinate_type == CoordinateType.CALIBRATED:
+            return Coordinate(CoordinateType.NORMALIZED, self.calibration.convert_from_calibrated_value(c.value) / self.n)
+        if c.coordinate_type == CoordinateType.NORMALIZED:
+            return Coordinate(CoordinateType.NORMALIZED, c.value)
+        if c.coordinate_type == CoordinateType.PIXEL:
+            return Coordinate(CoordinateType.NORMALIZED, c.value / self.n)
+        raise NotImplementedError()
+
+
+class CalibratedInterval:
+    def __init__(self, start: Coordinate, end: Coordinate):
+        assert start.coordinate_type == end.coordinate_type
+        self.start = start
+        self.end = end
+
+    def __repr__(self):
+        return f"[{self.start!r} {self.end!r})"
+
+    @property
+    def length(self) -> Coordinate:
+        return Coordinate(self.start.coordinate_type, self.end.value - self.start.value)

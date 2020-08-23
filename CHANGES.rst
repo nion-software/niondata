@@ -3,6 +3,7 @@ Changelog (niondata)
 
 0.13.11 (UNRELEASED)
 --------------------
+- Introduce calibrated coordinates and reference frames (preliminary).
 - Add xdata function rebin_image.
 - Make pick functions work for sequences of spectrum images.
 
