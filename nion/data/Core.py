@@ -1950,7 +1950,6 @@ def function_convert_to_scalar(data_and_metadata: DataAndMetadata.DataAndMetadat
             data_and_metadata = function_array(log_absolute, data_and_metadata)
     return data_and_metadata
 
-
 def get_calibrated_interval_domain(reference_frame: Calibration.ReferenceFrameAxis,
                                    interval: Calibration.CalibratedInterval) -> DataAndMetadata.DataAndMetadata:
     start = reference_frame.convert_to_calibrated(interval.start).value
@@ -1960,7 +1959,6 @@ def get_calibrated_interval_domain(reference_frame: Calibration.ReferenceFrameAx
     return DataAndMetadata.new_data_and_metadata(numpy.linspace(start, end, (stop_px - start_px), endpoint=False),
                                                  dimensional_calibrations=[reference_frame.calibration])
 
-
 def get_calibrated_interval_slice(spectrum: DataAndMetadata.DataAndMetadata,
                                   reference_frame: Calibration.ReferenceFrameAxis,
                                   interval: Calibration.CalibratedInterval) -> DataAndMetadata.DataAndMetadata:
@@ -1968,3 +1966,24 @@ def get_calibrated_interval_slice(spectrum: DataAndMetadata.DataAndMetadata,
     start_px = int(reference_frame.convert_to_pixel(interval.start).value)
     stop_px = int(reference_frame.convert_to_pixel(interval.end).value)
     return spectrum[..., start_px:stop_px]
+
+def calibrated_subtract_spectrum(data1: DataAndMetadata.DataAndMetadata, data2: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+    assert data1.is_datum_1d
+    assert data2.is_datum_1d
+    assert data1.intensity_calibration == data2.intensity_calibration
+    calibration1 = data1.datum_dimensional_calibrations[0]
+    calibration2 = data2.datum_dimensional_calibrations[0]
+    assert calibration1.units == calibration2.units
+    assert calibration1.scale == calibration2.scale
+    start1 = calibration1.convert_to_calibrated_value(0)
+    end1 = calibration1.convert_to_calibrated_value(data1.datum_dimension_shape[0])
+    start2 = calibration2.convert_to_calibrated_value(0)
+    end2 = calibration2.convert_to_calibrated_value(data2.datum_dimension_shape[0])
+    assert (start2 <= start1 <= end2) or (start2 <= end1 <= end2) or (start1 <= start2 <= end1) or (start1 <= end2 <= end1)
+    start = max(start1, start2)
+    end = min(end1, end2)
+    start_index1 = round(calibration1.convert_from_calibrated_value(start))
+    end_index1 = round(calibration1.convert_from_calibrated_value(end))
+    start_index2 = round(calibration2.convert_from_calibrated_value(start))
+    end_index2 = round(calibration2.convert_from_calibrated_value(end))
+    return data1[..., start_index1:end_index1] - data2[..., start_index2:end_index2]
