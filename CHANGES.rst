@@ -1,7 +1,7 @@
 Changelog (niondata)
 ====================
 
-0.13.11 (UNRELEASED)
+0.13.11 (2020-08-31)
 --------------------
 - Introduce calibrated coordinates and reference frames (preliminary).
 - Improve handling of NaNs in rebin_1d.
