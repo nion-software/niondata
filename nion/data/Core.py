@@ -1867,7 +1867,8 @@ def function_scalar(op, data_and_metadata: DataAndMetadata.DataAndMetadata) -> D
 
     return DataAndMetadata.ScalarAndMetadata(lambda: calculate_value(), data_and_metadata.intensity_calibration)
 
-def function_display_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None, slice_center: int=0, slice_width: int=1, complex_display_type: str=None) -> typing.Tuple[DataAndMetadata.DataAndMetadata, bool]:
+def function_element_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None, slice_center: int=0, slice_width: int=1) -> typing.Tuple[DataAndMetadata.DataAndMetadata, bool]:
+    # extract an element (2d or 1d data element) from data and metadata using the indexes and slices.
     dimensional_shape = data_and_metadata.dimensional_shape
     modified = False
     next_dimension = 0
@@ -1891,6 +1892,12 @@ def function_display_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMeta
             data_and_metadata = DataAndMetadata.function_data_slice(data_and_metadata, collection_slice)
             modified = True
         next_dimension += collection_dimension_count + datum_dimension_count
+    if data_and_metadata and functools.reduce(operator.mul, data_and_metadata.dimensional_shape) == 0:
+        data_and_metadata = None
+    return data_and_metadata, modified
+
+def function_scalar_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetadata, complex_display_type: str=None, *, _modified: bool = False) -> typing.Tuple[DataAndMetadata.DataAndMetadata, bool]:
+    modified = _modified
     if data_and_metadata and data_and_metadata.is_data_complex_type:
         if complex_display_type == "real":
             data_and_metadata = function_array(numpy.real, data_and_metadata)
@@ -1905,6 +1912,11 @@ def function_display_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMeta
         modified = True
     if data_and_metadata and functools.reduce(operator.mul, data_and_metadata.dimensional_shape) == 0:
         data_and_metadata = None
+    return data_and_metadata, modified
+
+def function_display_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None, slice_center: int=0, slice_width: int=1, complex_display_type: str=None) -> typing.Tuple[DataAndMetadata.DataAndMetadata, bool]:
+    data_and_metadata, modified = function_element_data_no_copy(data_and_metadata, sequence_index, collection_index, slice_center, slice_width)
+    data_and_metadata, modified = function_scalar_data_no_copy(data_and_metadata, _modified=modified)
     return data_and_metadata, modified
 
 def function_display_data(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None, slice_center: int=0, slice_width: int=1, complex_display_type: str=None) -> DataAndMetadata.DataAndMetadata:
@@ -1937,17 +1949,7 @@ def function_extract_datum(data_and_metadata: DataAndMetadata.DataAndMetadata, s
     return data_and_metadata
 
 def function_convert_to_scalar(data_and_metadata: DataAndMetadata.DataAndMetadata, complex_display_type: str=None) -> DataAndMetadata.DataAndMetadata:
-    if data_and_metadata and data_and_metadata.is_data_complex_type:
-        if complex_display_type == "real":
-            data_and_metadata = function_array(numpy.real, data_and_metadata)
-        elif complex_display_type == "imaginary":
-            data_and_metadata = function_array(numpy.imag, data_and_metadata)
-        elif complex_display_type == "absolute":
-            data_and_metadata = function_array(numpy.absolute, data_and_metadata)
-        else:  # default, log-absolute
-            def log_absolute(d):
-                return numpy.log(numpy.abs(d).astype(numpy.float64) + numpy.nextafter(0,1))
-            data_and_metadata = function_array(log_absolute, data_and_metadata)
+    data_and_metadata, modified = function_scalar_data_no_copy(data_and_metadata, complex_display_type)
     return data_and_metadata
 
 def get_calibrated_interval_domain(reference_frame: Calibration.ReferenceFrameAxis,

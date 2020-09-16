@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+0.13.12 (UNRELEASED)
+--------------------
+- Split display functions into element and scalar functions.
+
 0.13.11 (2020-08-31)
 --------------------
 - Introduce calibrated coordinates and reference frames (preliminary).
