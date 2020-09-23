@@ -3,6 +3,7 @@ Changelog (niondata)
 
 0.13.12 (UNRELEASED)
 --------------------
+- Changed rescale to take a new parameter 'in_range'.
 - Changed rgba/rgb functions to clip data to 0, 255.
 - Split display functions into element and scalar functions.
 

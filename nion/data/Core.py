@@ -1607,7 +1607,7 @@ def function_resize(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: D
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=resized_dimensional_calibrations)
 
 
-def function_rescale(data_and_metadata: DataAndMetadata.DataAndMetadata, data_range: DataRangeType=None) -> DataAndMetadata.DataAndMetadata:
+def function_rescale(data_and_metadata: DataAndMetadata.DataAndMetadata, data_range: DataRangeType=None, in_range: DataRangeType=None) -> DataAndMetadata.DataAndMetadata:
     """Rescale data and update intensity calibration.
 
     rescale(a, (0.0, 1.0))
@@ -1620,9 +1620,9 @@ def function_rescale(data_and_metadata: DataAndMetadata.DataAndMetadata, data_ra
         data = data_and_metadata.data
         if not Image.is_data_valid(data):
             return None
-        data_ptp = numpy.ptp(data)
+        data_ptp = numpy.ptp(data) if in_range is None else in_range[1] - in_range[0]
         data_ptp_i = 1.0 / data_ptp if data_ptp != 0.0 else 1.0
-        data_min = numpy.amin(data)
+        data_min = numpy.amin(data) if in_range is None else in_range[0]
         data_span = data_range[1] - data_range[0]
         if data_span == 1.0 and data_range[0] == 0.0:
             return (data - data_min) * data_ptp_i
