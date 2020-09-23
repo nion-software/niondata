@@ -3,6 +3,7 @@ Changelog (niondata)
 
 0.13.12 (UNRELEASED)
 --------------------
+- Changed rgba/rgb functions to clip data to 0, 255.
 - Split display functions into element and scalar functions.
 
 0.13.11 (2020-08-31)

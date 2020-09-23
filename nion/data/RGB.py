@@ -82,9 +82,9 @@ def function_rgb(red_data_and_metadata: DataAndMetadata.DataAndMetadata,
                 return None
 
             if data.dtype.kind in 'iu':
-                rgb_image[..., channel_index] = data
+                rgb_image[..., channel_index] = numpy.clip(data, 0, 255)
             elif data.dtype.kind in 'f':
-                rgb_image[..., channel_index] = numpy.multiply(data, 255)
+                rgb_image[..., channel_index] = numpy.clip(numpy.multiply(data, 255), 0, 255)
             else:
                 return None
         return rgb_image
@@ -127,9 +127,9 @@ def function_rgba(red_data_and_metadata: DataAndMetadata.DataAndMetadata,
                 return None
 
             if data.dtype.kind in 'iu':
-                rgba_image[..., channel_index] = data
+                rgba_image[..., channel_index] = numpy.clip(data, 0, 255)
             elif data.dtype.kind in 'f':
-                rgba_image[..., channel_index] = numpy.multiply(data, 255)
+                rgba_image[..., channel_index] = numpy.clip(numpy.multiply(data, 255), 0, 255)
             else:
                 return None
         return rgba_image
