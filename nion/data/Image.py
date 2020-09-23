@@ -103,8 +103,13 @@ def rebin_1d(src: numpy.ndarray, len: int, retained: dict=None) -> numpy.ndarray
         return result
 
 
+def get_dtype_view(array, dtype):
+    # this is useful for handling both numpy and h5py arrays
+    return numpy.array(array, copy=False).view(dtype)
+
+
 def get_byte_view(rgba_image):
-    return rgba_image.view(numpy.uint8).reshape(rgba_image.shape + (-1, ))
+    return get_dtype_view(rgba_image, numpy.uint8).reshape(rgba_image.shape + (-1, ))
 
 
 def get_rgb_view(rgba_image, byteorder=None):
@@ -163,11 +168,11 @@ def get_alpha_view(rgba_image, byteorder=None):
 
 
 def get_rgba_view_from_rgba_data(rgba_data):
-    return rgba_data.view(numpy.uint8).reshape(rgba_data.shape + (4,))
+    return get_dtype_view(rgba_data, numpy.uint8).reshape(rgba_data.shape + (4,))
 
 
 def get_rgba_data_from_rgba(rgba_image):
-    return rgba_image.view(numpy.uint32).reshape(rgba_image.shape[:-1])
+    return get_dtype_view(rgba_image, numpy.uint32).reshape(rgba_image.shape[:-1])
 
 
 def create_checkerboard(size):
@@ -377,7 +382,7 @@ def create_rgba_image_from_array(array, normalize=True, data_range=None, display
                     # optimized version below
                     r0 = numpy.empty(array.shape, numpy.uint8)
                     r0[:] = (m * (array - nmin))
-                    rgb_view = rgba_image.view(numpy.uint8).reshape(rgba_image.shape + (-1, ))[..., :3]
+                    rgb_view = get_dtype_view(rgba_image, numpy.uint8).reshape(rgba_image.shape + (-1, ))[..., :3]
                     rgb_view[..., 0] = rgb_view[..., 1] = rgb_view[..., 2] = r0
                 if overlimit:
                     rgba_image = numpy.where(numpy.less(array - nmin, (nmax - nmin) * overlimit), rgba_image, 0xFFFF0000)
@@ -392,13 +397,13 @@ def create_rgba_image_from_array(array, normalize=True, data_range=None, display
     elif numpy.ndim(array) == 3:
         assert array.shape[2] in (3,4)  # rgb, rgba
         if array.shape[2] == 4:
-            return array.view(numpy.uint32).reshape(array.shape[:-1])  # squash the color into uint32
+            return get_dtype_view(array, numpy.uint32).reshape(array.shape[:-1])  # squash the color into uint32
         else:
             assert array.shape[2] == 3
             rgba_image = numpy.empty(array.shape[:-1] + (4,), numpy.uint8)
             rgba_image[:,:,0:3] = array
             rgba_image[:,:,3] = 255
-            return rgba_image.view(numpy.uint32).reshape(rgba_image.shape[:-1])  # squash the color into uint32
+            return get_dtype_view(rgba_image, numpy.uint32).reshape(rgba_image.shape[:-1])  # squash the color into uint32
     return None
 
 
@@ -426,7 +431,7 @@ def is_grayscale(data):
 def read_rgba_image_from_file(ui, filename):
     rgba_image = ui.load_rgba_data_from_file(filename)  # always loads rgba
     assert rgba_image is not None
-    return rgba_image.view(numpy.uint8).reshape(rgba_image.shape + (4,))
+    return get_dtype_view(rgba_image, numpy.uint8).reshape(rgba_image.shape + (4,))
 
 
 # read image file. convert to dtype.
