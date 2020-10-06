@@ -1,7 +1,7 @@
 Changelog (niondata)
 ====================
 
-0.13.12 (UNRELEASED)
+0.13.12 (2020-10-06)
 --------------------
 - Fixed RGB issues when data backed by h5py array instead of numpy array.
 - Changed rescale to take a new parameter 'in_range'.
