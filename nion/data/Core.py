@@ -1867,8 +1867,16 @@ def function_scalar(op, data_and_metadata: DataAndMetadata.DataAndMetadata) -> D
 
     return DataAndMetadata.ScalarAndMetadata(lambda: calculate_value(), data_and_metadata.intensity_calibration)
 
-def function_element_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None, slice_center: int=0, slice_width: int=1) -> typing.Tuple[DataAndMetadata.DataAndMetadata, bool]:
+
+def function_element_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetadata,
+                                  sequence_index: int = 0,
+                                  collection_index: DataAndMetadata.PositionType = None,
+                                  slice_center: int = 0,
+                                  slice_width: int = 1, *,
+                                  use_slice: bool = True,
+                                  flag16: bool = True) -> typing.Tuple[DataAndMetadata.DataAndMetadata, bool]:
     # extract an element (2d or 1d data element) from data and metadata using the indexes and slices.
+    # flag16 is for backwards compatibility with 0.15.2 and earlier. new callers should set it to False.
     dimensional_shape = data_and_metadata.dimensional_shape
     modified = False
     next_dimension = 0
@@ -1882,9 +1890,9 @@ def function_element_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMeta
         collection_dimension_count = data_and_metadata.collection_dimension_count
         datum_dimension_count = data_and_metadata.datum_dimension_count
         # next dimensions are treated as collection indexes.
-        if collection_dimension_count == 1 and datum_dimension_count == 1 and data_and_metadata.collection_dimension_shape[0] <= 16:
+        if flag16 and collection_dimension_count == 1 and datum_dimension_count == 1 and data_and_metadata.collection_dimension_shape[0] <= 16:
             pass  # this is a special case to display a few rows all at once. once true multi-data displays are available, remove this
-        elif collection_dimension_count == 2 and datum_dimension_count == 1:
+        elif use_slice and collection_dimension_count == 2 and datum_dimension_count == 1:
             data_and_metadata = function_slice_sum(data_and_metadata, slice_center, slice_width)
             modified = True
         else:  # default, "pick"

@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+0.13.13 (UNRELEASED)
+--------------------
+- Remove special case of C(1) D(1) < 16 from element data function.
+
 0.13.12 (2020-10-06)
 --------------------
 - Fixed RGB issues when data backed by h5py array instead of numpy array.
