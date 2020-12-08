@@ -1,9 +1,9 @@
 Changelog (niondata)
 ====================
 
-0.13.13 (UNRELEASED)
+0.13.13 (2020-12-08)
 --------------------
-- Remove special case of C(1) D(1) < 16 from element data function.
+- Make special case of C(1) D(1) < 16 from element data function optional.
 
 0.13.12 (2020-10-06)
 --------------------
