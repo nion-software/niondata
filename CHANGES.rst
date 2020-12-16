@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+UNRELEASED
+----------
+- Add affine transform function and optional order parameter to warp.
+
 0.13.13 (2020-12-08)
 --------------------
 - Make special case of C(1) D(1) < 16 from element data function optional.

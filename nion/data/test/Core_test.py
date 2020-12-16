@@ -970,6 +970,27 @@ class TestCore(unittest.TestCase):
             self.assertTrue(xdata.is_collection)
             self.assertFalse(xdata.is_sequence)
 
+    def test_affine_transform(self):
+        data_shapes = [(5, 5)]#, (6, 6)]
+        for data_shape in data_shapes:
+            with self.subTest(data_shape=data_shape):
+                original_data = numpy.zeros(data_shape)
+                original_data[1:-1, 2:-2] = 1
+                transformation_matrix = numpy.array(((numpy.cos(numpy.pi/2), -numpy.sin(numpy.pi/2), 0),
+                                                     (numpy.sin(numpy.pi/2),  numpy.cos(numpy.pi/2), 0),
+                                                     (0,                      0,                     1)))
+                transformed = Core.function_affine_transform(original_data, transformation_matrix, order=1)
+                self.assertTrue(numpy.allclose(numpy.rot90(original_data), transformed.data))
+
+    def test_affine_transform_does_identity_correctly(self):
+        data_shapes = [(4, 4), (5, 5)]
+        for data_shape in data_shapes:
+            with self.subTest(data_shape=data_shape):
+                original_data = numpy.random.rand(*data_shape)
+                transformation_matrix = numpy.array(((1, 0), (0, 1)))
+                transformed = Core.function_affine_transform(original_data, transformation_matrix, order=1)
+                self.assertTrue(numpy.allclose(original_data, transformed.data))
+
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

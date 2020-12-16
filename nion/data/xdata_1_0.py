@@ -90,8 +90,11 @@ def rebin_image(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataA
 def resample_image(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
     return Core.function_resample_2d(data_and_metadata, shape)
 
-def warp(data_and_metadata: DataAndMetadata.DataAndMetadata, coordinates: typing.Sequence[DataAndMetadata.DataAndMetadata]) -> DataAndMetadata.DataAndMetadata:
+def warp(data_and_metadata: DataAndMetadata.DataAndMetadata, coordinates: typing.Sequence[DataAndMetadata.DataAndMetadata], order: int=1) -> DataAndMetadata.DataAndMetadata:
     return Core.function_warp(data_and_metadata, coordinates)
+
+def affine_transform(data_and_metadata: DataAndMetadata.DataAndMetadata, transformation_matrix: numpy.ndarray, order: int=1) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_affine_transform(data_and_metadata, transformation_matrix, order=order)
 
 # functions generating ndarrays
 # TODO: move these bodies to Core once Core usage has been migrated

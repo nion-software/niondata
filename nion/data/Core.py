@@ -1712,25 +1712,61 @@ def function_resample_2d(data_and_metadata: DataAndMetadata.DataAndMetadata, sha
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=resampled_dimensional_calibrations)
 
 
-def function_warp(data_and_metadata: DataAndMetadata.DataAndMetadata, coordinates: typing.Sequence[DataAndMetadata.DataAndMetadata]) -> DataAndMetadata.DataAndMetadata:
+def function_warp(data_and_metadata: DataAndMetadata.DataAndMetadata, coordinates: typing.Sequence[DataAndMetadata.DataAndMetadata], order: int=1) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
     coords = numpy.moveaxis(numpy.dstack([coordinate.data for coordinate in coordinates]), -1, 0)
     if data_and_metadata.is_data_rgb:
         rgb = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (3,), numpy.uint8)
-        rgb[..., 0] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 0], coords)
-        rgb[..., 1] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 1], coords)
-        rgb[..., 2] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 2], coords)
-        return DataAndMetadata.new_data_and_metadata(rgb)
+        rgb[..., 0] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 0], coords, order=order)
+        rgb[..., 1] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 1], coords, order=order)
+        rgb[..., 2] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 2], coords, order=order)
+        return DataAndMetadata.new_data_and_metadata(rgb, dimensional_calibrations=data_and_metadata.dimensional_calibrations,
+                                                     intensity_calibration=data_and_metadata.intensity_calibration)
     elif data_and_metadata.is_data_rgba:
         rgba = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (4,), numpy.uint8)
-        rgba[..., 0] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 0], coords)
-        rgba[..., 1] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 1], coords)
-        rgba[..., 2] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 2], coords)
-        rgba[..., 3] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 3], coords)
-        return DataAndMetadata.new_data_and_metadata(rgba)
+        rgba[..., 0] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 0], coords, order=order)
+        rgba[..., 1] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 1], coords, order=order)
+        rgba[..., 2] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 2], coords, order=order)
+        rgba[..., 3] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 3], coords, order=order)
+        return DataAndMetadata.new_data_and_metadata(rgba, dimensional_calibrations=data_and_metadata.dimensional_calibrations,
+                                                     intensity_calibration=data_and_metadata.intensity_calibration)
     else:
-        return DataAndMetadata.new_data_and_metadata(scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data, coords))
+        return DataAndMetadata.new_data_and_metadata(scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data, coords, order=order),
+                                                     dimensional_calibrations=data_and_metadata.dimensional_calibrations,
+                                                     intensity_calibration=data_and_metadata.intensity_calibration)
 
+
+def calculate_coordinates_for_affine_transform(data_and_metadata: DataAndMetadata.DataAndMetadata, transformation_matrix: numpy.ndarray) -> typing.Sequence[DataAndMetadata.DataAndMetadata]:
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
+    if data_and_metadata.is_data_rgb_type:
+        assert len(data_and_metadata.data_shape) == 3
+        coords_shape = data_and_metadata.data_shape[:-1]
+    else:
+        assert len(data_and_metadata.data_shape) == 2
+        coords_shape = data_and_metadata.data_shape
+    assert transformation_matrix.ndim == 2
+    assert transformation_matrix.shape[0] == transformation_matrix.shape[1]
+    assert transformation_matrix.shape[0] in {len(coords_shape), len(coords_shape) + 1}
+    half_shape = (coords_shape[0] * 0.5, coords_shape[1] * 0.5)
+    coords = numpy.mgrid[0:coords_shape[0], 0:coords_shape[1]].astype(float)
+    coords[0] -= half_shape[0] - 0.5
+    coords[1] -= half_shape[1] - 0.5
+    if transformation_matrix.shape[0] == len(coords_shape) + 1:
+        coords = numpy.concatenate([numpy.ones((1,) + coords.shape[1:]), coords])
+    coords = coords[::-1, ...]
+    transformed = numpy.einsum('ij,ikm', transformation_matrix, coords)
+    transformed = transformed[::-1, ...]
+    if transformation_matrix.shape[0] == len(coords_shape) + 1:
+        transformed = transformed[1:, ...]
+    transformed[0] += half_shape[0] - 0.5
+    transformed[1] += half_shape[1] - 0.5
+    transformed = [DataAndMetadata.new_data_and_metadata(transformed[0]), DataAndMetadata.new_data_and_metadata(transformed[1])]
+    return transformed
+
+
+def function_affine_transform(data_and_metadata: DataAndMetadata.DataAndMetadata, transformation_matrix: numpy.ndarray, order: int=1) -> DataAndMetadata.DataAndMetadata:
+    coordinates = calculate_coordinates_for_affine_transform(data_and_metadata, transformation_matrix)
+    return function_warp(data_and_metadata, coordinates, order=order)
 
 
 def function_histogram(data_and_metadata: DataAndMetadata.DataAndMetadata, bins: int) -> DataAndMetadata.DataAndMetadata:
