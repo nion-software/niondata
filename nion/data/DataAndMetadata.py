@@ -154,9 +154,9 @@ class DataMetadata:
         return True
 
     @property
-    def data_shape(self) -> typing.Optional[ShapeType]:
+    def data_shape(self) -> ShapeType:
         data_shape_and_dtype = self.data_shape_and_dtype
-        return data_shape_and_dtype[0] if data_shape_and_dtype is not None else None
+        return tuple(data_shape_and_dtype[0]) if data_shape_and_dtype is not None else tuple()
 
     @property
     def data_dtype(self) -> typing.Optional[numpy.dtype]:
@@ -164,12 +164,13 @@ class DataMetadata:
         return data_shape_and_dtype[1] if data_shape_and_dtype is not None else None
 
     @property
-    def dimensional_shape(self) -> typing.Optional[ShapeType]:
+    def dimensional_shape(self) -> ShapeType:
         data_shape_and_dtype = self.data_shape_and_dtype
         if data_shape_and_dtype is not None:
             data_shape, data_dtype = data_shape_and_dtype
-            return Image.dimensional_shape_from_shape_and_dtype(data_shape, data_dtype)
-        return None
+            shape = Image.dimensional_shape_from_shape_and_dtype(data_shape, data_dtype)
+            return tuple(shape) if shape is not None else tuple()
+        return tuple()
 
     @property
     def is_sequence(self) -> bool:
@@ -201,24 +202,24 @@ class DataMetadata:
         return dimensional_shape[0] if dimensional_shape and self.is_sequence else 0
 
     @property
-    def sequence_dimension_shape(self) -> typing.Optional[ShapeType]:
+    def sequence_dimension_shape(self) -> ShapeType:
         dimensional_shape = self.dimensional_shape
-        return dimensional_shape[self.data_descriptor.sequence_dimension_index_slice] if dimensional_shape else None
+        return tuple(dimensional_shape[self.data_descriptor.sequence_dimension_index_slice]) if dimensional_shape else tuple()
 
     @property
-    def collection_dimension_shape(self) -> typing.Optional[ShapeType]:
+    def collection_dimension_shape(self) -> ShapeType:
         dimensional_shape = self.dimensional_shape
-        return dimensional_shape[self.data_descriptor.collection_dimension_index_slice] if dimensional_shape else None
+        return tuple(dimensional_shape[self.data_descriptor.collection_dimension_index_slice]) if dimensional_shape else tuple()
 
     @property
-    def navigation_dimension_shape(self) -> typing.Optional[ShapeType]:
+    def navigation_dimension_shape(self) -> ShapeType:
         dimensional_shape = self.dimensional_shape
-        return dimensional_shape[self.data_descriptor.navigation_dimension_index_slice] if dimensional_shape else None
+        return tuple(dimensional_shape[self.data_descriptor.navigation_dimension_index_slice]) if dimensional_shape else tuple()
 
     @property
-    def datum_dimension_shape(self) -> typing.Optional[ShapeType]:
+    def datum_dimension_shape(self) -> ShapeType:
         dimensional_shape = self.dimensional_shape
-        return dimensional_shape[self.data_descriptor.datum_dimension_index_slice] if dimensional_shape else None
+        return tuple(dimensional_shape[self.data_descriptor.datum_dimension_index_slice]) if dimensional_shape else tuple()
 
     @property
     def sequence_dimension_index(self) -> typing.Optional[int]:
@@ -519,6 +520,16 @@ class DataAndMetadata:
             self.decrement_data_ref_count()
 
     @property
+    def _data_ex(self) -> numpy.ndarray:
+        self.increment_data_ref_count()
+        try:
+            data = self.__data
+            assert data is not None
+            return data
+        finally:
+            self.decrement_data_ref_count()
+
+    @property
     def data_if_loaded(self) -> bool:
         return self.__data is not None
 
@@ -553,7 +564,7 @@ class DataAndMetadata:
         return self.__data_metadata
 
     @property
-    def data_shape(self) -> typing.Optional[ShapeType]:
+    def data_shape(self) -> ShapeType:
         return self.__data_metadata.data_shape
 
     @property
@@ -561,11 +572,11 @@ class DataAndMetadata:
         return self.__data_metadata.data_dtype
 
     @property
-    def dimensional_shape(self) -> typing.Optional[ShapeType]:
+    def dimensional_shape(self) -> ShapeType:
         return self.__data_metadata.dimensional_shape
 
     @property
-    def data_descriptor(self) -> typing.Optional[DataDescriptor]:
+    def data_descriptor(self) -> DataDescriptor:
         return copy.deepcopy(self.__data_metadata.data_descriptor)
 
     @property
@@ -597,19 +608,19 @@ class DataAndMetadata:
         return self.__data_metadata.max_sequence_index
 
     @property
-    def sequence_dimension_shape(self) -> typing.Optional[ShapeType]:
+    def sequence_dimension_shape(self) -> ShapeType:
         return self.__data_metadata.sequence_dimension_shape
 
     @property
-    def collection_dimension_shape(self) -> typing.Optional[ShapeType]:
+    def collection_dimension_shape(self) -> ShapeType:
         return self.__data_metadata.collection_dimension_shape
 
     @property
-    def navigation_dimension_shape(self) -> typing.Optional[ShapeType]:
+    def navigation_dimension_shape(self) -> ShapeType:
         return self.__data_metadata.navigation_dimension_shape
 
     @property
-    def datum_dimension_shape(self) -> typing.Optional[ShapeType]:
+    def datum_dimension_shape(self) -> ShapeType:
         return self.__data_metadata.datum_dimension_shape
 
     @property
@@ -1152,7 +1163,7 @@ def function_data_slice(data_and_metadata, key):
     return new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=cropped_dimensional_calibrations, data_descriptor=data_descriptor)
 
 
-def promote_ndarray(data):
+def promote_ndarray(data: typing.Union[DataAndMetadata, numpy.ndarray, typing.Any]) -> DataAndMetadata:
     if isinstance(data, DataAndMetadata):
         return data
     if isinstance(data, numpy.ndarray):
