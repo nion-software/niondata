@@ -154,12 +154,12 @@ class DataMetadata:
         return True
 
     @property
-    def data_shape(self) -> ShapeType:
+    def data_shape(self) -> typing.Optional[ShapeType]:
         data_shape_and_dtype = self.data_shape_and_dtype
         return data_shape_and_dtype[0] if data_shape_and_dtype is not None else None
 
     @property
-    def data_dtype(self) -> numpy.dtype:
+    def data_dtype(self) -> typing.Optional[numpy.dtype]:
         data_shape_and_dtype = self.data_shape_and_dtype
         return data_shape_and_dtype[1] if data_shape_and_dtype is not None else None
 
@@ -167,7 +167,7 @@ class DataMetadata:
     def dimensional_shape(self) -> typing.Optional[ShapeType]:
         data_shape_and_dtype = self.data_shape_and_dtype
         if data_shape_and_dtype is not None:
-            data_shape, data_dtype = self.data_shape_and_dtype
+            data_shape, data_dtype = data_shape_and_dtype
             return Image.dimensional_shape_from_shape_and_dtype(data_shape, data_dtype)
         return None
 
@@ -197,30 +197,35 @@ class DataMetadata:
 
     @property
     def max_sequence_index(self) -> int:
-        return self.dimensional_shape[0] if self.is_sequence else 0
+        dimensional_shape = self.dimensional_shape
+        return dimensional_shape[0] if dimensional_shape and self.is_sequence else 0
 
     @property
-    def sequence_dimension_shape(self) -> ShapeType:
-        return self.dimensional_shape[self.data_descriptor.sequence_dimension_index_slice]
+    def sequence_dimension_shape(self) -> typing.Optional[ShapeType]:
+        dimensional_shape = self.dimensional_shape
+        return dimensional_shape[self.data_descriptor.sequence_dimension_index_slice] if dimensional_shape else None
 
     @property
-    def collection_dimension_shape(self) -> ShapeType:
-        return self.dimensional_shape[self.data_descriptor.collection_dimension_index_slice]
+    def collection_dimension_shape(self) -> typing.Optional[ShapeType]:
+        dimensional_shape = self.dimensional_shape
+        return dimensional_shape[self.data_descriptor.collection_dimension_index_slice] if dimensional_shape else None
 
     @property
-    def navigation_dimension_shape(self) -> ShapeType:
-        return self.dimensional_shape[self.data_descriptor.navigation_dimension_index_slice]
+    def navigation_dimension_shape(self) -> typing.Optional[ShapeType]:
+        dimensional_shape = self.dimensional_shape
+        return dimensional_shape[self.data_descriptor.navigation_dimension_index_slice] if dimensional_shape else None
 
     @property
-    def datum_dimension_shape(self) -> ShapeType:
-        return self.dimensional_shape[self.data_descriptor.datum_dimension_index_slice]
+    def datum_dimension_shape(self) -> typing.Optional[ShapeType]:
+        dimensional_shape = self.dimensional_shape
+        return dimensional_shape[self.data_descriptor.datum_dimension_index_slice] if dimensional_shape else None
 
     @property
-    def sequence_dimension_index(self) -> int:
+    def sequence_dimension_index(self) -> typing.Optional[int]:
         return 0 if self.is_sequence else None
 
     @property
-    def sequence_dimension_slice(self) -> slice:
+    def sequence_dimension_slice(self) -> typing.Optional[slice]:
         return slice(0, 1) if self.is_sequence else None
 
     @property
@@ -372,15 +377,14 @@ class DataMetadata:
             data_dtype = self.data_dtype
             if dimensional_shape is not None and data_dtype is not None:
                 shape_str_list = list()
-                if self.is_sequence:
+                if self.is_sequence and self.sequence_dimension_shape is not None:
                     shape_str_list.append("S" + self.__get_size_str(self.sequence_dimension_shape))
-                if self.collection_dimension_count > 0:
+                if self.collection_dimension_count > 0 and self.collection_dimension_shape is not None:
                     shape_str_list.append("C" + self.__get_size_str(self.collection_dimension_shape))
-                if self.datum_dimension_count > 0:
+                if self.datum_dimension_count > 0 and self.datum_dimension_shape is not None:
                     shape_str_list.append("D" + self.__get_size_str(self.datum_dimension_shape, True))
                 shape_str = " x ".join(shape_str_list)
                 dtype_names = {
-                    numpy.bool: _("Boolean (1-bit)"),
                     numpy.bool_: _("Boolean (1-bit)"),
                     numpy.int8: _("Integer (8-bit)"),
                     numpy.int16: _("Integer (16-bit)"),
@@ -398,9 +402,10 @@ class DataMetadata:
                 if self.is_data_rgb_type:
                     data_size_and_data_format_as_string = _("RGB (8-bit)") if self.is_data_rgb else _("RGBA (8-bit)")
                 else:
-                    if not self.data_dtype.type in dtype_names:
-                        logging.debug("Unknown dtype %s", self.data_dtype.type)
-                    data_size_and_data_format_as_string = dtype_names[self.data_dtype.type] if self.data_dtype.type in dtype_names else _("Unknown Data Type")
+                    data_type = self.data_dtype.type if self.data_dtype else None
+                    if data_type not in dtype_names:
+                        logging.debug("Unknown dtype %s", data_type)
+                    data_size_and_data_format_as_string = dtype_names[data_type] if data_type in dtype_names else _("Unknown Data Type")
                 return "{0}, {1}".format(shape_str, data_size_and_data_format_as_string)
             return _("No Data")
         except Exception as e:
@@ -422,7 +427,7 @@ class DataAndMetadata:
     directly and not copied.
     """
 
-    def __init__(self, data_fn: typing.Callable[[], numpy.ndarray], data_shape_and_dtype: typing.Tuple[ShapeType, numpy.dtype],
+    def __init__(self, data_fn: typing.Callable[[], numpy.ndarray], data_shape_and_dtype: typing.Optional[typing.Tuple[ShapeType, numpy.dtype]],
                  intensity_calibration: Calibration.Calibration = None, dimensional_calibrations: CalibrationListType = None, metadata: dict = None,
                  timestamp: datetime.datetime = None, data: numpy.ndarray = None, data_descriptor: DataDescriptor=None,
                  timezone: str = None, timezone_offset: str = None):
@@ -506,7 +511,7 @@ class DataAndMetadata:
         return self.__data_valid
 
     @property
-    def data(self) -> numpy.ndarray:
+    def data(self) -> typing.Optional[numpy.ndarray]:
         self.increment_data_ref_count()
         try:
             return self.__data
@@ -540,27 +545,27 @@ class DataAndMetadata:
         return new_data_and_metadata(data, intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations, data_descriptor=self.data_descriptor)
 
     @property
-    def data_shape_and_dtype(self) -> typing.Tuple[ShapeType, numpy.dtype]:
-        return self.__data_metadata.data_shape_and_dtype
+    def data_shape_and_dtype(self) -> typing.Optional[typing.Tuple[ShapeType, numpy.dtype]]:
+        return self.__data_metadata.data_shape_and_dtype if self.__data_metadata else None
 
     @property
     def data_metadata(self) -> DataMetadata:
         return self.__data_metadata
 
     @property
-    def data_shape(self) -> ShapeType:
+    def data_shape(self) -> typing.Optional[ShapeType]:
         return self.__data_metadata.data_shape
 
     @property
-    def data_dtype(self) -> numpy.dtype:
+    def data_dtype(self) -> typing.Optional[numpy.dtype]:
         return self.__data_metadata.data_dtype
 
     @property
-    def dimensional_shape(self) -> ShapeType:
+    def dimensional_shape(self) -> typing.Optional[ShapeType]:
         return self.__data_metadata.dimensional_shape
 
     @property
-    def data_descriptor(self) -> DataDescriptor:
+    def data_descriptor(self) -> typing.Optional[DataDescriptor]:
         return copy.deepcopy(self.__data_metadata.data_descriptor)
 
     @property
@@ -592,27 +597,27 @@ class DataAndMetadata:
         return self.__data_metadata.max_sequence_index
 
     @property
-    def sequence_dimension_shape(self) -> ShapeType:
+    def sequence_dimension_shape(self) -> typing.Optional[ShapeType]:
         return self.__data_metadata.sequence_dimension_shape
 
     @property
-    def collection_dimension_shape(self) -> ShapeType:
+    def collection_dimension_shape(self) -> typing.Optional[ShapeType]:
         return self.__data_metadata.collection_dimension_shape
 
     @property
-    def navigation_dimension_shape(self) -> ShapeType:
+    def navigation_dimension_shape(self) -> typing.Optional[ShapeType]:
         return self.__data_metadata.navigation_dimension_shape
 
     @property
-    def datum_dimension_shape(self) -> ShapeType:
+    def datum_dimension_shape(self) -> typing.Optional[ShapeType]:
         return self.__data_metadata.datum_dimension_shape
 
     @property
-    def sequence_dimension_index(self) -> int:
+    def sequence_dimension_index(self) -> typing.Optional[int]:
         return self.__data_metadata.sequence_dimension_index
 
     @property
-    def sequence_dimension_slice(self) -> slice:
+    def sequence_dimension_slice(self) -> typing.Optional[slice]:
         return self.__data_metadata.sequence_dimension_slice
 
     @property
@@ -640,7 +645,7 @@ class DataAndMetadata:
         return self.__data_metadata.datum_dimension_slice
 
     @property
-    def sequence_dimensional_calibration(self) -> Calibration.Calibration:
+    def sequence_dimensional_calibration(self) -> typing.Optional[Calibration.Calibration]:
         return self.__data_metadata.sequence_dimensional_calibration
 
     @property
@@ -898,14 +903,14 @@ class ScalarAndMetadata:
     @classmethod
     def from_value(cls, value, calibration: Calibration.Calibration = None) -> "ScalarAndMetadata":
         calibration = calibration or Calibration.Calibration()
-        metadata = dict()
+        metadata: typing.Dict = dict()
         timestamp = datetime.datetime.utcnow()
         return cls(lambda: value, calibration, metadata, timestamp)
 
     @classmethod
     def from_value_fn(cls, value_fn) -> "ScalarAndMetadata":
         calibration = Calibration.Calibration()
-        metadata = dict()
+        metadata: typing.Dict = dict()
         timestamp = datetime.datetime.utcnow()
         return cls(value_fn, calibration, metadata, timestamp)
 

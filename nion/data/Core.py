@@ -1377,7 +1377,7 @@ def function_sum_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask
     assert len(mask_data_and_metadata.dimensional_shape) == 2
 
     data = data_and_metadata.data
-    mask_data = mask_data_and_metadata.data.astype(numpy.bool)
+    mask_data = mask_data_and_metadata.data.astype(bool)
 
     assert data is not None
 
@@ -1413,7 +1413,7 @@ def function_average_region(data_and_metadata: DataAndMetadata.DataAndMetadata, 
     assert len(mask_data_and_metadata.dimensional_shape) == 2
 
     data = data_and_metadata.data
-    mask_data = mask_data_and_metadata.data.astype(numpy.bool)
+    mask_data = mask_data_and_metadata.data.astype(bool)
 
     assert data is not None
 
@@ -1789,7 +1789,7 @@ def function_histogram(data_and_metadata: DataAndMetadata.DataAndMetadata, bins:
     histogram_data = numpy.histogram(data, bins=bins)
     min_x = data_and_metadata.intensity_calibration.convert_to_calibrated_value(histogram_data[1][0])
     max_x = data_and_metadata.intensity_calibration.convert_to_calibrated_value(histogram_data[1][-1])
-    result_data = histogram_data[0].astype(numpy.int)
+    result_data = histogram_data[0].astype(numpy.int32)
 
     x_calibration = Calibration.Calibration(min_x, (max_x - min_x) / bins, data_and_metadata.intensity_calibration.units)
 
@@ -1848,7 +1848,7 @@ def function_line_profile(data_and_metadata: DataAndMetadata.DataAndMetadata, ve
             yy, xx = get_coordinates(start_data, end_data, actual_integration_width)
             samples = scipy.ndimage.map_coordinates(data, (yy, xx), order=spline_order)
             if len(samples.shape) > 1:
-                return numpy.sum(samples, 0)
+                return numpy.sum(samples, 0, dtype=data.dtype)
             else:
                 return samples
         else:
