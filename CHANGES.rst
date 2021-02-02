@@ -3,6 +3,7 @@ Changelog (niondata)
 
 UNRELEASED
 ----------
+- Add provenance and valid_rows structured metadata accessors to DataAndMetadata.
 - Add affine transform function and optional order parameter to warp.
 
 0.13.13 (2020-12-08)
