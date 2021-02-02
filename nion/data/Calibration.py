@@ -131,7 +131,7 @@ class Calibration:
             else:
                 result = u"{0:g}{1:s}".format(calibrated_value, units_str)
         elif isinstance(calibrated_value, complex):
-            result = u"{0:g}{1:s}".format(calibrated_value, units_str)
+            result = u"{0:g}+{1:g}j{2:s}".format(calibrated_value.real, calibrated_value.imag, units_str)
         elif isinstance(calibrated_value, numpy.ndarray) and numpy.ndim(calibrated_value) == 1 and calibrated_value.shape[0] in (3, 4) and calibrated_value.dtype == numpy.uint8:
             result = u", ".join([u"{0:d}".format(v) for v in calibrated_value])
         else:

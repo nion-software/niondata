@@ -75,13 +75,13 @@ def radius(data_and_metadata: DataAndMetadata.DataAndMetadata, normalize: bool=T
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
-def full(shape: DataAndMetadata.ShapeType, fill_value, dtype: numpy.dtype=None) -> DataAndMetadata.DataAndMetadata:
+def full(shape: DataAndMetadata.ShapeType, fill_value, dtype: numpy.dtype = None) -> DataAndMetadata.DataAndMetadata:
     """Generate a constant valued image with the given shape.
 
     full(4, shape(4, 5))
     full(0, data_shape(b))
     """
-    dtype = dtype if dtype else numpy.float64
+    dtype = dtype if dtype else numpy.dtype(numpy.float64)
 
     return DataAndMetadata.new_data_and_metadata(numpy.full(shape, DataAndMetadata.extract_data(fill_value), dtype))
 
@@ -120,9 +120,11 @@ def astype(data: numpy.ndarray, dtype: numpy.dtype) -> numpy.ndarray:
     return data.astype(dtype)
 
 
-dtype_map = {int: "int", float: "float", complex: "complex", numpy.int16: "int16", numpy.int32: "int32",
-    numpy.int64: "int64", numpy.uint8: "uint8", numpy.uint16: "uint16", numpy.uint32: "uint32", numpy.uint64: "uint64",
-    numpy.float32: "float32", numpy.float64: "float64", numpy.complex64: "complex64", numpy.complex128: "complex128"}
+dtype_map: typing.Mapping[typing.Any, str] = {int: "int", float: "float", complex: "complex", numpy.int16: "int16",
+                                              numpy.int32: "int32", numpy.int64: "int64", numpy.uint8: "uint8",
+                                              numpy.uint16: "uint16", numpy.uint32: "uint32", numpy.uint64: "uint64",
+                                              numpy.float32: "float32", numpy.float64: "float64",
+                                              numpy.complex64: "complex64", numpy.complex128: "complex128"}
 
 dtype_inverse_map = {dtype_map[k]: k for k in dtype_map}
 
@@ -134,7 +136,7 @@ def dtype_to_str(dtype: numpy.dtype) -> str:
     return dtype_map.get(dtype, "float")
 
 
-def function_fft(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+def function_fft(data_and_metadata: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     data_shape = data_and_metadata.data_shape
@@ -180,7 +182,7 @@ def function_fft(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndM
     return DataAndMetadata.new_data_and_metadata(calculate_data(), dimensional_calibrations=dimensional_calibrations)
 
 
-def function_ifft(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+def function_ifft(data_and_metadata: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     data_shape = data_and_metadata.data_shape
@@ -223,7 +225,7 @@ def function_ifft(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAnd
     return DataAndMetadata.new_data_and_metadata(calculate_data(), dimensional_calibrations=dimensional_calibrations)
 
 
-def function_autocorrelate(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+def function_autocorrelate(data_and_metadata: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     def calculate_data():
@@ -251,7 +253,7 @@ def function_autocorrelate(data_and_metadata: DataAndMetadata.DataAndMetadata) -
     return DataAndMetadata.new_data_and_metadata(calculate_data(), dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
-def function_crosscorrelate(*args) -> DataAndMetadata.DataAndMetadata:
+def function_crosscorrelate(*args) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     if len(args) != 2:
         return None
 
@@ -304,11 +306,16 @@ def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMe
     # get the raw data
     data1 = xdata1.data
     data2 = xdata2.data
+    if data1 is None:
+        return tuple()
+    if data2 is None:
+        return tuple()
     # take the slice if there is one
     if bounds is not None:
         d_rank = xdata1.datum_dimension_count
-        shape = xdata1.data.shape
+        shape = data1.shape
         bounds_pixels = numpy.rint(numpy.array(bounds) * numpy.array(shape)).astype(numpy.int_)
+        bounds_slice: typing.Optional[typing.Union[slice, typing.Tuple[slice, ...]]]
         if d_rank == 1:
             bounds_slice = slice(max(0, bounds_pixels[0]), min(shape[0], bounds_pixels[1]))
         elif d_rank == 2:
@@ -322,6 +329,8 @@ def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMe
     if subtract_means:
         data1 = data1 - numpy.average(data1)
         data2 = data2 - numpy.average(data2)
+    assert data1 is not None
+    assert data2 is not None
     # adjust the dimensions so 1D data is always nx1
     add_before = 0
     while len(data1.shape) > 1 and data1.shape[0] == 1:
@@ -350,7 +359,7 @@ def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMe
     return result
 
 
-def function_match_template(image_xdata: DataAndMetadata.DataAndMetadata, template_xdata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+def function_match_template(image_xdata: DataAndMetadata.DataAndMetadata, template_xdata: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     """
     Calculates the normalized cross-correlation for a template with an image. The returned xdata will have the same
     shape as `image_xdata`.
@@ -365,10 +374,14 @@ def function_match_template(image_xdata: DataAndMetadata.DataAndMetadata, templa
     assert numpy.less_equal(template_xdata.data_shape, image_xdata.data_shape).all()
     image = image_xdata.data
     template = template_xdata.data
+    assert image is not None
+    assert template is not None
     squeeze = False
     if image_xdata.is_data_1d:
         image = image[..., numpy.newaxis]
         template = template[..., numpy.newaxis]
+        assert image is not None
+        assert template is not None
         squeeze = True
     ccorr = TemplateMatching.match_template(image, template)
     if squeeze:
@@ -384,19 +397,23 @@ def function_register_template(image_xdata: DataAndMetadata.DataAndMetadata, tem
     Inputs can be 1D or 2D and the template must be smaller than or the same size as the image.
     """
     ccorr_xdata = function_match_template(image_xdata, template_xdata)
-    error, ccoeff, max_pos = TemplateMatching.find_ccorr_max(ccorr_xdata.data)
-    if not error:
-        return ccoeff, tuple(max_pos[i] - image_xdata.data_shape[i] * 0.5 for i in range(len(image_xdata.data_shape)))
+    if ccorr_xdata:
+        error, ccoeff, max_pos = TemplateMatching.find_ccorr_max(ccorr_xdata.data)
+        if not error:
+            return ccoeff, tuple(max_pos[i] - image_xdata.data_shape[i] * 0.5 for i in range(len(image_xdata.data_shape)))
     return 0.0, (0.0, ) * len(image_xdata.data_shape)
 
 
-def function_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...], *, order: int = 1) -> DataAndMetadata.DataAndMetadata:
+def function_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...], *, order: int = 1) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     src = DataAndMetadata.promote_ndarray(src)
-    shifted = scipy.ndimage.shift(src.data, shift, order=order, cval=numpy.mean(src.data))
-    return DataAndMetadata.new_data_and_metadata(numpy.squeeze(shifted))
+    if src:
+        src_data = src._data_ex
+        shifted = scipy.ndimage.shift(src_data, shift, order=order, cval=numpy.mean(src_data))
+        return DataAndMetadata.new_data_and_metadata(numpy.squeeze(shifted))
+    return None
 
 
-def function_fourier_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...]) -> DataAndMetadata.DataAndMetadata:
+def function_fourier_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[float, ...]) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     src = DataAndMetadata.promote_ndarray(src)
     src_data = numpy.fft.fftn(src.data)
     do_squeeze = False
@@ -410,14 +427,14 @@ def function_fourier_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.T
     return DataAndMetadata.new_data_and_metadata(shifted)
 
 
-def function_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> DataAndMetadata.DataAndMetadata:
+def function_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     """Aligns target to src and returns align target, using Fourier space."""
     src = DataAndMetadata.promote_ndarray(src)
     target = DataAndMetadata.promote_ndarray(target)
     return function_shift(target, function_register(src, target, upsample_factor, True, bounds=bounds))
 
 
-def function_fourier_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> DataAndMetadata.DataAndMetadata:
+def function_fourier_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     """Aligns target to src and returns align target, using Fourier space."""
     src = DataAndMetadata.promote_ndarray(src)
     target = DataAndMetadata.promote_ndarray(target)
@@ -439,7 +456,7 @@ def function_sequence_register_translation(src: DataAndMetadata.DataAndMetadata,
     c = int(numpy.product(s_shape))
     result = numpy.empty(s_shape + (d_rank, ))
     previous_data = None
-    src_data = src.data
+    src_data = src._data_ex
     for i in range(c):
         ii = numpy.unravel_index(i, s_shape) + (Ellipsis, )
         if previous_data is None:
@@ -465,7 +482,7 @@ def function_sequence_measure_relative_translation(src: DataAndMetadata.DataAndM
     s_shape = src_shape[0:-d_rank]
     c = int(numpy.product(s_shape))
     result = numpy.empty(s_shape + (d_rank, ))
-    src_data = src.data
+    src_data = src._data_ex
     for i in range(c):
         ii = numpy.unravel_index(i, s_shape)
         current_data = src_data[ii]
@@ -474,10 +491,10 @@ def function_sequence_measure_relative_translation(src: DataAndMetadata.DataAndM
     return DataAndMetadata.new_data_and_metadata(result, intensity_calibration=intensity_calibration, data_descriptor=DataAndMetadata.DataDescriptor(src.is_sequence, src.collection_dimension_count, 1))
 
 
-def function_squeeze_measurement(src: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+def function_squeeze_measurement(src: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     # squeezes a measurement of a sequence or collection so that it can be sensibly displayed
     src = DataAndMetadata.promote_ndarray(src)
-    data = src.data
+    data = src._data_ex
     descriptor = src.data_descriptor
     calibrations = list(src.dimensional_calibrations)
     if descriptor.is_sequence and data.shape[0] == 1:
@@ -526,8 +543,10 @@ def function_sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_facto
     for i in range(1, c):
         ii = numpy.unravel_index(i, s_shape) + (Ellipsis, )
         current_xdata = DataAndMetadata.new_data_and_metadata(numpy.copy(result_data[ii]))
-        translation = translations.data[numpy.unravel_index(i, s_shape)]
-        result_data[ii] = function_shift(current_xdata, tuple(translation)).data
+        translation = translations._data_ex[numpy.unravel_index(i, s_shape)]
+        shift_xdata = function_shift(current_xdata, tuple(translation))
+        if shift_xdata:
+            result_data[ii] = shift_xdata.data
     return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=src.intensity_calibration, dimensional_calibrations=src.dimensional_calibrations, data_descriptor=src.data_descriptor)
 
 
@@ -549,26 +568,28 @@ def function_sequence_fourier_align(src: DataAndMetadata.DataAndMetadata, upsamp
     for i in range(1, c):
         ii = numpy.unravel_index(i, s_shape) + (Ellipsis, )
         current_xdata = DataAndMetadata.new_data_and_metadata(numpy.copy(result_data[ii]))
-        translation = translations.data[numpy.unravel_index(i, s_shape)]
-        result_data[ii] = function_fourier_shift(current_xdata, tuple(translation)).data
+        translation = translations._data_ex[numpy.unravel_index(i, s_shape)]
+        shift_xdata = function_fourier_shift(current_xdata, tuple(translation))
+        if shift_xdata:
+            result_data[ii] = shift_xdata.data
     return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=src.intensity_calibration, dimensional_calibrations=src.dimensional_calibrations, data_descriptor=src.data_descriptor)
 
 
-def function_sequence_integrate(src: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+def function_sequence_integrate(src: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     src = DataAndMetadata.promote_ndarray(src)
     if not src.is_sequence:
         return None
     dim = src.data_shape[1:]
     if len(dim) < 1:
         return None
-    result = numpy.sum(src.data, axis=0)
+    result = numpy.sum(src._data_ex, axis=0)
     intensity_calibration = src.intensity_calibration
     dimensional_calibrations = src.dimensional_calibrations[1:]
     data_descriptor = DataAndMetadata.DataDescriptor(False, src.data_descriptor.collection_dimension_count, src.data_descriptor.datum_dimension_count)
     return DataAndMetadata.new_data_and_metadata(result, intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
 
 
-def function_sequence_trim(src: DataAndMetadata.DataAndMetadata, trim_start: int, trim_end: int) -> DataAndMetadata.DataAndMetadata:
+def function_sequence_trim(src: DataAndMetadata.DataAndMetadata, trim_start: int, trim_end: int) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     src = DataAndMetadata.promote_ndarray(src)
     if not src.is_sequence:
         return None
@@ -581,7 +602,7 @@ def function_sequence_trim(src: DataAndMetadata.DataAndMetadata, trim_start: int
     return src[cs:ce]
 
 
-def function_sequence_insert(src1: DataAndMetadata.DataAndMetadata, src2: DataAndMetadata.DataAndMetadata, position: int) -> DataAndMetadata.DataAndMetadata:
+def function_sequence_insert(src1: DataAndMetadata.DataAndMetadata, src2: DataAndMetadata.DataAndMetadata, position: int) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     src1 = DataAndMetadata.promote_ndarray(src1)
     src2 = DataAndMetadata.promote_ndarray(src2)
     if not src1.is_sequence or not src2.is_sequence:
@@ -593,20 +614,20 @@ def function_sequence_insert(src1: DataAndMetadata.DataAndMetadata, src2: DataAn
     if len(dim) < 1 or len(dim) > 2:
         return None
     channel = max(0, min(c, int(position)))
-    result = numpy.vstack(src1.data[:channel], src2.data, src1.data[channel:])
+    result = numpy.vstack([src1._data_ex[:channel], src2._data_ex, src1._data_ex[channel:]])
     intensity_calibration = src1.intensity_calibration
     dimensional_calibrations = src1.dimensional_calibrations
     data_descriptor = src1.data_descriptor
     return DataAndMetadata.new_data_and_metadata(result, intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
 
 
-def function_sequence_concatenate(src1: DataAndMetadata.DataAndMetadata, src2: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+def function_sequence_concatenate(src1: DataAndMetadata.DataAndMetadata, src2: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     src1 = DataAndMetadata.promote_ndarray(src1)
     src2 = DataAndMetadata.promote_ndarray(src2)
     return function_sequence_insert(src1, src2, src1.data_shape[0])
 
 
-def function_sequence_join(data_and_metadata_list: typing.Sequence[DataAndMetadata.DataAndMetadata]) -> DataAndMetadata.DataAndMetadata:
+def function_sequence_join(data_and_metadata_list: typing.Sequence[DataAndMetadata.DataAndMetadata]) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     if not data_and_metadata_list:
         return None
     data_and_metadata_list = [DataAndMetadata.promote_ndarray(data_and_metadata) for data_and_metadata in data_and_metadata_list]
@@ -626,7 +647,7 @@ def function_sequence_join(data_and_metadata_list: typing.Sequence[DataAndMetada
     return function_concatenate(sequence_xdata_list)
 
 
-def function_sequence_extract(src: DataAndMetadata.DataAndMetadata, position: int) -> DataAndMetadata.DataAndMetadata:
+def function_sequence_extract(src: DataAndMetadata.DataAndMetadata, position: int) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     src = DataAndMetadata.promote_ndarray(src)
     if not src.is_sequence:
         return None
@@ -638,7 +659,7 @@ def function_sequence_extract(src: DataAndMetadata.DataAndMetadata, position: in
     return src[channel]
 
 
-def function_sequence_split(src: DataAndMetadata.DataAndMetadata) -> typing.List[DataAndMetadata.DataAndMetadata]:
+def function_sequence_split(src: DataAndMetadata.DataAndMetadata) -> typing.Optional[typing.List[DataAndMetadata.DataAndMetadata]]:
     src = DataAndMetadata.promote_ndarray(src)
     if not src.is_sequence:
         return None
@@ -647,21 +668,23 @@ def function_sequence_split(src: DataAndMetadata.DataAndMetadata) -> typing.List
         return None
     dimensional_calibrations = copy.deepcopy(src.dimensional_calibrations[1:])
     data_descriptor = DataAndMetadata.DataDescriptor(False, src.collection_dimension_count, src.datum_dimension_count)
+    return [
+        DataAndMetadata.new_data_and_metadata(data, dimensional_calibrations=copy.deepcopy(dimensional_calibrations),
+                                              intensity_calibration=copy.deepcopy(src.intensity_calibration),
+                                              data_descriptor=copy.copy(data_descriptor)) for data in src._data_ex]
 
-    return [DataAndMetadata.new_data_and_metadata(data, dimensional_calibrations=copy.deepcopy(dimensional_calibrations), intensity_calibration=copy.deepcopy(src.intensity_calibration), data_descriptor=copy.copy(data_descriptor)) for data in src.data]
 
-
-def function_make_elliptical_mask(data_shape: DataAndMetadata.ShapeType, center: NormPointType, size: NormSizeType, rotation: float) -> DataAndMetadata.DataAndMetadata:
-    data_shape = Geometry.IntSize.make(data_shape)
-    data_rect = Geometry.FloatRect(origin=Geometry.FloatPoint(), size=Geometry.FloatSize.make(data_shape))
-    center = Geometry.map_point(Geometry.FloatPoint.make(center), Geometry.FloatRect.unit_rect(), data_rect)
-    size = Geometry.map_size(Geometry.FloatSize.make(size), Geometry.FloatRect.unit_rect(), data_rect)
-    mask = numpy.zeros((data_shape.height, data_shape.width))
-    bounds = Geometry.FloatRect.from_center_and_size(center, size)
+def function_make_elliptical_mask(data_shape: DataAndMetadata.ShapeType, center: NormPointType, size: NormSizeType, rotation: float) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+    data_size = Geometry.IntSize.make(data_shape)
+    data_rect = Geometry.FloatRect(origin=Geometry.FloatPoint(), size=Geometry.FloatSize.make(data_size))
+    center_point = Geometry.map_point(Geometry.FloatPoint.make(center), Geometry.FloatRect.unit_rect(), data_rect)
+    size_size = Geometry.map_size(Geometry.FloatSize.make(size), Geometry.FloatRect.unit_rect(), data_rect)
+    mask = numpy.zeros((data_size.height, data_size.width))
+    bounds = Geometry.FloatRect.from_center_and_size(center_point, size_size)
     if bounds.height <= 0 or bounds.width <= 0:
         return DataAndMetadata.new_data_and_metadata(mask)
     a, b = bounds.center.y, bounds.center.x
-    y, x = numpy.ogrid[-a:data_shape.height - a, -b:data_shape.width - b]
+    y, x = numpy.ogrid[-a:data_size.height - a, -b:data_size.width - b]
     if rotation:
         angle_sin = math.sin(rotation)
         angle_cos = math.cos(rotation)
@@ -672,7 +695,7 @@ def function_make_elliptical_mask(data_shape: DataAndMetadata.ShapeType, center:
     return DataAndMetadata.new_data_and_metadata(mask)
 
 
-def function_fourier_mask(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+def function_fourier_mask(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
     mask_data_and_metadata = DataAndMetadata.promote_ndarray(mask_data_and_metadata)
 
@@ -714,7 +737,7 @@ def function_fourier_mask(data_and_metadata: DataAndMetadata.DataAndMetadata, ma
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
-def function_sobel(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+def function_sobel(data_and_metadata: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     def calculate_data():
@@ -740,7 +763,7 @@ def function_sobel(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAn
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
-def function_laplace(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+def function_laplace(data_and_metadata: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     def calculate_data():
@@ -766,7 +789,7 @@ def function_laplace(data_and_metadata: DataAndMetadata.DataAndMetadata) -> Data
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
-def function_gaussian_blur(data_and_metadata: DataAndMetadata.DataAndMetadata, sigma: float) -> DataAndMetadata.DataAndMetadata:
+def function_gaussian_blur(data_and_metadata: DataAndMetadata.DataAndMetadata, sigma: float) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     sigma = float(sigma)
@@ -780,7 +803,7 @@ def function_gaussian_blur(data_and_metadata: DataAndMetadata.DataAndMetadata, s
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
-def function_median_filter(data_and_metadata: DataAndMetadata.DataAndMetadata, size: int) -> DataAndMetadata.DataAndMetadata:
+def function_median_filter(data_and_metadata: DataAndMetadata.DataAndMetadata, size: int) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     size = max(min(int(size), 999), 1)
@@ -808,7 +831,7 @@ def function_median_filter(data_and_metadata: DataAndMetadata.DataAndMetadata, s
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
-def function_uniform_filter(data_and_metadata: DataAndMetadata.DataAndMetadata, size: int) -> DataAndMetadata.DataAndMetadata:
+def function_uniform_filter(data_and_metadata: DataAndMetadata.DataAndMetadata, size: int) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     size = max(min(int(size), 999), 1)
@@ -836,7 +859,7 @@ def function_uniform_filter(data_and_metadata: DataAndMetadata.DataAndMetadata, 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
-def function_transpose_flip(data_and_metadata: DataAndMetadata.DataAndMetadata, transpose: bool=False, flip_v: bool=False, flip_h: bool=False) -> DataAndMetadata.DataAndMetadata:
+def function_transpose_flip(data_and_metadata: DataAndMetadata.DataAndMetadata, transpose: bool=False, flip_v: bool=False, flip_h: bool=False) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     def calculate_data():
@@ -866,12 +889,12 @@ def function_transpose_flip(data_and_metadata: DataAndMetadata.DataAndMetadata, 
     if transpose:
         dimensional_calibrations = list(reversed(data_and_metadata.dimensional_calibrations))
     else:
-        dimensional_calibrations = data_and_metadata.dimensional_calibrations
+        dimensional_calibrations = list(data_and_metadata.dimensional_calibrations)
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
-def function_invert(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+def function_invert(data_and_metadata: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     def calculate_data():
@@ -899,8 +922,8 @@ def function_invert(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataA
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
-def function_crop(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: NormRectangleType) -> DataAndMetadata.DataAndMetadata:
-    bounds = Geometry.FloatRect.make(bounds)
+def function_crop(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: NormRectangleType) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+    bounds_rect = Geometry.FloatRect.make(bounds)
 
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
@@ -909,7 +932,7 @@ def function_crop(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: No
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
-    data = data_and_metadata.data
+    data = data_and_metadata._data_ex
 
     if not Image.is_shape_and_dtype_valid(list(data_shape), data_dtype) or dimensional_calibrations is None:
         return None
@@ -917,13 +940,13 @@ def function_crop(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: No
     if not Image.is_data_valid(data):
         return None
 
-    oheight = int(data_shape.height * bounds.height)
-    owidth = int(data_shape.width * bounds.width)
+    oheight = int(data_shape.height * bounds_rect.height)
+    owidth = int(data_shape.width * bounds_rect.width)
 
-    top = int(data_shape.height * bounds.top)
-    left = int(data_shape.width * bounds.left)
-    height = int(data_shape.height * bounds.height)
-    width = int(data_shape.width * bounds.width)
+    top = int(data_shape.height * bounds_rect.top)
+    left = int(data_shape.width * bounds_rect.left)
+    height = int(data_shape.height * bounds_rect.height)
+    width = int(data_shape.width * bounds_rect.width)
 
     dtop = 0
     dleft = 0
@@ -947,31 +970,34 @@ def function_crop(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: No
         dwidth -= (left + width- data_shape.width)
         width = data_shape.width - left
 
+    data_dtype = data.dtype
+    assert data_dtype is not None
+
     if data_and_metadata.is_data_rgb:
-        new_data = numpy.zeros((oheight, owidth, 3), dtype=data.dtype)
+        new_data = numpy.zeros((oheight, owidth, 3), dtype=data_dtype)
         if height > 0 and width > 0:
             new_data[dtop:dtop + dheight, dleft:dleft + dwidth] = data[top:top + height, left:left + width]
     elif data_and_metadata.is_data_rgba:
-        new_data = numpy.zeros((oheight, owidth, 4), dtype=data.dtype)
+        new_data = numpy.zeros((oheight, owidth, 4), dtype=data_dtype)
         if height > 0 and width > 0:
             new_data[dtop:dtop + dheight, dleft:dleft + dwidth] = data[top:top + height, left:left + width]
     else:
-        new_data = numpy.zeros((oheight, owidth), dtype=data.dtype)
+        new_data = numpy.zeros((oheight, owidth), dtype=data_dtype)
         if height > 0 and width > 0:
             new_data[dtop:dtop + dheight, dleft:dleft + dwidth] = data[top:top + height, left:left + width]
 
     cropped_dimensional_calibrations = list()
     for index, dimensional_calibration in enumerate(dimensional_calibrations):
         cropped_calibration = Calibration.Calibration(
-            dimensional_calibration.offset + data_shape[index] * bounds[0][index] * dimensional_calibration.scale,
+            dimensional_calibration.offset + data_shape[index] * bounds_rect.origin[index] * dimensional_calibration.scale,
             dimensional_calibration.scale, dimensional_calibration.units)
         cropped_dimensional_calibrations.append(cropped_calibration)
 
     return DataAndMetadata.new_data_and_metadata(new_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=cropped_dimensional_calibrations)
 
 
-def function_crop_rotated(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: NormRectangleType, angle: float) -> DataAndMetadata.DataAndMetadata:
-    bounds = Geometry.FloatRect.make(bounds)
+def function_crop_rotated(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: NormRectangleType, angle: float) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+    bounds_rect = Geometry.FloatRect.make(bounds)
 
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
@@ -980,7 +1006,7 @@ def function_crop_rotated(data_and_metadata: DataAndMetadata.DataAndMetadata, bo
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
-    data = data_and_metadata.data
+    data = data_and_metadata._data_ex
 
     if not Image.is_shape_and_dtype_valid(list(data_shape), data_dtype) or dimensional_calibrations is None:
         return None
@@ -988,10 +1014,10 @@ def function_crop_rotated(data_and_metadata: DataAndMetadata.DataAndMetadata, bo
     if not Image.is_data_valid(data):
         return None
 
-    top = round(data_shape.height * bounds.top)
-    left = round(data_shape.width * bounds.left)
-    height = round(data_shape.height * bounds.height)
-    width = round(data_shape.width * bounds.width)
+    top = round(data_shape.height * bounds_rect.top)
+    left = round(data_shape.width * bounds_rect.left)
+    height = round(data_shape.height * bounds_rect.height)
+    width = round(data_shape.width * bounds_rect.width)
 
     x, y = numpy.meshgrid(numpy.arange(-(width // 2), width - width // 2), numpy.arange(-(height // 2), height - height // 2))
 
@@ -1002,29 +1028,29 @@ def function_crop_rotated(data_and_metadata: DataAndMetadata.DataAndMetadata, bo
 
     if data_and_metadata.is_data_rgb:
         new_data = numpy.zeros(coords[0].shape + (3,), numpy.uint8)
-        new_data[..., 0] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 0], coords)
-        new_data[..., 1] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 1], coords)
-        new_data[..., 2] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 2], coords)
+        new_data[..., 0] = scipy.ndimage.interpolation.map_coordinates(data[..., 0], coords)
+        new_data[..., 1] = scipy.ndimage.interpolation.map_coordinates(data[..., 1], coords)
+        new_data[..., 2] = scipy.ndimage.interpolation.map_coordinates(data[..., 2], coords)
     elif data_and_metadata.is_data_rgba:
         new_data = numpy.zeros(coords[0].shape + (4,), numpy.uint8)
-        new_data[..., 0] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 0], coords)
-        new_data[..., 1] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 1], coords)
-        new_data[..., 2] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 2], coords)
-        new_data[..., 3] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 3], coords)
+        new_data[..., 0] = scipy.ndimage.interpolation.map_coordinates(data[..., 0], coords)
+        new_data[..., 1] = scipy.ndimage.interpolation.map_coordinates(data[..., 1], coords)
+        new_data[..., 2] = scipy.ndimage.interpolation.map_coordinates(data[..., 2], coords)
+        new_data[..., 3] = scipy.ndimage.interpolation.map_coordinates(data[..., 3], coords)
     else:
-        new_data = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data, coords)
+        new_data = scipy.ndimage.interpolation.map_coordinates(data, coords)
 
     cropped_dimensional_calibrations = list()
     for index, dimensional_calibration in enumerate(dimensional_calibrations):
         cropped_calibration = Calibration.Calibration(
-            dimensional_calibration.offset + data_shape[index] * bounds[0][index] * dimensional_calibration.scale,
+            dimensional_calibration.offset + data_shape[index] * bounds_rect[0][index] * dimensional_calibration.scale,
             dimensional_calibration.scale, dimensional_calibration.units)
         cropped_dimensional_calibrations.append(cropped_calibration)
 
     return DataAndMetadata.new_data_and_metadata(new_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=cropped_dimensional_calibrations)
 
 
-def function_crop_interval(data_and_metadata: DataAndMetadata.DataAndMetadata, interval: NormIntervalType) -> DataAndMetadata.DataAndMetadata:
+def function_crop_interval(data_and_metadata: DataAndMetadata.DataAndMetadata, interval: NormIntervalType) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     data_shape = data_and_metadata.data_shape
@@ -1055,7 +1081,7 @@ def function_crop_interval(data_and_metadata: DataAndMetadata.DataAndMetadata, i
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=cropped_dimensional_calibrations)
 
 
-def function_slice_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, slice_center: int, slice_width: int) -> DataAndMetadata.DataAndMetadata:
+def function_slice_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, slice_center: int, slice_width: int) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     signal_index = -1
@@ -1087,7 +1113,7 @@ def function_slice_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, slice
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
-def function_pick(data_and_metadata: DataAndMetadata.DataAndMetadata, position: DataAndMetadata.PositionType) -> DataAndMetadata.DataAndMetadata:
+def function_pick(data_and_metadata: DataAndMetadata.DataAndMetadata, position: DataAndMetadata.PositionType) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     data_shape = data_and_metadata.data_shape
@@ -1122,14 +1148,14 @@ def function_pick(data_and_metadata: DataAndMetadata.DataAndMetadata, position: 
 
 
     if data_and_metadata.is_sequence:
-        dimensional_calibrations = [dimensional_calibrations[0]] + dimensional_calibrations[data_and_metadata.datum_dimension_slice]
+        dimensional_calibrations = [dimensional_calibrations[0]] + list(dimensional_calibrations[data_and_metadata.datum_dimension_slice])
     else:
-        dimensional_calibrations = dimensional_calibrations[data_and_metadata.datum_dimension_slice]
+        dimensional_calibrations = list(dimensional_calibrations[data_and_metadata.datum_dimension_slice])
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
 
 
-def function_concatenate(data_and_metadata_list: typing.Sequence[DataAndMetadata.DataAndMetadata], axis: int=0) -> DataAndMetadata.DataAndMetadata:
+def function_concatenate(data_and_metadata_list: typing.Sequence[DataAndMetadata.DataAndMetadata], axis: int=0) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     """Concatenate multiple data_and_metadatas.
 
     concatenate((a, b, c), 1)
@@ -1163,7 +1189,7 @@ def function_concatenate(data_and_metadata_list: typing.Sequence[DataAndMetadata
     if any([data_and_metadata.data_shape != partial_shape[1:] is None for data_and_metadata in data_and_metadata_list]):
         return None
 
-    dimensional_calibrations = [None] * len(data_and_metadata_list[0].dimensional_calibrations)
+    dimensional_calibrations: typing.List[Calibration.Calibration] = [typing.cast(Calibration.Calibration, None)] * len(data_and_metadata_list[0].dimensional_calibrations)
     for data_and_metadata in data_and_metadata_list:
         for index, calibration in enumerate(data_and_metadata.dimensional_calibrations):
             if dimensional_calibrations[index] is None:
@@ -1177,7 +1203,7 @@ def function_concatenate(data_and_metadata_list: typing.Sequence[DataAndMetadata
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
 
 
-def function_hstack(data_and_metadata_list: typing.Sequence[DataAndMetadata.DataAndMetadata]) -> DataAndMetadata.DataAndMetadata:
+def function_hstack(data_and_metadata_list: typing.Sequence[DataAndMetadata.DataAndMetadata]) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     """Stack multiple data_and_metadatas along axis 1.
 
     hstack((a, b, c))
@@ -1202,7 +1228,7 @@ def function_hstack(data_and_metadata_list: typing.Sequence[DataAndMetadata.Data
         return function_concatenate(data_and_metadata_list, 0)
 
 
-def function_vstack(data_and_metadata_list: typing.Sequence[DataAndMetadata.DataAndMetadata]) -> DataAndMetadata.DataAndMetadata:
+def function_vstack(data_and_metadata_list: typing.Sequence[DataAndMetadata.DataAndMetadata]) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     """Stack multiple data_and_metadatas along axis 0.
 
     hstack((a, b, c))
@@ -1251,19 +1277,19 @@ def function_vstack(data_and_metadata_list: typing.Sequence[DataAndMetadata.Data
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
 
 
-def function_moveaxis(data_and_metadata: DataAndMetadata.DataAndMetadata, src_axis: int, dst_axis: int) -> DataAndMetadata.DataAndMetadata:
+def function_moveaxis(data_and_metadata: DataAndMetadata.DataAndMetadata, src_axis: int, dst_axis: int) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
-    data = numpy.moveaxis(data_and_metadata.data, src_axis, dst_axis)
+    data = numpy.moveaxis(data_and_metadata._data_ex, src_axis, dst_axis)
 
-    dimensional_calibrations = copy.deepcopy(data_and_metadata.dimensional_calibrations)
+    dimensional_calibrations = list(copy.deepcopy(data_and_metadata.dimensional_calibrations))
 
     dimensional_calibrations.insert(dst_axis, dimensional_calibrations.pop(src_axis))
 
     return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
-def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Union[int, typing.Sequence[int]]=None, keepdims: bool=False) -> DataAndMetadata.DataAndMetadata:
+def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Optional[typing.Union[int, typing.Sequence[int]]] = None, keepdims: bool = False) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     data_shape = data_and_metadata.data_shape
@@ -1298,6 +1324,7 @@ def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typin
     new_dimensional_calibrations = list()
 
     if not keepdims or Image.is_shape_and_dtype_rgb_type(data_shape, data_dtype):
+        assert axis is not None
         axes = numpy.atleast_1d(axis)
         for i in range(len(axes)):
             if axes[i] < 0:
@@ -1310,7 +1337,8 @@ def function_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typin
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
-def function_mean(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Union[int, typing.Sequence[int]]=None, keepdims: bool=False) -> DataAndMetadata.DataAndMetadata:
+
+def function_mean(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Optional[typing.Union[int, typing.Sequence[int]]] = None, keepdims: bool = False) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     data_shape = data_and_metadata.data_shape
@@ -1345,6 +1373,7 @@ def function_mean(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typi
     new_dimensional_calibrations = list()
 
     if not keepdims or Image.is_shape_and_dtype_rgb_type(data_shape, data_dtype):
+        assert axis is not None
         axes = numpy.atleast_1d(axis)
         for i in range(len(axes)):
             if axes[i] < 0:
@@ -1358,7 +1387,7 @@ def function_mean(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typi
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
-def function_sum_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+def function_sum_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
     mask_data_and_metadata = DataAndMetadata.promote_ndarray(mask_data_and_metadata)
 
@@ -1376,10 +1405,8 @@ def function_sum_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask
         assert len(data_and_metadata.dimensional_shape) == 3
     assert len(mask_data_and_metadata.dimensional_shape) == 2
 
-    data = data_and_metadata.data
-    mask_data = mask_data_and_metadata.data.astype(bool)
-
-    assert data is not None
+    data = data_and_metadata._data_ex
+    mask_data = mask_data_and_metadata._data_ex.astype(bool)
 
     start_index = 1 if data_and_metadata.is_sequence else 0
     result_data = numpy.sum(data, axis=tuple(range(start_index, len(data_and_metadata.dimensional_shape) - 1)), where=mask_data[..., numpy.newaxis])
@@ -1387,14 +1414,14 @@ def function_sum_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask
     data_descriptor = DataAndMetadata.DataDescriptor(data_and_metadata.is_sequence, 0, data_and_metadata.datum_dimension_count)
 
     if data_and_metadata.is_sequence:
-        dimensional_calibrations = [dimensional_calibrations[0]] + dimensional_calibrations[data_and_metadata.datum_dimension_slice]
+        dimensional_calibrations = [dimensional_calibrations[0]] + list(dimensional_calibrations[data_and_metadata.datum_dimension_slice])
     else:
-        dimensional_calibrations = dimensional_calibrations[data_and_metadata.datum_dimension_slice]
+        dimensional_calibrations = list(dimensional_calibrations[data_and_metadata.datum_dimension_slice])
 
     return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
 
 
-def function_average_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+def function_average_region(data_and_metadata: DataAndMetadata.DataAndMetadata, mask_data_and_metadata: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
     mask_data_and_metadata = DataAndMetadata.promote_ndarray(mask_data_and_metadata)
 
@@ -1412,15 +1439,12 @@ def function_average_region(data_and_metadata: DataAndMetadata.DataAndMetadata, 
         assert len(data_and_metadata.dimensional_shape) == 3
     assert len(mask_data_and_metadata.dimensional_shape) == 2
 
-    data = data_and_metadata.data
-    mask_data = mask_data_and_metadata.data.astype(bool)
+    data = data_and_metadata._data_ex
+    mask_data = mask_data_and_metadata._data_ex.astype(bool)
 
     assert data is not None
 
-    mask_sum = numpy.sum(mask_data)
-
-    if mask_sum == 0:
-        mask_sum = 1
+    mask_sum = max(1, numpy.sum(mask_data))
 
     start_index = 1 if data_and_metadata.is_sequence else 0
     result_data = numpy.sum(data, axis=tuple(range(start_index, len(data_and_metadata.dimensional_shape) - 1)), where=mask_data[..., numpy.newaxis]) / mask_sum
@@ -1428,14 +1452,14 @@ def function_average_region(data_and_metadata: DataAndMetadata.DataAndMetadata, 
     data_descriptor = DataAndMetadata.DataDescriptor(data_and_metadata.is_sequence, 0, data_and_metadata.datum_dimension_count)
 
     if data_and_metadata.is_sequence:
-        dimensional_calibrations = [dimensional_calibrations[0]] + dimensional_calibrations[data_and_metadata.datum_dimension_slice]
+        dimensional_calibrations = [dimensional_calibrations[0]] + list(dimensional_calibrations[data_and_metadata.datum_dimension_slice])
     else:
-        dimensional_calibrations = dimensional_calibrations[data_and_metadata.datum_dimension_slice]
+        dimensional_calibrations = list(dimensional_calibrations[data_and_metadata.datum_dimension_slice])
 
     return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
 
 
-def function_reshape(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
+def function_reshape(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     """Reshape a data and metadata to shape.
 
     reshape(a, shape(4, 5))
@@ -1493,7 +1517,7 @@ def function_reshape(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=new_dimensional_calibrations)
 
 
-def function_squeeze(data_and_metadata: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+def function_squeeze(data_and_metadata: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     """Remove dimensions with lengths of one."""
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
@@ -1510,7 +1534,7 @@ def function_squeeze(data_and_metadata: DataAndMetadata.DataAndMetadata) -> Data
     indexes = list()
     if is_sequence:
         if data_shape[dimensional_index] <= 1:
-            is_sequence = 0
+            is_sequence = False
             indexes.append(dimensional_index)
         else:
             new_dimensional_calibrations.append(dimensional_calibrations[dimensional_index])
@@ -1532,7 +1556,7 @@ def function_squeeze(data_and_metadata: DataAndMetadata.DataAndMetadata) -> Data
 
     data_descriptor = DataAndMetadata.DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
 
-    data = data_and_metadata.data
+    data = data_and_metadata._data_ex
     if not Image.is_data_valid(data):
         return None
 
@@ -1541,7 +1565,7 @@ def function_squeeze(data_and_metadata: DataAndMetadata.DataAndMetadata) -> Data
     return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=new_dimensional_calibrations, data_descriptor=data_descriptor)
 
 
-def function_redimension(data_and_metadata: DataAndMetadata.DataAndMetadata, data_descriptor: DataAndMetadata.DataDescriptor) -> DataAndMetadata.DataAndMetadata:
+def function_redimension(data_and_metadata: DataAndMetadata.DataAndMetadata, data_descriptor: DataAndMetadata.DataDescriptor) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     if data_and_metadata.data_descriptor.expected_dimension_count != data_descriptor.expected_dimension_count:
@@ -1554,7 +1578,7 @@ def function_redimension(data_and_metadata: DataAndMetadata.DataAndMetadata, dat
     return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations, data_descriptor=data_descriptor)
 
 
-def function_resize(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType, mode: str=None) -> DataAndMetadata.DataAndMetadata:
+def function_resize(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType, mode: str=None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     """Resize a data and metadata to shape, padding if larger, cropping if smaller.
 
     resize(a, shape(4, 5))
@@ -1607,7 +1631,7 @@ def function_resize(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: D
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=resized_dimensional_calibrations)
 
 
-def function_rescale(data_and_metadata: DataAndMetadata.DataAndMetadata, data_range: DataRangeType=None, in_range: DataRangeType=None) -> DataAndMetadata.DataAndMetadata:
+def function_rescale(data_and_metadata: DataAndMetadata.DataAndMetadata, data_range: DataRangeType=None, in_range: DataRangeType=None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     """Rescale data and update intensity calibration.
 
     rescale(a, (0.0, 1.0))
@@ -1641,7 +1665,7 @@ def function_rescale(data_and_metadata: DataAndMetadata.DataAndMetadata, data_ra
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
-def function_rebin_2d(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
+def function_rebin_2d(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     height = int(shape[0])
@@ -1679,7 +1703,7 @@ def function_rebin_2d(data_and_metadata: DataAndMetadata.DataAndMetadata, shape:
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=rebinned_dimensional_calibrations)
 
 
-def function_resample_2d(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
+def function_resample_2d(data_and_metadata: DataAndMetadata.DataAndMetadata, shape: DataAndMetadata.ShapeType) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     height = int(shape[0])
@@ -1712,26 +1736,27 @@ def function_resample_2d(data_and_metadata: DataAndMetadata.DataAndMetadata, sha
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=resampled_dimensional_calibrations)
 
 
-def function_warp(data_and_metadata: DataAndMetadata.DataAndMetadata, coordinates: typing.Sequence[DataAndMetadata.DataAndMetadata], order: int=1) -> DataAndMetadata.DataAndMetadata:
+def function_warp(data_and_metadata: DataAndMetadata.DataAndMetadata, coordinates: typing.Sequence[DataAndMetadata.DataAndMetadata], order: int=1) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
     coords = numpy.moveaxis(numpy.dstack([coordinate.data for coordinate in coordinates]), -1, 0)
+    data = data_and_metadata._data_ex
     if data_and_metadata.is_data_rgb:
         rgb = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (3,), numpy.uint8)
-        rgb[..., 0] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 0], coords, order=order)
-        rgb[..., 1] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 1], coords, order=order)
-        rgb[..., 2] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 2], coords, order=order)
+        rgb[..., 0] = scipy.ndimage.interpolation.map_coordinates(data[..., 0], coords, order=order)
+        rgb[..., 1] = scipy.ndimage.interpolation.map_coordinates(data[..., 1], coords, order=order)
+        rgb[..., 2] = scipy.ndimage.interpolation.map_coordinates(data[..., 2], coords, order=order)
         return DataAndMetadata.new_data_and_metadata(rgb, dimensional_calibrations=data_and_metadata.dimensional_calibrations,
                                                      intensity_calibration=data_and_metadata.intensity_calibration)
     elif data_and_metadata.is_data_rgba:
         rgba = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (4,), numpy.uint8)
-        rgba[..., 0] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 0], coords, order=order)
-        rgba[..., 1] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 1], coords, order=order)
-        rgba[..., 2] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 2], coords, order=order)
-        rgba[..., 3] = scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data[..., 3], coords, order=order)
+        rgba[..., 0] = scipy.ndimage.interpolation.map_coordinates(data[..., 0], coords, order=order)
+        rgba[..., 1] = scipy.ndimage.interpolation.map_coordinates(data[..., 1], coords, order=order)
+        rgba[..., 2] = scipy.ndimage.interpolation.map_coordinates(data[..., 2], coords, order=order)
+        rgba[..., 3] = scipy.ndimage.interpolation.map_coordinates(data[..., 3], coords, order=order)
         return DataAndMetadata.new_data_and_metadata(rgba, dimensional_calibrations=data_and_metadata.dimensional_calibrations,
                                                      intensity_calibration=data_and_metadata.intensity_calibration)
     else:
-        return DataAndMetadata.new_data_and_metadata(scipy.ndimage.interpolation.map_coordinates(data_and_metadata.data, coords, order=order),
+        return DataAndMetadata.new_data_and_metadata(scipy.ndimage.interpolation.map_coordinates(data, coords, order=order),
                                                      dimensional_calibrations=data_and_metadata.dimensional_calibrations,
                                                      intensity_calibration=data_and_metadata.intensity_calibration)
 
@@ -1764,12 +1789,12 @@ def calculate_coordinates_for_affine_transform(data_and_metadata: DataAndMetadat
     return transformed
 
 
-def function_affine_transform(data_and_metadata: DataAndMetadata.DataAndMetadata, transformation_matrix: numpy.ndarray, order: int=1) -> DataAndMetadata.DataAndMetadata:
+def function_affine_transform(data_and_metadata: DataAndMetadata.DataAndMetadata, transformation_matrix: numpy.ndarray, order: int=1) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     coordinates = calculate_coordinates_for_affine_transform(data_and_metadata, transformation_matrix)
     return function_warp(data_and_metadata, coordinates, order=order)
 
 
-def function_histogram(data_and_metadata: DataAndMetadata.DataAndMetadata, bins: int) -> DataAndMetadata.DataAndMetadata:
+def function_histogram(data_and_metadata: DataAndMetadata.DataAndMetadata, bins: int) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     bins = int(bins)
@@ -1797,7 +1822,7 @@ def function_histogram(data_and_metadata: DataAndMetadata.DataAndMetadata, bins:
 
 
 def function_line_profile(data_and_metadata: DataAndMetadata.DataAndMetadata, vector: NormVectorType,
-                          integration_width: float) -> DataAndMetadata.DataAndMetadata:
+                          integration_width: float) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
     integration_width = int(integration_width)
@@ -1828,7 +1853,7 @@ def function_line_profile(data_and_metadata: DataAndMetadata.DataAndMetadata, ve
 
     # xx, yy = __coordinates(None, (4,4), (8,4), 3)
 
-    data = data_and_metadata.data
+    data = data_and_metadata._data_ex
     shape = data.shape
     actual_integration_width = min(max(shape[0], shape[1]), integration_width)  # limit integration width to sensible value
 
@@ -1879,10 +1904,10 @@ def function_make_vector(start, end) -> NormVectorType:
     return start, end
 
 def function_make_rectangle_origin_size(origin, size) -> NormRectangleType:
-    return tuple(Geometry.FloatRect(origin, size))
+    return typing.cast(NormRectangleType, tuple(Geometry.FloatRect(origin, size)))
 
 def function_make_rectangle_center_size(center, size) -> NormRectangleType:
-    return tuple(Geometry.FloatRect.from_center_and_size(center, size))
+    return typing.cast(NormRectangleType, tuple(Geometry.FloatRect.from_center_and_size(center, size)))
 
 def function_make_interval(start, end) -> NormIntervalType:
     return start, end
@@ -1892,7 +1917,7 @@ def function_make_shape(*args) -> DataAndMetadata.ShapeType:
 
 # generic functions
 
-def function_array(array_fn, data_and_metadata: DataAndMetadata.DataAndMetadata, *args, **kwargs) -> DataAndMetadata.DataAndMetadata:
+def function_array(array_fn, data_and_metadata: DataAndMetadata.DataAndMetadata, *args, **kwargs) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
     data = array_fn(data_and_metadata.data, *args, **kwargs)
     return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
@@ -1906,69 +1931,74 @@ def function_scalar(op, data_and_metadata: DataAndMetadata.DataAndMetadata) -> D
 
 def function_element_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetadata,
                                   sequence_index: int = 0,
-                                  collection_index: DataAndMetadata.PositionType = None,
+                                  collection_index: typing.Optional[DataAndMetadata.PositionType] = None,
                                   slice_center: int = 0,
                                   slice_width: int = 1, *,
                                   use_slice: bool = True,
-                                  flag16: bool = True) -> typing.Tuple[DataAndMetadata.DataAndMetadata, bool]:
+                                  flag16: bool = True) -> typing.Tuple[typing.Optional[DataAndMetadata.DataAndMetadata], bool]:
     # extract an element (2d or 1d data element) from data and metadata using the indexes and slices.
     # flag16 is for backwards compatibility with 0.15.2 and earlier. new callers should set it to False.
+    result: typing.Optional[DataAndMetadata.DataAndMetadata] = data_and_metadata
     dimensional_shape = data_and_metadata.dimensional_shape
     modified = False
     next_dimension = 0
     if data_and_metadata.is_sequence:
         # next dimension is treated as a sequence index, which may be time or just a sequence index
         sequence_index = min(max(sequence_index, 0), dimensional_shape[next_dimension])
-        data_and_metadata = DataAndMetadata.function_data_slice(data_and_metadata, [sequence_index, Ellipsis])
+        result = DataAndMetadata.function_data_slice(data_and_metadata, [sequence_index, Ellipsis])
         modified = True
         next_dimension += 1
-    if data_and_metadata and data_and_metadata.is_collection:
-        collection_dimension_count = data_and_metadata.collection_dimension_count
-        datum_dimension_count = data_and_metadata.datum_dimension_count
+    if result and result.is_collection:
+        assert collection_index is not None
+        collection_dimension_count = result.collection_dimension_count
+        datum_dimension_count = result.datum_dimension_count
         # next dimensions are treated as collection indexes.
-        if flag16 and collection_dimension_count == 1 and datum_dimension_count == 1 and data_and_metadata.collection_dimension_shape[0] <= 16:
+        if flag16 and collection_dimension_count == 1 and datum_dimension_count == 1 and result.collection_dimension_shape[0] <= 16:
             pass  # this is a special case to display a few rows all at once. once true multi-data displays are available, remove this
         elif use_slice and collection_dimension_count == 2 and datum_dimension_count == 1:
-            data_and_metadata = function_slice_sum(data_and_metadata, slice_center, slice_width)
+            result = function_slice_sum(result, slice_center, slice_width)
             modified = True
         else:  # default, "pick"
-            collection_slice = [collection_index for collection_index in collection_index][0:collection_dimension_count] + [Ellipsis, ]
-            data_and_metadata = DataAndMetadata.function_data_slice(data_and_metadata, collection_slice)
+            collection_slice = typing.cast(typing.List, list(collection_index[0:collection_dimension_count])) + [Ellipsis, ]
+            result = DataAndMetadata.function_data_slice(result, collection_slice)
             modified = True
         next_dimension += collection_dimension_count + datum_dimension_count
-    if data_and_metadata and functools.reduce(operator.mul, data_and_metadata.dimensional_shape) == 0:
-        data_and_metadata = None
-    return data_and_metadata, modified
+    if result and functools.reduce(operator.mul, result.dimensional_shape) == 0:
+        result = None
+    return result, modified
 
-def function_scalar_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetadata, complex_display_type: str=None, *, _modified: bool = False) -> typing.Tuple[DataAndMetadata.DataAndMetadata, bool]:
+def function_scalar_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetadata, complex_display_type: str=None, *, _modified: bool = False) -> typing.Tuple[typing.Optional[DataAndMetadata.DataAndMetadata], bool]:
     modified = _modified
-    if data_and_metadata and data_and_metadata.is_data_complex_type:
+    result: typing.Optional[DataAndMetadata.DataAndMetadata] = data_and_metadata
+    if result and result.is_data_complex_type:
         if complex_display_type == "real":
-            data_and_metadata = function_array(numpy.real, data_and_metadata)
+            result = function_array(numpy.real, result)
         elif complex_display_type == "imaginary":
-            data_and_metadata = function_array(numpy.imag, data_and_metadata)
+            result = function_array(numpy.imag, result)
         elif complex_display_type == "absolute":
-            data_and_metadata = function_array(numpy.absolute, data_and_metadata)
+            result = function_array(numpy.absolute, result)
         else:  # default, log-absolute
             def log_absolute(d):
                 return numpy.log(numpy.abs(d).astype(numpy.float64) + numpy.nextafter(0,1))
-            data_and_metadata = function_array(log_absolute, data_and_metadata)
+            result = function_array(log_absolute, result)
         modified = True
-    if data_and_metadata and functools.reduce(operator.mul, data_and_metadata.dimensional_shape) == 0:
-        data_and_metadata = None
-    return data_and_metadata, modified
+    if result and functools.reduce(operator.mul, result.dimensional_shape) == 0:
+        result = None
+    return result, modified
 
-def function_display_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None, slice_center: int=0, slice_width: int=1, complex_display_type: str=None) -> typing.Tuple[DataAndMetadata.DataAndMetadata, bool]:
-    data_and_metadata, modified = function_element_data_no_copy(data_and_metadata, sequence_index, collection_index, slice_center, slice_width)
-    data_and_metadata, modified = function_scalar_data_no_copy(data_and_metadata, _modified=modified)
-    return data_and_metadata, modified
+def function_display_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None, slice_center: int=0, slice_width: int=1, complex_display_type: str=None) -> typing.Tuple[typing.Optional[DataAndMetadata.DataAndMetadata], bool]:
+    result: typing.Optional[DataAndMetadata.DataAndMetadata] = None
+    result, modified = function_element_data_no_copy(data_and_metadata, sequence_index, collection_index, slice_center, slice_width)
+    if result:
+        result, modified = function_scalar_data_no_copy(result, _modified=modified)
+    return result, modified
 
-def function_display_data(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None, slice_center: int=0, slice_width: int=1, complex_display_type: str=None) -> DataAndMetadata.DataAndMetadata:
-    data_and_metadata, modified = function_display_data_no_copy(data_and_metadata, sequence_index, collection_index, slice_center, slice_width, complex_display_type)
-    return copy.deepcopy(data_and_metadata) if data_and_metadata and not modified else data_and_metadata
+def function_display_data(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None, slice_center: int=0, slice_width: int=1, complex_display_type: str=None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+    result, modified = function_display_data_no_copy(data_and_metadata, sequence_index, collection_index, slice_center, slice_width, complex_display_type)
+    return copy.deepcopy(result) if result and not modified else result
 
-def function_display_rgba(data_and_metadata: DataAndMetadata.DataAndMetadata, display_range: typing.Tuple[float, float]=None, color_table: numpy.ndarray=None) -> DataAndMetadata.DataAndMetadata:
-    data_2d = data_and_metadata.data
+def function_display_rgba(data_and_metadata: DataAndMetadata.DataAndMetadata, display_range: typing.Tuple[float, float]=None, color_table: numpy.ndarray=None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+    data_2d = data_and_metadata._data_ex
     if Image.is_data_1d(data_2d):
         data_2d = data_2d.reshape(1, *data_2d.shape)
     if not Image.is_data_rgb_type(data_2d):
@@ -1977,7 +2007,7 @@ def function_display_rgba(data_and_metadata: DataAndMetadata.DataAndMetadata, di
     rgba_data = Image.create_rgba_image_from_array(data_2d, display_limits=display_range, lookup=color_table)
     return DataAndMetadata.new_data_and_metadata(rgba_data)
 
-def function_extract_datum(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None) -> DataAndMetadata.DataAndMetadata:
+def function_extract_datum(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int=0, collection_index: DataAndMetadata.PositionType=None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     dimensional_shape = data_and_metadata.dimensional_shape
     next_dimension = 0
     if data_and_metadata.is_sequence:
@@ -1987,17 +2017,19 @@ def function_extract_datum(data_and_metadata: DataAndMetadata.DataAndMetadata, s
         next_dimension += 1
     if data_and_metadata and data_and_metadata.is_collection:
         collection_dimension_count = data_and_metadata.collection_dimension_count
+        assert collection_dimension_count is not None
+        assert collection_index is not None
         # next dimensions are treated as collection indexes.
-        collection_slice = [collection_index for collection_index in collection_index][0:collection_dimension_count] + [Ellipsis, ]
+        collection_slice = typing.cast(typing.List, list(collection_index[0:collection_dimension_count])) + [Ellipsis, ]
         data_and_metadata = DataAndMetadata.function_data_slice(data_and_metadata, collection_slice)
     return data_and_metadata
 
-def function_convert_to_scalar(data_and_metadata: DataAndMetadata.DataAndMetadata, complex_display_type: str=None) -> DataAndMetadata.DataAndMetadata:
-    data_and_metadata, modified = function_scalar_data_no_copy(data_and_metadata, complex_display_type)
-    return data_and_metadata
+def function_convert_to_scalar(data_and_metadata: DataAndMetadata.DataAndMetadata, complex_display_type: str=None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+    result, modified = function_scalar_data_no_copy(data_and_metadata, complex_display_type)
+    return result
 
 def get_calibrated_interval_domain(reference_frame: Calibration.ReferenceFrameAxis,
-                                   interval: Calibration.CalibratedInterval) -> DataAndMetadata.DataAndMetadata:
+                                   interval: Calibration.CalibratedInterval) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     start = reference_frame.convert_to_calibrated(interval.start).value
     end = reference_frame.convert_to_calibrated(interval.end).value
     start_px = int(reference_frame.convert_to_pixel(interval.start).value)
@@ -2007,13 +2039,13 @@ def get_calibrated_interval_domain(reference_frame: Calibration.ReferenceFrameAx
 
 def get_calibrated_interval_slice(spectrum: DataAndMetadata.DataAndMetadata,
                                   reference_frame: Calibration.ReferenceFrameAxis,
-                                  interval: Calibration.CalibratedInterval) -> DataAndMetadata.DataAndMetadata:
+                                  interval: Calibration.CalibratedInterval) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     assert spectrum.is_datum_1d
     start_px = int(reference_frame.convert_to_pixel(interval.start).value)
     stop_px = int(reference_frame.convert_to_pixel(interval.end).value)
     return spectrum[..., start_px:stop_px]
 
-def calibrated_subtract_spectrum(data1: DataAndMetadata.DataAndMetadata, data2: DataAndMetadata.DataAndMetadata) -> DataAndMetadata.DataAndMetadata:
+def calibrated_subtract_spectrum(data1: DataAndMetadata.DataAndMetadata, data2: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     assert data1.is_datum_1d
     assert data2.is_datum_1d
     assert data1.intensity_calibration == data2.intensity_calibration
