@@ -2,6 +2,7 @@
 import copy
 import logging
 import math
+import scipy
 import unittest
 
 # third party libraries
@@ -49,18 +50,18 @@ class TestCore(unittest.TestCase):
     def test_line_profile_produces_appropriate_data_type(self):
         # valid for 'nearest' mode only. ignores overflow issues.
         vector = (0.1, 0.2), (0.3, 0.4)
-        self.assertEqual(Core.function_line_profile(DataAndMetadata.new_data_and_metadata(numpy.zeros((32, 32), numpy.int32)), vector, 3.0).data_dtype, numpy.int)
-        self.assertEqual(Core.function_line_profile(DataAndMetadata.new_data_and_metadata(numpy.zeros((32, 32), numpy.uint32)), vector, 3.0).data_dtype, numpy.uint)
+        self.assertEqual(Core.function_line_profile(DataAndMetadata.new_data_and_metadata(numpy.zeros((32, 32), numpy.int32)), vector, 3.0).data_dtype, numpy.int32)
+        self.assertEqual(Core.function_line_profile(DataAndMetadata.new_data_and_metadata(numpy.zeros((32, 32), numpy.uint32)), vector, 3.0).data_dtype, numpy.uint32)
         self.assertEqual(Core.function_line_profile(DataAndMetadata.new_data_and_metadata(numpy.zeros((32, 32), numpy.float32)), vector, 3.0).data_dtype, numpy.float32)
         self.assertEqual(Core.function_line_profile(DataAndMetadata.new_data_and_metadata(numpy.zeros((32, 32), numpy.float64)), vector, 3.0).data_dtype, numpy.float64)
 
-    def test_line_profile_rejects_complex_data(self):
-        vector = (0.1, 0.2), (0.3, 0.4)
-        with self.assertRaises(Exception):
+    def test_line_profile_accepts_complex_data(self):
+        if tuple(map(int, (scipy.version.version.split(".")))) > (1, 6):
+            vector = (0.1, 0.2), (0.3, 0.4)
             Core.function_line_profile(DataAndMetadata.new_data_and_metadata(numpy.zeros((32, 32), numpy.complex128)), vector, 3.0)
 
     def test_fft_produces_correct_calibration(self):
-        src_data = ((numpy.abs(numpy.random.randn(16, 16)) + 1) * 10).astype(numpy.float)
+        src_data = ((numpy.abs(numpy.random.randn(16, 16)) + 1) * 10).astype(numpy.float32)
         dimensional_calibrations = (Calibration.Calibration(offset=3), Calibration.Calibration(offset=2))
         a = DataAndMetadata.DataAndMetadata.from_data(src_data, dimensional_calibrations=dimensional_calibrations)
         fft = Core.function_fft(a)
@@ -103,8 +104,8 @@ class TestCore(unittest.TestCase):
         self.assertLess(numpy.sqrt(numpy.mean(numpy.square(numpy.absolute(src_data)))) - numpy.sqrt(numpy.mean(numpy.square(numpy.absolute(src_data_2)))), 1E-12)
 
     def test_concatenate_works_with_1d_inputs(self):
-        src_data1 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float)
-        src_data2 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float)
+        src_data1 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float32)
+        src_data2 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float32)
         dimensional_calibrations = [Calibration.Calibration(offset=3)]
         a1 = DataAndMetadata.DataAndMetadata.from_data(src_data1, dimensional_calibrations=dimensional_calibrations)
         a2 = DataAndMetadata.DataAndMetadata.from_data(src_data2, dimensional_calibrations=dimensional_calibrations)
@@ -156,8 +157,8 @@ class TestCore(unittest.TestCase):
         self.assertEqual("c", vstack.dimensional_calibrations[2].units)
 
     def test_vstack_and_hstack_work_with_1d_inputs(self):
-        src_data1 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float)
-        src_data2 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float)
+        src_data1 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float32)
+        src_data2 = ((numpy.abs(numpy.random.randn(16)) + 1) * 10).astype(numpy.float32)
         dimensional_calibrations = [Calibration.Calibration(offset=3)]
         a1 = DataAndMetadata.DataAndMetadata.from_data(src_data1, dimensional_calibrations=dimensional_calibrations)
         a2 = DataAndMetadata.DataAndMetadata.from_data(src_data2, dimensional_calibrations=dimensional_calibrations)
@@ -243,7 +244,7 @@ class TestCore(unittest.TestCase):
         dimension_list = [(32, 32), (31, 30), (30, 31), (31, 31), (32, 31), (31, 32)]
         for h, w in dimension_list:
             data = DataAndMetadata.DataAndMetadata.from_data(numpy.random.randn(h, w))
-            mask = DataAndMetadata.DataAndMetadata.from_data((numpy.random.randn(h, w) > 0).astype(numpy.float))
+            mask = DataAndMetadata.DataAndMetadata.from_data((numpy.random.randn(h, w) > 0).astype(numpy.float32))
             fft = Core.function_fft(data)
             masked_data = Core.function_ifft(Core.function_fourier_mask(fft, mask)).data
             self.assertAlmostEqual(numpy.sum(numpy.imag(masked_data)), 0)
@@ -329,7 +330,7 @@ class TestCore(unittest.TestCase):
         c2 = Calibration.Calibration(units="c")
         c3 = Calibration.Calibration(units="d")
         data = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[c1, c2, c3])  # last index is signal
-        mask_data = numpy.zeros((3, 4), numpy.int)
+        mask_data = numpy.zeros((3, 4), numpy.int32)
         mask_data[0, 1] = 1
         mask_data[2, 2] = 1
         mask = DataAndMetadata.new_data_and_metadata(mask_data)
@@ -347,7 +348,7 @@ class TestCore(unittest.TestCase):
         c2 = Calibration.Calibration(units="c")
         c3 = Calibration.Calibration(units="d")
         data = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[cs, c1, c2, c3], data_descriptor=DataAndMetadata.DataDescriptor(True, 2, 1))  # last index is signal
-        mask_data = numpy.zeros((3, 4), numpy.int)
+        mask_data = numpy.zeros((3, 4), numpy.int32)
         mask_data[0, 1] = 1
         mask_data[2, 2] = 1
         mask = DataAndMetadata.new_data_and_metadata(mask_data)
@@ -365,7 +366,7 @@ class TestCore(unittest.TestCase):
         c2 = Calibration.Calibration(units="c")
         c3 = Calibration.Calibration(units="d")
         data = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[c1, c2, c3])  # last index is signal
-        mask_data = numpy.zeros((3, 4), numpy.int)
+        mask_data = numpy.zeros((3, 4), numpy.int32)
         mask_data[0, 1] = 1
         mask_data[2, 2] = 1
         mask = DataAndMetadata.new_data_and_metadata(mask_data)
@@ -383,7 +384,7 @@ class TestCore(unittest.TestCase):
         c2 = Calibration.Calibration(units="c")
         c3 = Calibration.Calibration(units="d")
         data = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[cs, c1, c2, c3], data_descriptor=DataAndMetadata.DataDescriptor(True, 2, 1))  # last index is signal
-        mask_data = numpy.zeros((3, 4), numpy.int)
+        mask_data = numpy.zeros((3, 4), numpy.int32)
         mask_data[0, 1] = 1
         mask_data[2, 2] = 1
         mask = DataAndMetadata.new_data_and_metadata(mask_data)
@@ -905,13 +906,13 @@ class TestCore(unittest.TestCase):
         self.assertEqual((1, 115), result.data_shape)
 
     def test_redimension_basic_functionality(self):
-        data = numpy.ones((100, 100), dtype=numpy.int)
+        data = numpy.ones((100, 100), dtype=numpy.int32)
         xdata = DataAndMetadata.new_data_and_metadata(data)
         xdata_redim = Core.function_redimension(xdata, DataAndMetadata.DataDescriptor(True, 0, 1))
         self.assertEqual(xdata.data_descriptor.expected_dimension_count, xdata_redim.data_descriptor.expected_dimension_count)
 
     def test_squeeze_does_not_remove_last_datum_dimension(self):
-        data = numpy.ones((1, 1, 1, 1), dtype=numpy.int)
+        data = numpy.ones((1, 1, 1, 1), dtype=numpy.int32)
         xdata = DataAndMetadata.new_data_and_metadata(data)
         xdata_squeeze= Core.function_squeeze(xdata)
         self.assertEqual(1, xdata_squeeze.data_descriptor.expected_dimension_count)

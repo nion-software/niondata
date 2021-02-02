@@ -43,7 +43,7 @@ class TestExtendedData(unittest.TestCase):
         self.assertTrue(xdata_slice.dimensional_shape, (4, 4))
 
     def test_data_slice_calibrates_correctly(self):
-        data = numpy.zeros((100, 100), dtype=numpy.float)
+        data = numpy.zeros((100, 100), dtype=numpy.float32)
         xdata = DataAndMetadata.new_data_and_metadata(data)
         calibrations = xdata[40:60, 40:60].dimensional_calibrations
         self.assertAlmostEqual(calibrations[0].offset, 40)
@@ -52,7 +52,7 @@ class TestExtendedData(unittest.TestCase):
         self.assertAlmostEqual(calibrations[1].scale, 1)
 
     def test_data_slice_of_sequence_handles_calibrations(self):
-        data = numpy.zeros((10, 100, 100), dtype=numpy.float)
+        data = numpy.zeros((10, 100, 100), dtype=numpy.float32)
         intensity_calibration = Calibration.Calibration(0.1, 0.2, "I")
         dimensional_calibrations = [Calibration.Calibration(0.11, 0.22, "S"), Calibration.Calibration(0.11, 0.22, "A"), Calibration.Calibration(0.111, 0.222, "B")]
         xdata = DataAndMetadata.new_data_and_metadata(data, intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
@@ -120,14 +120,14 @@ class TestExtendedData(unittest.TestCase):
             shutil.rmtree(workspace_dir)
 
     def test_numpy_functions_work_directly_with_xdata(self):
-        data = numpy.ones((100, 100), dtype=numpy.int)
+        data = numpy.ones((100, 100), dtype=numpy.int32)
         data[50, 50] = 2
         xdata = DataAndMetadata.new_data_and_metadata(data)
         self.assertEqual(1, numpy.amin(xdata))
         self.assertEqual(2, numpy.amax(xdata))
 
     def test_data_descriptor_is_a_copy(self):
-        data = numpy.ones((100, 100), dtype=numpy.int)
+        data = numpy.ones((100, 100), dtype=numpy.int32)
         data[50, 50] = 2
         xdata = DataAndMetadata.new_data_and_metadata(data)
         xdata.data_descriptor.is_sequence = True
