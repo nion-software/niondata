@@ -21,10 +21,10 @@ def function_rgb_channel(data_and_metadata: DataAndMetadata.DataAndMetadata, cha
             return None
         if Image.is_shape_and_dtype_rgb(data.shape, data.dtype):
             if channel == 3:
-                return numpy.ones(data.shape, numpy.int)
-            return data[..., channel].astype(numpy.int)
+                return numpy.ones(data.shape, int)
+            return data[..., channel].astype(int)
         elif Image.is_shape_and_dtype_rgba(data.shape, data.dtype):
-            return data[..., channel].astype(numpy.int)
+            return data[..., channel].astype(int)
         else:
             return None
 

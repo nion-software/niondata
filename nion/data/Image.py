@@ -22,7 +22,7 @@ def scale_multidimensional(image, scaled_size):
     # we pass slices into ogrid, to gives us vectors for each dimension
     # ogrid returns a list of floating numbers if we use complex so we have
     # to convert to int. np.rint rounds to nearest for us, but doesn't cast to int!
-    coords = [numpy.rint(x).astype(numpy.int) for x in numpy.ogrid[slices]]
+    coords = [numpy.rint(x).astype(int) for x in numpy.ogrid[slices]]
     # coords is now, for an array image of dimension n, a list of n 1d arrays we the
     # coords we want to take from image:
     return image[coords]
@@ -258,7 +258,7 @@ def is_data_scalar_type(data):
 def is_shape_and_dtype_bool(shape, dtype):
     if shape is None or dtype is None:
         return False
-    return dtype == numpy.bool and len(shape) > 1
+    return dtype == bool and len(shape) > 1
 def is_data_bool(data):
     return data is not None and is_shape_and_dtype_bool(data.shape, data.dtype)
 
