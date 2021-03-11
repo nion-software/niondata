@@ -26,7 +26,7 @@ CalibrationListType = typing.Sequence[Calibration.Calibration]
 class DataDescriptor:
     "A class describing the layout of data."
     def __init__(self, is_sequence: bool, collection_dimension_count: int, datum_dimension_count: int):
-        assert datum_dimension_count in (1, 2)
+        assert datum_dimension_count in (0, 1, 2)
         assert collection_dimension_count in (0, 1, 2)
         self.is_sequence = is_sequence
         self.collection_dimension_count = collection_dimension_count
