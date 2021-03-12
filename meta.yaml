@@ -1,9 +1,9 @@
 package:
   name: 'niondata'
-  version: '0.13.13'
+  version: '0.13.14'
 
 source:
-  git_rev: 0.13.13
+  git_rev: 0.13.14
   git_url: https://github.com/nion-software/niondata.git
 
 build:

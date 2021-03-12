@@ -1,8 +1,8 @@
 Changelog (niondata)
 ====================
 
-UNRELEASED
-----------
+0.13.14 (2021-03-12)
+--------------------
 - Add affine transform function and optional order parameter to warp.
 - Allow zero-dimensioned (scalar) data and metadata objects.
 
