@@ -396,6 +396,8 @@ def function_register_template(image_xdata: DataAndMetadata.DataAndMetadata, tem
     The sub-pixel position is calculated by fitting a parabola to the tip of the cross-correlation peak.
     Inputs can be 1D or 2D and the template must be smaller than or the same size as the image.
     """
+    image_xdata = DataAndMetadata.promote_ndarray(image_xdata)
+    template_xdata = DataAndMetadata.promote_ndarray(template_xdata)
     ccorr_xdata = function_match_template(image_xdata, template_xdata)
     if ccorr_xdata:
         error, ccoeff, max_pos = TemplateMatching.find_ccorr_max(ccorr_xdata.data)
