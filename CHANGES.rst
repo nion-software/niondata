@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+0.13.15 (UNRELEASED)
+--------------------
+- Optimize element data for sequence + collection case.
+
 0.13.14 (2021-03-12)
 --------------------
 - Add affine transform function and optional order parameter to warp.

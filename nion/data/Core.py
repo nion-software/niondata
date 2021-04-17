@@ -1944,27 +1944,39 @@ def function_element_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMeta
     dimensional_shape = data_and_metadata.dimensional_shape
     modified = False
     next_dimension = 0
-    if data_and_metadata.is_sequence:
-        # next dimension is treated as a sequence index, which may be time or just a sequence index
-        sequence_index = min(max(sequence_index, 0), dimensional_shape[next_dimension])
-        result = DataAndMetadata.function_data_slice(data_and_metadata, [sequence_index, Ellipsis])
-        modified = True
-        next_dimension += 1
-    if result and result.is_collection:
+    collection_dimension_count = data_and_metadata.collection_dimension_count
+    collection_dimension_shape = data_and_metadata.collection_dimension_shape
+    datum_dimension_count = data_and_metadata.datum_dimension_count
+    treat_as_image = flag16 and collection_dimension_count == 1 and datum_dimension_count == 1 and collection_dimension_shape[0] <= 16
+    use_slice_sum = use_slice and collection_dimension_count == 2 and datum_dimension_count == 1
+    if data_and_metadata.is_sequence and data_and_metadata.is_collection and not treat_as_image and not use_slice_sum:
+        # optimize the case of a sequence + collection that is not treated as an image and doesn't sum slices (as a pick would do).
+        # this is a typical 5D image case.
         assert collection_index is not None
-        collection_dimension_count = result.collection_dimension_count
-        datum_dimension_count = result.datum_dimension_count
-        # next dimensions are treated as collection indexes.
-        if flag16 and collection_dimension_count == 1 and datum_dimension_count == 1 and result.collection_dimension_shape[0] <= 16:
-            pass  # this is a special case to display a few rows all at once. once true multi-data displays are available, remove this
-        elif use_slice and collection_dimension_count == 2 and datum_dimension_count == 1:
-            result = function_slice_sum(result, slice_center, slice_width)
+        sequence_index = min(max(sequence_index, 0), dimensional_shape[next_dimension])
+        data_slice = typing.cast(typing.List, [sequence_index,] + list(collection_index[0:collection_dimension_count])) + [Ellipsis, ]
+        result = DataAndMetadata.function_data_slice(data_and_metadata, data_slice)
+        modified = True
+    else:
+        if data_and_metadata.is_sequence:
+            # next dimension is treated as a sequence index, which may be time or just a sequence index
+            sequence_index = min(max(sequence_index, 0), dimensional_shape[next_dimension])
+            result = DataAndMetadata.function_data_slice(data_and_metadata, [sequence_index, Ellipsis])
             modified = True
-        else:  # default, "pick"
-            collection_slice = typing.cast(typing.List, list(collection_index[0:collection_dimension_count])) + [Ellipsis, ]
-            result = DataAndMetadata.function_data_slice(result, collection_slice)
-            modified = True
-        next_dimension += collection_dimension_count + datum_dimension_count
+            next_dimension += 1
+        if result and result.is_collection:
+            assert collection_index is not None
+            # next dimensions are treated as collection indexes.
+            if treat_as_image:
+                pass  # this is a special case to display a few rows all at once. once true multi-data displays are available, remove this
+            elif use_slice_sum:
+                result = function_slice_sum(result, slice_center, slice_width)
+                modified = True
+            else:  # default, "pick"
+                collection_slice = typing.cast(typing.List, list(collection_index[0:collection_dimension_count])) + [Ellipsis, ]
+                result = DataAndMetadata.function_data_slice(result, collection_slice)
+                modified = True
+            next_dimension += collection_dimension_count + datum_dimension_count
     if result and functools.reduce(operator.mul, result.dimensional_shape) == 0:
         result = None
     return result, modified
