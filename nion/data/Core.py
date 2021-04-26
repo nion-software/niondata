@@ -21,7 +21,6 @@ import scipy.signal
 from nion.data import Calibration
 from nion.data import DataAndMetadata
 from nion.data import Image
-from nion.data import ImageRegistration
 from nion.data import TemplateMatching
 from nion.utils import Geometry
 
@@ -296,12 +295,11 @@ def function_crosscorrelate(*args) -> typing.Optional[DataAndMetadata.DataAndMet
     return DataAndMetadata.new_data_and_metadata(calculate_data(), dimensional_calibrations=data_and_metadata1.dimensional_calibrations)
 
 
-def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool, bounds: typing.Union[NormRectangleType, NormIntervalType]=None) -> typing.Tuple[float, ...]:
-    # FUTURE: use scikit.image register_translation
+def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMetadata.DataAndMetadata, subtract_means: bool, bounds: typing.Union[NormRectangleType, NormIntervalType]=None) -> typing.Tuple[float, ...]:
     xdata1 = DataAndMetadata.promote_ndarray(xdata1)
     xdata2 = DataAndMetadata.promote_ndarray(xdata2)
-    # data shape and descriptors should match
-    assert xdata1.data_shape == xdata2.data_shape
+    # data dimensionality and descriptors should match
+    assert len(xdata1.data_shape) == len(xdata2.data_shape)
     assert xdata1.data_descriptor == xdata2.data_descriptor
     # get the raw data
     data1 = xdata1.data
@@ -331,32 +329,10 @@ def function_register(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMe
         data2 = data2 - numpy.average(data2)
     assert data1 is not None
     assert data2 is not None
-    # adjust the dimensions so 1D data is always nx1
-    add_before = 0
-    while len(data1.shape) > 1 and data1.shape[0] == 1:
-        data1 = numpy.squeeze(data1, axis=0)
-        data2 = numpy.squeeze(data2, axis=0)
-        add_before += 1
-    add_after = 0
-    while len(data1.shape) > 1 and data1.shape[-1] == 1:
-        data1 = numpy.squeeze(data1, axis=-1)
-        data2 = numpy.squeeze(data2, axis=-1)
-        add_after += 1
-    do_squeeze = False
-    if len(data1.shape) == 1:
-        data1 = data1[..., numpy.newaxis]
-        data2 = data2[..., numpy.newaxis]
-        do_squeeze = True
     # carry out the registration
-    result = ImageRegistration.dftregistration(data1, data2, upsample_factor)#[0:d_rank]
-    # adjust results to match input data
-    if do_squeeze:
-        result = result[0:-1]
-    for _ in range(add_before):
-        result = (numpy.zeros_like(result[0]), ) + result
-    for _ in range(add_after):
-        result = result + (numpy.zeros_like(result[0]), )
-    return result
+    ccorr = scipy.signal.correlate(data1, data2, mode="same")
+    max_pos = TemplateMatching.find_ccorr_max(ccorr)[2]
+    return tuple(max_pos[i] - data1.shape[i] * 0.5 for i in range(len(data1.shape)))
 
 
 def function_match_template(image_xdata: DataAndMetadata.DataAndMetadata, template_xdata: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
@@ -429,21 +405,21 @@ def function_fourier_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.T
     return DataAndMetadata.new_data_and_metadata(shifted)
 
 
-def function_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+def function_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     """Aligns target to src and returns align target, using Fourier space."""
     src = DataAndMetadata.promote_ndarray(src)
     target = DataAndMetadata.promote_ndarray(target)
-    return function_shift(target, function_register(src, target, upsample_factor, True, bounds=bounds))
+    return function_shift(target, function_register(src, target, True, bounds=bounds))
 
 
-def function_fourier_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+def function_fourier_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     """Aligns target to src and returns align target, using Fourier space."""
     src = DataAndMetadata.promote_ndarray(src)
     target = DataAndMetadata.promote_ndarray(target)
-    return function_fourier_shift(target, function_register(src, target, upsample_factor, True, bounds=bounds))
+    return function_fourier_shift(target, function_register(src, target, True, bounds=bounds))
 
 
-def function_sequence_register_translation(src: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+def function_sequence_register_translation(src: DataAndMetadata.DataAndMetadata, subtract_means: bool, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     # measures shift relative to last position in sequence
     # only works on sequences
     src = DataAndMetadata.promote_ndarray(src)
@@ -466,13 +442,13 @@ def function_sequence_register_translation(src: DataAndMetadata.DataAndMetadata,
             result[0, ...] = 0
         else:
             current_data = src_data[ii]
-            result[ii] = function_register(previous_data, current_data, upsample_factor, subtract_means, bounds=bounds)
+            result[ii] = function_register(previous_data, current_data, subtract_means, bounds=bounds)
             previous_data = current_data
     intensity_calibration = src.dimensional_calibrations[1]  # not the sequence dimension
     return DataAndMetadata.new_data_and_metadata(result, intensity_calibration=intensity_calibration, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 1))
 
 
-def function_sequence_measure_relative_translation(src: DataAndMetadata.DataAndMetadata, ref: DataAndMetadata.DataAndMetadata, upsample_factor: int, subtract_means: bool, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+def function_sequence_measure_relative_translation(src: DataAndMetadata.DataAndMetadata, ref: DataAndMetadata.DataAndMetadata, subtract_means: bool, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     # measures shift at each point in sequence/collection relative to reference
     src = DataAndMetadata.promote_ndarray(src)
     d_rank = src.datum_dimension_count
@@ -488,7 +464,7 @@ def function_sequence_measure_relative_translation(src: DataAndMetadata.DataAndM
     for i in range(c):
         ii = numpy.unravel_index(i, s_shape)
         current_data = src_data[ii]
-        result[ii] = function_register(ref, current_data, upsample_factor, subtract_means, bounds=bounds)
+        result[ii] = function_register(ref, current_data, subtract_means, bounds=bounds)
     intensity_calibration = src.dimensional_calibrations[1]  # not the sequence dimension
     return DataAndMetadata.new_data_and_metadata(result, intensity_calibration=intensity_calibration, data_descriptor=DataAndMetadata.DataDescriptor(src.is_sequence, src.collection_dimension_count, 1))
 
@@ -527,7 +503,7 @@ def function_squeeze_measurement(src: DataAndMetadata.DataAndMetadata) -> typing
     return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=intensity_calibration, dimensional_calibrations=calibrations, data_descriptor=descriptor)
 
 
-def function_sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+def function_sequence_align(src: DataAndMetadata.DataAndMetadata, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     src = DataAndMetadata.promote_ndarray(src)
     d_rank = src.datum_dimension_count
     if len(src.data_shape) <= d_rank:
@@ -538,7 +514,7 @@ def function_sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_facto
     s_shape = src_shape[0:-d_rank]
     c = int(numpy.product(s_shape))
     ref = src[numpy.unravel_index(0, s_shape) + (Ellipsis, )]
-    translations = function_sequence_measure_relative_translation(src, ref, upsample_factor, True, bounds=bounds)
+    translations = function_sequence_measure_relative_translation(src, ref, True, bounds=bounds)
     if not translations:
         return None
     result_data = numpy.copy(src.data)
@@ -552,7 +528,7 @@ def function_sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_facto
     return DataAndMetadata.new_data_and_metadata(result_data, intensity_calibration=src.intensity_calibration, dimensional_calibrations=src.dimensional_calibrations, data_descriptor=src.data_descriptor)
 
 
-def function_sequence_fourier_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+def function_sequence_fourier_align(src: DataAndMetadata.DataAndMetadata, bounds: typing.Union[NormRectangleType, NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     src = DataAndMetadata.promote_ndarray(src)
     d_rank = src.datum_dimension_count
     if len(src.data_shape) <= d_rank:
@@ -563,7 +539,7 @@ def function_sequence_fourier_align(src: DataAndMetadata.DataAndMetadata, upsamp
     s_shape = src_shape[0:-d_rank]
     c = int(numpy.product(s_shape))
     ref = src[numpy.unravel_index(0, s_shape) + (Ellipsis, )]
-    translations = function_sequence_measure_relative_translation(src, ref, upsample_factor, True, bounds=bounds)
+    translations = function_sequence_measure_relative_translation(src, ref, True, bounds=bounds)
     if not translations:
         return None
     result_data = numpy.copy(src.data)
