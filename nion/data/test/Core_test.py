@@ -476,10 +476,10 @@ class TestCore(unittest.TestCase):
         xdata = DataAndMetadata.new_data_and_metadata(data)
         shift = (-3.4, 1.2)
         xdata_shifted = Core.function_fourier_shift(xdata, shift)
-        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True)
-        self.assertAlmostEqual(shift[0], measured_shift[0], 1)
-        self.assertAlmostEqual(shift[1], measured_shift[1], 1)
-        result = Core.function_fourier_align(data, xdata_shifted, 100) - xdata_shifted
+        measured_shift = Core.function_register(xdata_shifted, xdata, True)
+        self.assertAlmostEqual(shift[0], measured_shift[0], delta=0.5)
+        self.assertAlmostEqual(shift[1], measured_shift[1], delta=0.5)
+        result = Core.function_fourier_align(data, xdata_shifted) - xdata_shifted
         self.assertAlmostEqual(result.data.mean(), 0)
 
     def test_align_with_bounds_works_on_2d_data(self):
@@ -493,14 +493,14 @@ class TestCore(unittest.TestCase):
         xdata.data[40:50, 40:50] += 100
         xdata_shifted.data[40:50, 40:50] += 10
         bounds = ((5/64, 5/64), (20/64, 20/64))
-        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True, bounds=bounds)
-        self.assertAlmostEqual(shift[0], measured_shift[0], 1)
-        self.assertAlmostEqual(shift[1], measured_shift[1], 1)
+        measured_shift = Core.function_register(xdata_shifted, xdata, True, bounds=bounds)
+        self.assertAlmostEqual(shift[0], measured_shift[0], delta=0.5)
+        self.assertAlmostEqual(shift[1], measured_shift[1], delta=0.5)
         # Now test that without bounds we find no shift (because the more intense feature does not shift)
-        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True, bounds=None)
-        self.assertAlmostEqual(measured_shift[0], 0, 1)
-        self.assertAlmostEqual(measured_shift[1], 0, 1)
-        result = Core.function_fourier_align(data, xdata_shifted, 100, bounds=bounds) - xdata_shifted
+        measured_shift = Core.function_register(xdata_shifted, xdata, True, bounds=None)
+        self.assertAlmostEqual(measured_shift[0], 0, delta=0.5)
+        self.assertAlmostEqual(measured_shift[1], 0, delta=0.5)
+        result = Core.function_fourier_align(data, xdata_shifted, bounds=bounds) - xdata_shifted
         self.assertAlmostEqual(result.data.mean(), 0)
         numpy.random.set_state(random_state)
 
@@ -510,9 +510,9 @@ class TestCore(unittest.TestCase):
         xdata = DataAndMetadata.new_data_and_metadata(data)
         shift = (-3.4,)
         xdata_shifted = Core.function_fourier_shift(xdata, shift)
-        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True)
-        self.assertAlmostEqual(shift[0], measured_shift[0], 1)
-        result = Core.function_fourier_align(data, xdata_shifted, 100) - xdata_shifted
+        measured_shift = Core.function_register(xdata_shifted, xdata, True)
+        self.assertAlmostEqual(shift[0], measured_shift[0], delta=0.5)
+        result = Core.function_fourier_align(data, xdata_shifted) - xdata_shifted
         self.assertAlmostEqual(result.data.mean(), 0)
 
     def test_shift_nx1_data_produces_nx1_data(self):
@@ -543,10 +543,10 @@ class TestCore(unittest.TestCase):
         xdata = DataAndMetadata.new_data_and_metadata(data)
         shift = (-3.4, 0.0)
         xdata_shifted = Core.function_fourier_shift(xdata, shift)
-        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True)
-        self.assertAlmostEqual(shift[0], measured_shift[0], 1)
-        self.assertAlmostEqual(shift[1], measured_shift[1], 1)
-        result = Core.function_fourier_align(data, xdata_shifted, 100) - xdata_shifted
+        measured_shift = Core.function_register(xdata_shifted, xdata, True)
+        self.assertAlmostEqual(shift[0], measured_shift[0], delta=0.5)
+        self.assertAlmostEqual(shift[1], measured_shift[1], delta=0.5)
+        result = Core.function_fourier_align(data, xdata_shifted) - xdata_shifted
         self.assertAlmostEqual(result.data.mean(), 0)
 
         data = numpy.random.randn(1, 64)
@@ -554,10 +554,10 @@ class TestCore(unittest.TestCase):
         xdata = DataAndMetadata.new_data_and_metadata(data)
         shift = (0.0, -3.4)
         xdata_shifted = Core.function_fourier_shift(xdata, shift)
-        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True)
-        self.assertAlmostEqual(shift[0], measured_shift[0], 1)
-        self.assertAlmostEqual(shift[1], measured_shift[1], 1)
-        result = Core.function_fourier_align(data, xdata_shifted, 100) - xdata_shifted
+        measured_shift = Core.function_register(xdata_shifted, xdata, True)
+        self.assertAlmostEqual(shift[0], measured_shift[0], delta=0.5)
+        self.assertAlmostEqual(shift[1], measured_shift[1], delta=0.5)
+        result = Core.function_fourier_align(data, xdata_shifted) - xdata_shifted
         self.assertAlmostEqual(result.data.mean(), 0)
 
     def test_measure_works_on_navigable_data(self):
@@ -601,14 +601,14 @@ class TestCore(unittest.TestCase):
                     else:
                         shifts.append(0.0)
                 sequence_data[ii] = Core.function_fourier_shift(xdata, tuple(shifts))
-            measured = Core.function_sequence_measure_relative_translation(sequence_xdata, sequence_xdata[numpy.unravel_index(0, sequence_xdata.navigation_dimension_shape)], 100, False)
+            measured = Core.function_sequence_measure_relative_translation(sequence_xdata, sequence_xdata[numpy.unravel_index(0, sequence_xdata.navigation_dimension_shape)], False)
             self.assertEqual(sequence_xdata.is_sequence, measured.is_sequence)
             self.assertEqual(sequence_xdata.collection_dimension_shape, measured.collection_dimension_shape)
             self.assertEqual(1, measured.datum_dimension_count)
-            self.assertAlmostEqual(0.0, numpy.amin(-measured))
+            self.assertAlmostEqual(0.0, numpy.amin(-measured), places=1)
             s_max = numpy.product(s_shape)
             expected_max = 3.5 * (s_max - 1) / s_max
-            self.assertAlmostEqual(expected_max, numpy.amax(-measured), 1)
+            self.assertAlmostEqual(expected_max, numpy.amax(-measured), delta=0.5)
             measured_squeezed = Core.function_squeeze_measurement(measured)
 
     def test_align_with_bounds_works_on_1d_data(self):
@@ -622,12 +622,12 @@ class TestCore(unittest.TestCase):
         xdata.data[40:50] += 100
         xdata_shifted.data[40:50] += 100
         bounds = (5/64, 25/64)
-        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True, bounds=bounds)
-        self.assertAlmostEqual(shift[0], measured_shift[0], 1)
+        measured_shift = Core.function_register(xdata_shifted, xdata, True, bounds=bounds)
+        self.assertAlmostEqual(shift[0], measured_shift[0], delta=0.5)
         # Now test that without bounds we find no shift (because the more intense feature does not shift)
-        measured_shift = Core.function_register(xdata_shifted, xdata, 100, True, bounds=None)
-        self.assertAlmostEqual(measured_shift[0], 0, 1)
-        result = Core.function_fourier_align(data, xdata_shifted, 100, bounds=bounds) - xdata_shifted
+        measured_shift = Core.function_register(xdata_shifted, xdata, True, bounds=None)
+        self.assertAlmostEqual(measured_shift[0], 0, delta=0.5)
+        result = Core.function_fourier_align(data, xdata_shifted, bounds=bounds) - xdata_shifted
         self.assertAlmostEqual(result.data.mean(), 0)
         numpy.random.set_state(random_state)
 
@@ -640,12 +640,12 @@ class TestCore(unittest.TestCase):
             shift = (p / (sdata.shape[0] - 1) * -3.4, p / (sdata.shape[0] - 1) * 1.2)
             sdata[p, ...] = Core.function_fourier_shift(xdata, shift).data
         sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
-        shifts = Core.function_sequence_register_translation(sxdata, 100, True).data
+        shifts = Core.function_sequence_register_translation(sxdata, True).data
         self.assertEqual(shifts.shape, (sdata.shape[0], 2))
-        self.assertAlmostEqual(shifts[sdata.shape[0] // 2][0], 1 / (sdata.shape[0] - 1) * 3.4, 1)
-        self.assertAlmostEqual(shifts[sdata.shape[0] // 2][1], 1 / (sdata.shape[0] - 1) * -1.2, 1)
-        self.assertAlmostEqual(numpy.sum(shifts, axis=0)[0], 3.4, 0)
-        self.assertAlmostEqual(numpy.sum(shifts, axis=0)[1], -1.2, 0)
+        self.assertAlmostEqual(shifts[sdata.shape[0] // 2][0], 1 / (sdata.shape[0] - 1) * 3.4, delta=0.1)
+        self.assertAlmostEqual(shifts[sdata.shape[0] // 2][1], 1 / (sdata.shape[0] - 1) * -1.2, delta=0.1)
+        self.assertAlmostEqual(numpy.sum(shifts, axis=0)[0], 3.4, delta=2)
+        self.assertAlmostEqual(numpy.sum(shifts, axis=0)[1], -1.2, delta=2)
 
     def test_sequence_register_works_on_1d_data(self):
         data = numpy.random.randn(64)
@@ -656,10 +656,10 @@ class TestCore(unittest.TestCase):
             shift = [(p / (sdata.shape[0] - 1) * -3.4)]
             sdata[p, ...] = Core.function_fourier_shift(xdata, shift).data
         sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 1))
-        shifts = Core.function_sequence_register_translation(sxdata, 100, True).data
+        shifts = Core.function_sequence_register_translation(sxdata, True).data
         self.assertEqual(shifts.shape, (sdata.shape[0], 1))
-        self.assertAlmostEqual(shifts[sdata.shape[0] // 2][0], 1 / (sdata.shape[0] - 1) * 3.4, 1)
-        self.assertAlmostEqual(numpy.sum(shifts, axis=0)[0], 3.4, 0)
+        self.assertAlmostEqual(shifts[sdata.shape[0] // 2][0], 1 / (sdata.shape[0] - 1) * 3.4, delta=0.1)
+        self.assertAlmostEqual(numpy.sum(shifts, axis=0)[0], 3.4, delta=2)
 
     def test_sequence_register_produces_correctly_shaped_output_on_2dx1d_data(self):
         random_state = numpy.random.get_state()
@@ -673,7 +673,7 @@ class TestCore(unittest.TestCase):
                 shift = [((p + q) / 2 / (sdata.shape[0] - 1) * -3.4)]
                 sdata[q, p, ...] = Core.function_shift(xdata, shift).data
         sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 1))
-        shifts = Core.function_sequence_measure_relative_translation(sxdata, sxdata[0, 0], 100, True).data
+        shifts = Core.function_sequence_measure_relative_translation(sxdata, sxdata[0, 0], True).data
         self.assertEqual(shifts.shape, (6, 6, 1))
         numpy.random.set_state(random_state)
 
@@ -689,7 +689,7 @@ class TestCore(unittest.TestCase):
                 shift = (p / (sdata.shape[0] - 1) * -3.4, q / (sdata.shape[0] - 1) * 1.2)
                 sdata[q, p, ...] = Core.function_shift(xdata, shift).data
         sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 2))
-        shifts = Core.function_sequence_measure_relative_translation(sxdata, sxdata[0, 0], 100, True).data
+        shifts = Core.function_sequence_measure_relative_translation(sxdata, sxdata[0, 0], True).data
         self.assertEqual(shifts.shape, (6, 6, 2))
         numpy.random.set_state(random_state)
 
@@ -704,11 +704,11 @@ class TestCore(unittest.TestCase):
             shift = (p / (sdata.shape[0] - 1) * -3.4, p / (sdata.shape[0] - 1) * 1.2)
             sdata[p, ...] = Core.function_fourier_shift(xdata, shift).data
         sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
-        aligned_sxdata = Core.function_sequence_fourier_align(sxdata, 100)
-        shifts = Core.function_sequence_register_translation(aligned_sxdata, 100, True).data
+        aligned_sxdata = Core.function_sequence_fourier_align(sxdata)
+        shifts = Core.function_sequence_register_translation(aligned_sxdata, True).data
         shifts_total = numpy.sum(shifts, axis=0)
-        self.assertAlmostEqual(shifts_total[0], 0.0, places=1)
-        self.assertAlmostEqual(shifts_total[1], 0.0, places=1)
+        self.assertAlmostEqual(shifts_total[0], 0.0, delta=0.5)
+        self.assertAlmostEqual(shifts_total[1], 0.0, delta=0.5)
         numpy.random.set_state(random_state)
 
     def test_sequence_align_works_on_1d_data_without_errors(self):
@@ -722,10 +722,10 @@ class TestCore(unittest.TestCase):
             shift = [(p / (sdata.shape[0] - 1) * -3.4)]
             sdata[p, ...] = Core.function_shift(xdata, shift).data
         sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 1))
-        aligned_sxdata = Core.function_sequence_align(sxdata, 100)
-        shifts = Core.function_sequence_register_translation(aligned_sxdata, 100, True).data
+        aligned_sxdata = Core.function_sequence_align(sxdata)
+        shifts = Core.function_sequence_register_translation(aligned_sxdata, True).data
         shifts_total = numpy.sum(shifts, axis=0)
-        self.assertAlmostEqual(shifts_total[0], 0.0, places=1)
+        self.assertAlmostEqual(shifts_total[0], 0.0, delta=0.5)
         numpy.random.set_state(random_state)
 
     def test_sequence_align_works_on_2dx1d_data_without_errors(self):
@@ -740,11 +740,11 @@ class TestCore(unittest.TestCase):
                 shift = [((p + q) / 2 / (sdata.shape[0] - 1) * -3.4)]
                 sdata[q, p, ...] = Core.function_fourier_shift(xdata, shift).data
         sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 1))
-        aligned_sxdata = Core.function_sequence_fourier_align(sxdata, 100)
+        aligned_sxdata = Core.function_sequence_fourier_align(sxdata)
         aligned_sxdata = DataAndMetadata.new_data_and_metadata(aligned_sxdata.data.reshape(36, 64), data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 1))
-        shifts = Core.function_sequence_register_translation(aligned_sxdata, 100, True).data
+        shifts = Core.function_sequence_register_translation(aligned_sxdata, True).data
         shifts_total = numpy.sum(shifts, axis=0)
-        self.assertAlmostEqual(shifts_total[0], 0.0)
+        self.assertAlmostEqual(shifts_total[0], 0.0, places=1)
         numpy.random.set_state(random_state)
 
     def test_sequence_align_works_on_2dx2d_data_without_errors(self):
@@ -759,12 +759,12 @@ class TestCore(unittest.TestCase):
                 shift = (p / (sdata.shape[0] - 1) * -3.4, q / (sdata.shape[0] - 1) * 1.2)
                 sdata[q, p, ...] = Core.function_fourier_shift(xdata, shift).data
         sxdata = DataAndMetadata.new_data_and_metadata(sdata, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 2))
-        aligned_sxdata = Core.function_sequence_fourier_align(sxdata, 100)
+        aligned_sxdata = Core.function_sequence_fourier_align(sxdata)
         aligned_sxdata = DataAndMetadata.new_data_and_metadata(aligned_sxdata.data.reshape(36, 64, 64), data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
-        shifts = Core.function_sequence_register_translation(aligned_sxdata, 100, True).data
+        shifts = Core.function_sequence_register_translation(aligned_sxdata, True).data
         shifts_total = numpy.sum(shifts, axis=0)
-        self.assertAlmostEqual(shifts_total[0], 0.0, places=1)
-        self.assertAlmostEqual(shifts_total[1], 0.0, places=1)
+        self.assertAlmostEqual(shifts_total[0], 0.0, delta=0.5)
+        self.assertAlmostEqual(shifts_total[1], 0.0, delta=0.5)
         numpy.random.set_state(random_state)
 
     def test_resize_works_to_make_one_dimension_larger_and_one_smaller(self):
