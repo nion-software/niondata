@@ -4,6 +4,7 @@ Changelog (niondata)
 0.13.15 (UNRELEASED)
 --------------------
 - Optimize element data for sequence + collection case.
+- Change sub-pixel registration method to parabola fit to improve speed.
 
 0.13.14 (2021-03-12)
 --------------------
