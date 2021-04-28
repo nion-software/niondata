@@ -14,6 +14,7 @@ import functools
 import numpy
 import scipy.stats
 import typing
+import warnings
 
 from nion.data import Core
 from nion.data import Calibration
@@ -254,7 +255,6 @@ def invert(data_and_metadata: DataAndMetadata.DataAndMetadata) -> typing.Optiona
 
 def register_translation(xdata1: DataAndMetadata.DataAndMetadata, xdata2: DataAndMetadata.DataAndMetadata, upsample_factor: int = None, subtract_means: bool = True) -> typing.Tuple[float, ...]:
     if upsample_factor is not None:
-        import warnings
         warnings.warn("'upsample_factor' is deprecated and will be removed in a future release.", category=FutureWarning)
     return Core.function_register(xdata1, xdata2, subtract_means)
 
@@ -272,19 +272,16 @@ def fourier_shift(src: DataAndMetadata.DataAndMetadata, shift: typing.Tuple[floa
 
 def align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int = None, bounds: typing.Union[Core.NormRectangleType, Core.NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     if upsample_factor is not None:
-        import warnings
         warnings.warn("'upsample_factor' is deprecated and will be removed in a future release.", category=FutureWarning)
     return Core.function_align(src, target, bounds=bounds)
 
 def fourier_align(src: DataAndMetadata.DataAndMetadata, target: DataAndMetadata.DataAndMetadata, upsample_factor: int = None, bounds: typing.Union[Core.NormRectangleType, Core.NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     if upsample_factor is not None:
-        import warnings
         warnings.warn("'upsample_factor' is deprecated and will be removed in a future release.", category=FutureWarning)
     return Core.function_fourier_align(src, target, bounds=bounds)
 
 def sequence_register_translation(src: DataAndMetadata.DataAndMetadata, upsample_factor: int = None, subtract_means: bool = True, bounds: typing.Union[Core.NormRectangleType, Core.NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     if upsample_factor is not None:
-        import warnings
         warnings.warn("'upsample_factor' is deprecated and will be removed in a future release.", category=FutureWarning)
     return Core.function_sequence_register_translation(src, subtract_means)
 
@@ -296,13 +293,11 @@ def sequence_squeeze_measurement(data_and_metadata: DataAndMetadata.DataAndMetad
 
 def sequence_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int = None, bounds: typing.Union[Core.NormRectangleType, Core.NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     if upsample_factor is not None:
-        import warnings
         warnings.warn("'upsample_factor' is deprecated and will be removed in a future release.", category=FutureWarning)
     return Core.function_sequence_align(src, bounds=bounds)
 
 def sequence_fourier_align(src: DataAndMetadata.DataAndMetadata, upsample_factor: int = None, bounds: typing.Union[Core.NormRectangleType, Core.NormIntervalType] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     if upsample_factor is not None:
-        import warnings
         warnings.warn("'upsample_factor' is deprecated and will be removed in a future release.", category=FutureWarning)
     return Core.function_sequence_fourier_align(src, bounds=bounds)
 
