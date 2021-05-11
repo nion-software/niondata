@@ -13,6 +13,7 @@ import warnings
 import numpy
 from nion.data import Calibration
 from nion.data import Image
+from nion.data import ReferenceFrame
 
 _ = gettext.gettext
 
@@ -364,6 +365,12 @@ class DataMetadata:
         if self.datum_dimension_count == 0 and self.collection_dimension_count == 2:
             return True
         return False
+
+    @property
+    def reference_frame_2d(self) -> ReferenceFrame.ReferenceFrame2D:
+        assert len(self.data_shape) == 2 and self.datum_dimension_count == 2
+        return ReferenceFrame.ReferenceFrame2D(ReferenceFrame.ReferenceFrameAxis(self.dimensional_calibrations[0], self.data_shape[0]),
+                                               ReferenceFrame.ReferenceFrameAxis(self.dimensional_calibrations[1], self.data_shape[1]))
 
     def __get_size_str(self, data_shape: typing.Sequence[int], is_spatial: bool = False) -> str:
         spatial_shape_str = " x ".join([str(d) for d in data_shape])
@@ -793,6 +800,10 @@ class DataAndMetadata:
     @property
     def is_datum_2d(self) -> bool:
         return self.__data_metadata.is_datum_2d
+
+    @property
+    def reference_frame_2d(self) -> ReferenceFrame.ReferenceFrame2D:
+        return self.__data_metadata.reference_frame_2d
 
     @property
     def size_and_data_format_as_string(self) -> str:
