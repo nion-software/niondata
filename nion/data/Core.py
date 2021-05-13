@@ -3,7 +3,6 @@ import collections
 import copy
 import functools
 import math
-import numbers
 import operator
 import typing
 
@@ -21,7 +20,6 @@ import scipy.signal
 from nion.data import Calibration
 from nion.data import DataAndMetadata
 from nion.data import Image
-from nion.data import ReferenceFrame
 from nion.data import Shape
 from nion.data import TemplateMatching
 from nion.utils import Geometry
@@ -2020,9 +2018,9 @@ def function_convert_to_scalar(data_and_metadata: DataAndMetadata.DataAndMetadat
     result, modified = function_scalar_data_no_copy(data_and_metadata, complex_display_type)
     return result
 
-def get_calibrated_interval_domain(reference_frame: typing.Union[ReferenceFrame.ReferenceFrame1D, ReferenceFrame.ReferenceFrameAxis],
+def get_calibrated_interval_domain(reference_frame: typing.Union[Calibration.ReferenceFrame1D, Calibration.ReferenceFrameAxis],
                                    interval: Shape.Interval) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
-    axis = reference_frame.axis if isinstance(reference_frame, ReferenceFrame.ReferenceFrame1D) else reference_frame
+    axis = reference_frame.axis if isinstance(reference_frame, Calibration.ReferenceFrame1D) else reference_frame
     start = axis.convert_to_calibrated(interval.start).value
     end = axis.convert_to_calibrated(interval.end).value
     start_px = int(axis.convert_to_pixel(interval.start).value)
@@ -2031,10 +2029,10 @@ def get_calibrated_interval_domain(reference_frame: typing.Union[ReferenceFrame.
                                                  dimensional_calibrations=[axis.calibration])
 
 def get_calibrated_interval_slice(spectrum: DataAndMetadata.DataAndMetadata,
-                                  reference_frame: typing.Union[ReferenceFrame.ReferenceFrame1D, ReferenceFrame.ReferenceFrameAxis],
+                                  reference_frame: typing.Union[Calibration.ReferenceFrame1D, Calibration.ReferenceFrameAxis],
                                   interval: Shape.Interval) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     assert spectrum.is_datum_1d
-    axis = reference_frame.axis if isinstance(reference_frame, ReferenceFrame.ReferenceFrame1D) else reference_frame
+    axis = reference_frame.axis if isinstance(reference_frame, Calibration.ReferenceFrame1D) else reference_frame
     start_px = int(axis.convert_to_pixel(interval.start).value)
     stop_px = int(axis.convert_to_pixel(interval.end).value)
     return spectrum[..., start_px:stop_px]
