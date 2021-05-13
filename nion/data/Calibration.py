@@ -3,6 +3,8 @@ from __future__ import annotations
 # standard libraries
 import enum
 import math
+import typing
+
 import numpy
 
 
@@ -195,8 +197,17 @@ class CoordinateType(enum.IntEnum):
     PIXEL = 2
 
 
-
 class Coordinate:
+    def __init__(self, coordinate_type: CoordinateType, value: float):
+        self.coordinate_type = coordinate_type
+        self.value = value
+        self.int_value = int(value)
+
+    def __repr__(self):
+        return f"{str(self.coordinate_type).split('.')[-1]}:{self.value}"
+
+
+class Metric:
     def __init__(self, coordinate_type: CoordinateType, value: float):
         self.coordinate_type = coordinate_type
         self.value = value
@@ -238,16 +249,44 @@ class ReferenceFrameAxis:
             return Coordinate(CoordinateType.NORMALIZED, c.value / self.n)
         raise NotImplementedError()
 
+    def convert_to_calibrated_size(self, m: Metric) -> Metric:
+        if m.coordinate_type == CoordinateType.CALIBRATED:
+            return Metric(CoordinateType.CALIBRATED, m.value)
+        if m.coordinate_type == CoordinateType.NORMALIZED:
+            return Metric(CoordinateType.CALIBRATED, self.calibration.convert_to_calibrated_size(m.value * self.n))
+        if m.coordinate_type == CoordinateType.PIXEL:
+            return Metric(CoordinateType.CALIBRATED, self.calibration.convert_to_calibrated_size(m.value / self.n))
+        raise NotImplementedError()
 
-class CalibratedInterval:
-    def __init__(self, start: Coordinate, end: Coordinate):
-        assert start.coordinate_type == end.coordinate_type
-        self.start = start
-        self.end = end
+    def convert_to_pixel_size(self, m: Metric) -> Metric:
+        if m.coordinate_type == CoordinateType.CALIBRATED:
+            return Metric(CoordinateType.PIXEL, self.calibration.convert_from_calibrated_size(m.value))
+        if m.coordinate_type == CoordinateType.NORMALIZED:
+            return Metric(CoordinateType.PIXEL, m.value * self.n)
+        if m.coordinate_type == CoordinateType.PIXEL:
+            return Metric(CoordinateType.PIXEL, m.value)
+        raise NotImplementedError()
 
-    def __repr__(self):
-        return f"[{self.start!r} {self.end!r})"
+    def convert_to_normalized_size(self, m: Metric) -> Metric:
+        if m.coordinate_type == CoordinateType.CALIBRATED:
+            return Metric(CoordinateType.NORMALIZED, self.calibration.convert_from_calibrated_size(m.value) / self.n)
+        if m.coordinate_type == CoordinateType.NORMALIZED:
+            return Metric(CoordinateType.NORMALIZED, m.value)
+        if m.coordinate_type == CoordinateType.PIXEL:
+            return Metric(CoordinateType.NORMALIZED, m.value / self.n)
+        raise NotImplementedError()
+
+
+class ReferenceFrame1D:
+    def __init__(self, axis: ReferenceFrameAxis):
+        self.axis = axis
+
+
+class ReferenceFrame2D:
+    def __init__(self, y_axis: ReferenceFrameAxis, x_axis: ReferenceFrameAxis):
+        self.y_axis = y_axis
+        self.x_axis = x_axis
 
     @property
-    def length(self) -> Coordinate:
-        return Coordinate(self.start.coordinate_type, self.end.value - self.start.value)
+    def shape(self) -> typing.Tuple[int, ...]:
+        return self.y_axis.n, self.x_axis.n

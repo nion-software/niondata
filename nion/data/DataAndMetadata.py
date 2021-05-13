@@ -365,6 +365,12 @@ class DataMetadata:
             return True
         return False
 
+    @property
+    def reference_frame_2d(self) -> Calibration.ReferenceFrame2D:
+        assert len(self.data_shape) == 2 and self.datum_dimension_count == 2
+        return Calibration.ReferenceFrame2D(Calibration.ReferenceFrameAxis(self.dimensional_calibrations[0], self.data_shape[0]),
+                                            Calibration.ReferenceFrameAxis(self.dimensional_calibrations[1], self.data_shape[1]))
+
     def __get_size_str(self, data_shape: typing.Sequence[int], is_spatial: bool = False) -> str:
         spatial_shape_str = " x ".join([str(d) for d in data_shape])
         if is_spatial and len(data_shape) == 1:
@@ -793,6 +799,10 @@ class DataAndMetadata:
     @property
     def is_datum_2d(self) -> bool:
         return self.__data_metadata.is_datum_2d
+
+    @property
+    def reference_frame_2d(self) -> Calibration.ReferenceFrame2D:
+        return self.__data_metadata.reference_frame_2d
 
     @property
     def size_and_data_format_as_string(self) -> str:
