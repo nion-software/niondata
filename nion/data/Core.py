@@ -2018,23 +2018,6 @@ def function_convert_to_scalar(data_and_metadata: DataAndMetadata.DataAndMetadat
     result, modified = function_scalar_data_no_copy(data_and_metadata, complex_display_type)
     return result
 
-def get_calibrated_interval_domain(reference_frame: Calibration.ReferenceFrameAxis,
-                                   interval: Calibration.CalibratedInterval) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
-    start = reference_frame.convert_to_calibrated(interval.start).value
-    end = reference_frame.convert_to_calibrated(interval.end).value
-    start_px = int(reference_frame.convert_to_pixel(interval.start).value)
-    stop_px = int(reference_frame.convert_to_pixel(interval.end).value)
-    return DataAndMetadata.new_data_and_metadata(numpy.linspace(start, end, (stop_px - start_px), endpoint=False),
-                                                 dimensional_calibrations=[reference_frame.calibration])
-
-def get_calibrated_interval_slice(spectrum: DataAndMetadata.DataAndMetadata,
-                                  reference_frame: Calibration.ReferenceFrameAxis,
-                                  interval: Calibration.CalibratedInterval) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
-    assert spectrum.is_datum_1d
-    start_px = int(reference_frame.convert_to_pixel(interval.start).value)
-    stop_px = int(reference_frame.convert_to_pixel(interval.end).value)
-    return spectrum[..., start_px:stop_px]
-
 def calibrated_subtract_spectrum(data1: DataAndMetadata.DataAndMetadata, data2: DataAndMetadata.DataAndMetadata) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     assert data1.is_datum_1d
     assert data2.is_datum_1d
