@@ -70,7 +70,7 @@ def crop_interval(data_and_metadata: DataAndMetadata.DataAndMetadata, interval: 
 def slice_sum(data_and_metadata: DataAndMetadata.DataAndMetadata, slice_center: int, slice_width: int) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     return Core.function_slice_sum(data_and_metadata, slice_center, slice_width)
 
-def pick(data_and_metadata: DataAndMetadata.DataAndMetadata, position: DataAndMetadata.PositionType) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
+def pick(data_and_metadata: DataAndMetadata.DataAndMetadata, position: Core.PickPositionType) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
     return Core.function_pick(data_and_metadata, position)
 
 def sum(data_and_metadata: DataAndMetadata.DataAndMetadata, axis: typing.Union[int, typing.Sequence[int]]=None, keepdims: bool=False) -> typing.Optional[DataAndMetadata.DataAndMetadata]:

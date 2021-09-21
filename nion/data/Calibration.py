@@ -105,10 +105,10 @@ class Calibration:
     def units(self, value):
         self.__units = str(value) if value else None
 
-    def convert_to_calibrated_value(self, value):
+    def convert_to_calibrated_value(self, value: float) -> float:
         return self.offset + value * self.scale
 
-    def convert_to_calibrated_size(self, size):
+    def convert_to_calibrated_size(self, size: float) -> float:
         return size * self.scale
 
     def convert_from_calibrated_value(self, value):

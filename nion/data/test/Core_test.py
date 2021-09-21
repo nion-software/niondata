@@ -851,20 +851,20 @@ class TestCore(unittest.TestCase):
 
     def test_auto_correlation_keeps_calibration(self):
         # configure dimensions so that the pixels go from -16S to 16S
-        dimensional_calibrations = [Calibration.Calibration(-16, 2, "S"), Calibration.Calibration(-16, 2, "S")]
+        dimensional_calibrations = (Calibration.Calibration(-16, 2, "S"), Calibration.Calibration(-16, 2, "S"))
         xdata = DataAndMetadata.new_data_and_metadata(numpy.random.randn(16, 16), dimensional_calibrations=dimensional_calibrations)
         result = Core.function_autocorrelate(xdata)
         self.assertIsNot(dimensional_calibrations, result.dimensional_calibrations)  # verify
-        self.assertEqual(dimensional_calibrations, result.dimensional_calibrations)
+        self.assertEqual(tuple(dimensional_calibrations), tuple(result.dimensional_calibrations))
 
     def test_cross_correlation_keeps_calibration(self):
         # configure dimensions so that the pixels go from -16S to 16S
-        dimensional_calibrations = [Calibration.Calibration(-16, 2, "S"), Calibration.Calibration(-16, 2, "S")]
+        dimensional_calibrations = (Calibration.Calibration(-16, 2, "S"), Calibration.Calibration(-16, 2, "S"))
         xdata1 = DataAndMetadata.new_data_and_metadata(numpy.random.randn(16, 16), dimensional_calibrations=dimensional_calibrations)
         xdata2 = DataAndMetadata.new_data_and_metadata(numpy.random.randn(16, 16), dimensional_calibrations=dimensional_calibrations)
         result = Core.function_crosscorrelate(xdata1, xdata2)
         self.assertIsNot(dimensional_calibrations, result.dimensional_calibrations)  # verify
-        self.assertEqual(dimensional_calibrations, result.dimensional_calibrations)
+        self.assertEqual(tuple(dimensional_calibrations), tuple(result.dimensional_calibrations))
 
     def test_histogram_calibrates_x_axis(self):
         dimensional_calibrations = [Calibration.Calibration(-16, 2, "S"), Calibration.Calibration(-16, 2, "S")]
