@@ -111,7 +111,7 @@ class DataMetadata:
     """
 
     def __init__(self, data_shape_and_dtype: typing.Optional[typing.Tuple[ShapeType, numpy.dtype]],
-                 intensity_calibration=typing.Optional[Calibration.Calibration],
+                 intensity_calibration: typing.Optional[Calibration.Calibration] = None,
                  dimensional_calibrations: typing.Optional[CalibrationListType] = None,
                  metadata: typing.Optional[MetadataType] = None,
                  timestamp: typing.Optional[datetime.datetime] = None,
