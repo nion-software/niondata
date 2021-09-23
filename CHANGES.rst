@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+NEXT
+----
+- Drop support for Python 3.7.
+
 0.13.15 (2021-05-26)
 --------------------
 - Optimize element data for sequence + collection case.
