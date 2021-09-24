@@ -122,8 +122,12 @@ class DataMetadata:
             warnings.warn('using a non-integer shape in DataAndMetadata', DeprecationWarning, stacklevel=2)
         self.data_shape_and_dtype = (tuple(data_shape_and_dtype[0]), numpy.dtype(data_shape_and_dtype[1])) if data_shape_and_dtype is not None else None
 
-        dimensional_shape = Image.dimensional_shape_from_shape_and_dtype(data_shape_and_dtype[0], data_shape_and_dtype[1]) if data_shape_and_dtype is not None else ()
-        dimension_count = len(dimensional_shape)
+        dimensional_shape: typing.List[int] = list()
+        if data_shape_and_dtype is not None:
+            ds = Image.dimensional_shape_from_shape_and_dtype(data_shape_and_dtype[0], data_shape_and_dtype[1])
+            assert ds is not None
+            dimensional_shape = list(ds)
+        dimension_count = len(dimensional_shape) if dimensional_shape else 0
 
         if not data_descriptor:
             is_sequence = False

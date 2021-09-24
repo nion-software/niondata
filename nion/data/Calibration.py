@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 # standard libraries
-import enum
 import math
+import typing
+
 import numpy
 
 
@@ -17,7 +18,7 @@ class Calibration:
         Uses a transformation x' = x * scale + offset
     """
 
-    def __init__(self, offset=None, scale=None, units=None):
+    def __init__(self, offset: typing.Optional[float] = None, scale: typing.Optional[float] = None, units: typing.Optional[str] = None) -> None:
         super(Calibration, self).__init__()
         self.__offset = float(offset) if offset else None
         self.__scale = float(scale) if scale else None
@@ -108,7 +109,13 @@ class Calibration:
     def convert_to_calibrated_value(self, value: float) -> float:
         return self.offset + value * self.scale
 
+    def convert_array_to_calibrated_value(self, value: numpy.ndarray) -> numpy.ndarray:
+        return self.offset + value * self.scale
+
     def convert_to_calibrated_size(self, size: float) -> float:
+        return size * self.scale
+
+    def convert_array_to_calibrated_size(self, size: numpy.ndarray) -> numpy.ndarray:
         return size * self.scale
 
     def convert_from_calibrated_value(self, value):

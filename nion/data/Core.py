@@ -182,8 +182,7 @@ def function_fft(data_and_metadata: DataAndMetadata.DataAndMetadata) -> typing.O
     if not Image.is_data_valid(data_and_metadata.data):
         return None
 
-    assert len(src_dimensional_calibrations) == len(
-        Image.dimensional_shape_from_shape_and_dtype(data_shape, data_dtype))
+    assert len(src_dimensional_calibrations) == len(Image.dimensional_shape_from_shape_and_dtype(data_shape, data_dtype) or ())
 
     dimensional_calibrations = [Calibration.Calibration((-0.5 - 0.5 * data_shape_n) / (dimensional_calibration.scale * data_shape_n), 1.0 / (dimensional_calibration.scale * data_shape_n),
                                                         "1/" + dimensional_calibration.units) for
@@ -221,8 +220,7 @@ def function_ifft(data_and_metadata: DataAndMetadata.DataAndMetadata) -> typing.
     if not Image.is_data_valid(data_and_metadata.data):
         return None
 
-    assert len(src_dimensional_calibrations) == len(
-        Image.dimensional_shape_from_shape_and_dtype(data_shape, data_dtype))
+    assert len(src_dimensional_calibrations) == len(Image.dimensional_shape_from_shape_and_dtype(data_shape, data_dtype) or ())
 
     def remove_one_slash(s: str) -> str:
         if s.startswith("1/"):
@@ -2071,7 +2069,7 @@ def function_display_rgba(data_and_metadata: DataAndMetadata.DataAndMetadata,
         data_2d = data_2d.reshape(1, *data_2d.shape)
     if not Image.is_data_rgb_type(data_2d):
         assert display_range is not None
-    assert len(Image.dimensional_shape_from_data(data_2d)) == 2
+    assert len(Image.dimensional_shape_from_data(data_2d) or ()) == 2
     rgba_data = Image.create_rgba_image_from_array(data_2d, display_limits=display_range, lookup=color_table)
     return DataAndMetadata.new_data_and_metadata(rgba_data)
 

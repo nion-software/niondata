@@ -5,11 +5,17 @@ import sys
 
 # third party libraries
 import numpy
+import numpy.typing
 import scipy
 import scipy.interpolate
+import typing
 
 # local libraries
 # None
+
+
+ShapeType = typing.Sequence[int]
+
 
 def scale_multidimensional(image, scaled_size):
     """
@@ -193,11 +199,13 @@ def create_rgba_image_from_color(size, r, g, b, a=255):
     return rgba_image
 
 
-def dimensional_shape_from_shape_and_dtype(shape, dtype):
+def dimensional_shape_from_shape_and_dtype(shape: ShapeType, dtype: numpy.typing.DTypeLike) -> typing.Optional[ShapeType]:
     if shape is None or dtype is None:
         return None
     return shape[:-1] if dtype == numpy.uint8 and shape[-1] in (3,4) and len(shape) > 1 else shape
-def dimensional_shape_from_data(data):
+
+
+def dimensional_shape_from_data(data: numpy.ndarray) -> typing.Optional[ShapeType]:
     return dimensional_shape_from_shape_and_dtype(data.shape, data.dtype)
 
 
@@ -205,7 +213,9 @@ def is_shape_and_dtype_rgb(shape, dtype):
     if shape is None or dtype is None:
         return False
     return dtype == numpy.uint8 and shape[-1] == 3 and len(shape) > 1
-def is_data_rgb(data):
+
+
+def is_data_rgb(data: numpy.ndarray) -> bool:
     return data is not None and is_shape_and_dtype_rgb(data.shape, data.dtype)
 
 
@@ -213,13 +223,17 @@ def is_shape_and_dtype_rgba(shape, dtype):
     if shape is None or dtype is None:
         return False
     return dtype == numpy.uint8 and shape[-1] == 4 and len(shape) > 1
-def is_data_rgba(data):
+
+
+def is_data_rgba(data: numpy.ndarray) -> bool:
     return data is not None and is_shape_and_dtype_rgba(data.shape, data.dtype)
 
 
 def is_shape_and_dtype_rgb_type(shape, dtype):
     return is_shape_and_dtype_rgb(shape, dtype) or is_shape_and_dtype_rgba(shape, dtype)
-def is_data_rgb_type(data):
+
+
+def is_data_rgb_type(data: numpy.ndarray) -> bool:
     return data is not None and is_shape_and_dtype_rgb_type(data.shape, data.dtype)
 
 
@@ -408,9 +422,9 @@ def create_rgba_image_from_array(array, normalize=True, data_range=None, display
 
 
 # convert data to grayscale. may return same copy of data, or a copy.
-def convert_to_grayscale(data, dtype=numpy.uint32):
+def convert_to_grayscale(data, data_type: typing.Any = numpy.uint32) -> numpy.ndarray:
     if is_data_rgb(data) or is_data_rgba(data):
-        image = numpy.empty(data.shape[:-1], dtype)
+        image = numpy.empty(data.shape[:-1], data_type)
         # don't be tempted to use the numpy.dot operator; after testing, this explicit method
         # is faster by a factor of two. cem 2013-11-02.
         # note 0=b, 1=g, 2=r, 3=a. calculate luminosity.
@@ -418,31 +432,3 @@ def convert_to_grayscale(data, dtype=numpy.uint32):
         return image
     else:
         return scalar_from_array(data)
-
-
-# return True if data is grayscale.
-def is_grayscale(data):
-    if is_data_rgb(data) or is_data_rgba(data):
-        return numpy.array_equal(data[..., 0],data[..., 1]) and numpy.array_equal(data[..., 1],data[..., 2])
-    return True
-
-
-# read image file. return as rgba uint8.
-def read_rgba_image_from_file(ui, filename):
-    rgba_image = ui.load_rgba_data_from_file(filename)  # always loads rgba
-    assert rgba_image is not None
-    return get_dtype_view(rgba_image, numpy.uint8).reshape(rgba_image.shape + (4,))
-
-
-# read image file. convert to dtype.
-def read_grayscale_image_from_file(ui, filename, dtype=numpy.uint32):
-    data = read_rgba_image_from_file(ui, filename)
-    return convert_to_grayscale(data, dtype)
-
-
-# read image file. convert to dtype if it is grayscale.
-def read_image_from_file(ui, filename, dtype=numpy.uint32):
-    data = read_rgba_image_from_file(ui, filename)
-    if is_grayscale(data):
-        return convert_to_grayscale(data, dtype)
-    return data
