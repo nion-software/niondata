@@ -21,7 +21,7 @@ requirements:
     - python >=3.8
     - nionutils >=0.3.10,<0.4.0
     - scipy
-    - numpy
+    - numpy >=1.21
 
 test:
   imports:
