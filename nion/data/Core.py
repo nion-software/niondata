@@ -671,8 +671,8 @@ def function_sequence_split(src: DataAndMetadata.DataAndMetadata) -> typing.Opti
 
 
 def function_make_elliptical_mask(data_shape: DataAndMetadata.ShapeType, center: NormPointType, size: NormSizeType, rotation: float) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
-    data_size = Geometry.IntSize.make(data_shape)
-    data_rect = Geometry.FloatRect(origin=Geometry.FloatPoint(), size=Geometry.FloatSize.make(data_size))
+    data_size = Geometry.IntSize.make(typing.cast(Geometry.SizeIntTuple, data_shape))
+    data_rect = Geometry.FloatRect(origin=Geometry.FloatPoint(), size=Geometry.FloatSize.make(typing.cast(Geometry.SizeFloatTuple, data_size)))
     center_point = Geometry.map_point(Geometry.FloatPoint.make(center), Geometry.FloatRect.unit_rect(), data_rect)
     size_size = Geometry.map_size(Geometry.FloatSize.make(size), Geometry.FloatRect.unit_rect(), data_rect)
     mask = numpy.zeros((data_size.height, data_size.width))
@@ -680,7 +680,8 @@ def function_make_elliptical_mask(data_shape: DataAndMetadata.ShapeType, center:
     if bounds.height <= 0 or bounds.width <= 0:
         return DataAndMetadata.new_data_and_metadata(mask)
     a, b = bounds.center.y, bounds.center.x
-    y, x = numpy.ogrid[-a:data_size.height - a, -b:data_size.width - b]
+    # does ogrid take float args? not sure. typing says "no" so ignore typing for now.
+    y, x = numpy.ogrid[-a:data_size.height - a, -b:data_size.width - b]  # type: ignore
     if rotation:
         angle_sin = math.sin(rotation)
         angle_cos = math.cos(rotation)
@@ -942,7 +943,7 @@ def function_crop(data_and_metadata: DataAndMetadata.DataAndMetadata, bounds: No
 
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
-    data_shape = Geometry.IntSize.make(data_and_metadata.data_shape)
+    data_shape = Geometry.IntSize.make(typing.cast(Geometry.SizeIntTuple, data_and_metadata.data_shape))
     data_dtype = data_and_metadata.data_dtype
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
@@ -1016,7 +1017,7 @@ def function_crop_rotated(data_and_metadata: DataAndMetadata.DataAndMetadata, bo
 
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
 
-    data_shape = Geometry.IntSize.make(data_and_metadata.data_shape)
+    data_shape = Geometry.IntSize.make(typing.cast(Geometry.SizeIntTuple, data_and_metadata.data_shape))
     data_dtype = data_and_metadata.data_dtype
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
