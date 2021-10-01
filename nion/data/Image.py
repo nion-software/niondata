@@ -15,9 +15,16 @@ import typing
 
 
 ShapeType = typing.Sequence[int]
+Shape2DType = typing.Tuple[int, int]
+# NOTE: typing.Any is only required when numpy < 1.21. once that requirement is removed (anaconda), switch these back.
+_ImageDataType = typing.Any  # numpy.typing.NDArray[typing.Any]
+_RGBAImageDataType = typing.Any  # numpy.typing.NDArray[typing.Any]
+_RGBImageDataType = typing.Any  # numpy.typing.NDArray[typing.Any]
+_RGBA8ImageDataType = typing.Any  # numpy.typing.NDArray[typing.Any]
+_U8ImageDataType = typing.Any  # numpy.typing.NDArray[typing.Any]
 
 
-def scale_multidimensional(image, scaled_size):
+def scale_multidimensional(image: _ImageDataType, scaled_size: ShapeType) -> _ImageDataType:
     """
     Return image scaled to scaled_size. scaled_size should be a sequence
     with the same length as image.
@@ -31,11 +38,11 @@ def scale_multidimensional(image, scaled_size):
     coords = [numpy.rint(x).astype(int) for x in numpy.ogrid[slices]]
     # coords is now, for an array image of dimension n, a list of n 1d arrays we the
     # coords we want to take from image:
-    return image[coords]
+    return typing.cast(_ImageDataType, image[coords])
 
 
 # size is c-indexed (height, width)
-def scaled(image, size, method='linear'):
+def scaled(image: _ImageDataType, size: ShapeType, method: str = 'linear') -> _ImageDataType:
     size = tuple(size)
 
     if method=='nearest':
@@ -47,12 +54,12 @@ def scaled(image, size, method='linear'):
             iy = numpy.linspace(0, image.shape[0]-1, size[0])
             ix = numpy.linspace(0, image.shape[1]-1, size[1])
             f = scipy.interpolate.RectBivariateSpline(numpy.arange(image.shape[0]), numpy.arange(image.shape[1]), image, ky=3, kx=3)
-            return f(iy, ix)
+            return typing.cast(_ImageDataType, f(iy, ix))
         elif method == 'linear':
             iy = numpy.linspace(0, image.shape[0]-1, size[0])
             ix = numpy.linspace(0, image.shape[1]-1, size[1])
             f = scipy.interpolate.RectBivariateSpline(numpy.arange(image.shape[0]), numpy.arange(image.shape[1]), image, ky=1, kx=1)
-            return f(iy, ix)
+            return typing.cast(_ImageDataType, f(iy, ix))
         else:  # nearest
             dst = numpy.empty(size, image.dtype)
             indices = numpy.indices(size)
@@ -69,10 +76,10 @@ def scaled(image, size, method='linear'):
         if image.shape[2] == 4:
             dst_image[:, :, 3] = scaled(image[:, :, 3], size, method=method)
         return dst_image
-    return None
+    raise Exception("Unable to scale image")
 
 
-def rebin_1d(src: numpy.ndarray, len: int, retained: dict=None) -> numpy.ndarray:
+def rebin_1d(src: _ImageDataType, len: int, retained: typing.Optional[typing.Dict[str, typing.Any]] = None) -> _ImageDataType:
     src_len = src.shape[0]
     if len < src_len:
         if retained is not None and (retained.get("src_len") != src_len or retained.get("len") != len):
@@ -80,7 +87,7 @@ def rebin_1d(src: numpy.ndarray, len: int, retained: dict=None) -> numpy.ndarray
         if retained is not None and "w" in retained:
             w = retained["w"]
         else:
-            ix, iy = numpy.meshgrid(numpy.linspace(0, src_len-1, src_len), numpy.linspace(0, len-1, len))
+            ix, iy = numpy.meshgrid(numpy.linspace(0, src_len-1, src_len), numpy.linspace(0, len-1, len))  # type: ignore
             # # create linear bins
             # ss = numpy.linspace(0, float(src_len), len+1)
             # # create some useful row and column values using meshgrid
@@ -100,7 +107,7 @@ def rebin_1d(src: numpy.ndarray, len: int, retained: dict=None) -> numpy.ndarray
         weighted_src = w * src
         # This ensures that nans are handled properly: Only propagate nans that fall within a bin (i.e. where weight != 0)
         weighted_src[w==0] = 0
-        return numpy.sum(weighted_src, axis=1) * len / src_len
+        return typing.cast(_ImageDataType, numpy.sum(weighted_src, axis=1) * len / src_len)
     else:
         # linear
         result = numpy.empty((len, ), dtype=numpy.double)
@@ -109,94 +116,76 @@ def rebin_1d(src: numpy.ndarray, len: int, retained: dict=None) -> numpy.ndarray
         return result
 
 
-def get_dtype_view(array, dtype):
+def get_dtype_view(array: numpy.typing.ArrayLike, dtype: numpy.typing.DTypeLike) -> _ImageDataType:
     # this is useful for handling both numpy and h5py arrays
     return numpy.array(array, copy=False).view(dtype)
 
 
-def get_byte_view(rgba_image):
+def get_byte_view(rgba_image: _RGBAImageDataType) -> _RGBA8ImageDataType:
     return get_dtype_view(rgba_image, numpy.uint8).reshape(rgba_image.shape + (-1, ))
 
 
-def get_rgb_view(rgba_image, byteorder=None):
+def get_rgb_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str] = None) -> _RGBImageDataType:
     if byteorder is None:
         byteorder = sys.byteorder
     bytes = get_byte_view(rgba_image)
     assert bytes.shape[2] == 4
     if byteorder == 'little':
-        return bytes[..., :3]  # strip A off BGRA
+        return typing.cast(_RGBImageDataType, bytes[..., :3])  # strip A off BGRA
     else:
-        return bytes[..., 1:]  # strip A off ARGB
+        return typing.cast(_RGBImageDataType, bytes[..., 1:])  # strip A off ARGB
 
 
-def get_red_view(rgba_image, byteorder=None):
+def get_red_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str] = None) -> _U8ImageDataType:
     if byteorder is None:
         byteorder = sys.byteorder
     bytes = get_byte_view(rgba_image)
     assert bytes.shape[2] == 4
     if byteorder == 'little':
-        return bytes[..., 2]  # strip A off BGRA
+        return typing.cast(_U8ImageDataType, bytes[..., 2])
     else:
-        return bytes[..., 1]  # strip A off ARGB
+        return typing.cast(_U8ImageDataType, bytes[..., 1])
 
 
-def get_green_view(rgba_image, byteorder=None):
+def get_green_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str] = None) -> _U8ImageDataType:
     if byteorder is None:
         byteorder = sys.byteorder
     bytes = get_byte_view(rgba_image)
     assert bytes.shape[2] == 4
     if byteorder == 'little':
-        return bytes[..., 1]  # strip A off BGRA
+        return typing.cast(_U8ImageDataType, bytes[..., 1])
     else:
-        return bytes[..., 2]  # strip A off ARGB
+        return typing.cast(_U8ImageDataType, bytes[..., 2])
 
 
-def get_blue_view(rgba_image, byteorder=None):
+def get_blue_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str] = None) -> _U8ImageDataType:
     if byteorder is None:
         byteorder = sys.byteorder
     bytes = get_byte_view(rgba_image)
     assert bytes.shape[2] == 4
     if byteorder == 'little':
-        return bytes[..., 0]  # strip A off BGRA
+        return typing.cast(_U8ImageDataType, bytes[..., 0])
     else:
-        return bytes[..., 3]  # strip A off ARGB
+        return typing.cast(_U8ImageDataType, bytes[..., 3])
 
 
-def get_alpha_view(rgba_image, byteorder=None):
+def get_alpha_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str] = None) -> _U8ImageDataType:
     if byteorder is None:
         byteorder = sys.byteorder
     bytes = get_byte_view(rgba_image)
     assert bytes.shape[2] == 4
     if byteorder == 'little':
-        return bytes[..., 3]  # A of BGRA
+        return typing.cast(_U8ImageDataType, bytes[..., 3])
     else:
-        return bytes[..., 0]  # A of ARGB
+        return typing.cast(_U8ImageDataType, bytes[..., 0])
 
 
-def get_rgba_view_from_rgba_data(rgba_data):
+def get_rgba_view_from_rgba_data(rgba_data: _RGBAImageDataType) -> _RGBA8ImageDataType:
     return get_dtype_view(rgba_data, numpy.uint8).reshape(rgba_data.shape + (4,))
 
 
-def get_rgba_data_from_rgba(rgba_image):
+def get_rgba_data_from_rgba(rgba_image: _RGBA8ImageDataType) -> _RGBImageDataType:
     return get_dtype_view(rgba_image, numpy.uint32).reshape(rgba_image.shape[:-1])
-
-
-def create_checkerboard(size):
-    data = numpy.zeros(size, numpy.uint32)
-    xx, yy = numpy.meshgrid(numpy.linspace(0,1,size[0]), numpy.linspace(0,1,size[1]))
-    data[:] = numpy.sin(12*math.pi*xx)*numpy.sin(12*math.pi*yy) > 0
-    return data
-
-
-def create_color_image(size, r, g, b, a = 255):
-    return get_byte_view(create_rgba_image_from_color(size, r, g, b, a))
-
-
-def create_rgba_image_from_color(size, r, g, b, a=255):
-    rgba_image = numpy.empty(size, dtype=numpy.uint32)
-    get_rgb_view(rgba_image)[:] = (b,g,r)  # scalar data assigned to each component of rgb view
-    get_alpha_view(rgba_image)[:] = a
-    return rgba_image
 
 
 def dimensional_shape_from_shape_and_dtype(shape: ShapeType, dtype: numpy.typing.DTypeLike) -> typing.Optional[ShapeType]:
@@ -205,130 +194,150 @@ def dimensional_shape_from_shape_and_dtype(shape: ShapeType, dtype: numpy.typing
     return shape[:-1] if dtype == numpy.uint8 and shape[-1] in (3,4) and len(shape) > 1 else shape
 
 
-def dimensional_shape_from_data(data: numpy.ndarray) -> typing.Optional[ShapeType]:
+def dimensional_shape_from_data(data: _ImageDataType) -> typing.Optional[ShapeType]:
     return dimensional_shape_from_shape_and_dtype(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_rgb(shape, dtype):
+def is_shape_and_dtype_rgb(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
     if shape is None or dtype is None:
         return False
     return dtype == numpy.uint8 and shape[-1] == 3 and len(shape) > 1
 
 
-def is_data_rgb(data: numpy.ndarray) -> bool:
+def is_data_rgb(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_rgb(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_rgba(shape, dtype):
+def is_shape_and_dtype_rgba(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
     if shape is None or dtype is None:
         return False
     return dtype == numpy.uint8 and shape[-1] == 4 and len(shape) > 1
 
 
-def is_data_rgba(data: numpy.ndarray) -> bool:
+def is_data_rgba(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_rgba(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_rgb_type(shape, dtype):
+def is_shape_and_dtype_rgb_type(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
     return is_shape_and_dtype_rgb(shape, dtype) or is_shape_and_dtype_rgba(shape, dtype)
 
 
-def is_data_rgb_type(data: numpy.ndarray) -> bool:
+def is_data_rgb_type(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_rgb_type(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_complex64(shape, dtype):
+def is_shape_and_dtype_complex64(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
     if shape is None or dtype is None:
         return False
     return dtype == numpy.complex64
-def is_data_complex64(data):
+
+
+def is_data_complex64(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_complex64(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_complex128(shape, dtype):
+def is_shape_and_dtype_complex128(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
     if shape is None or dtype is None:
         return False
     return dtype == numpy.complex128
-def is_data_complex128(data):
+
+
+def is_data_complex128(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_complex128(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_complex_type(shape, dtype):
+def is_shape_and_dtype_complex_type(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
     if shape is None or dtype is None:
         return False
     return dtype == numpy.complex64 or dtype == numpy.complex128
-def is_data_complex_type(data):
+
+
+def is_data_complex_type(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_complex_type(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_scalar_type(shape, dtype):
+def is_shape_and_dtype_scalar_type(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
     if shape is None or dtype is None:
         return False
     return not is_shape_and_dtype_rgb_type(shape, dtype) and not is_shape_and_dtype_complex_type(shape, dtype)
-def is_data_scalar_type(data):
+
+
+def is_data_scalar_type(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_scalar_type(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_bool(shape, dtype):
+def is_shape_and_dtype_bool(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
     if shape is None or dtype is None:
         return False
     return dtype == bool and len(shape) > 1
-def is_data_bool(data):
+
+
+def is_data_bool(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_bool(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_valid(shape, dtype):
+def is_shape_and_dtype_valid(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
     if shape is None or dtype is None:
         return False
     if is_shape_and_dtype_rgb_type(shape, dtype):
         return len(shape) > 1 and functools.reduce(lambda x, y: x * y, shape[:-1]) > 0  # one extra dimension for rgb(a) values
     return len(shape) > 0 and functools.reduce(lambda x, y: x * y, shape) > 0
-def is_data_valid(data):
+
+
+def is_data_valid(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_valid(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_1d(shape, dtype):
+def is_shape_and_dtype_1d(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
     if shape is None or dtype is None or not is_shape_and_dtype_valid(shape, dtype):
         return False
     if is_shape_and_dtype_rgb(shape, dtype) or is_shape_and_dtype_rgba(shape, dtype):
         return len(shape) == 2  # one extra dimension for rgb(a) values
     return len(shape) == 1
-def is_data_1d(data):
+
+
+def is_data_1d(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_1d(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_2d(shape, dtype):
+def is_shape_and_dtype_2d(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
     if shape is None or dtype is None or not is_shape_and_dtype_valid(shape, dtype):
         return False
     if is_shape_and_dtype_rgb(shape, dtype) or is_shape_and_dtype_rgba(shape, dtype):
         return len(shape) == 3  # one extra dimension for rgb(a) values
     return len(shape) == 2
-def is_data_2d(data):
+
+
+def is_data_2d(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_2d(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_3d(shape, dtype):
+def is_shape_and_dtype_3d(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
     if shape is None or dtype is None or not is_shape_and_dtype_valid(shape, dtype):
         return False
     if is_shape_and_dtype_rgb(shape, dtype) or is_shape_and_dtype_rgba(shape, dtype):
         return len(shape) == 4  # one extra dimension for rgb(a) values
     return len(shape) == 3
-def is_data_3d(data):
+
+
+def is_data_3d(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_3d(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_4d(shape, dtype):
+def is_shape_and_dtype_4d(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
     if shape is None or dtype is None or not is_shape_and_dtype_valid(shape, dtype):
         return False
     if is_shape_and_dtype_rgb(shape, dtype) or is_shape_and_dtype_rgba(shape, dtype):
         return len(shape) == 5  # one extra dimension for rgb(a) values
     return len(shape) == 4
-def is_data_4d(data):
+
+
+def is_data_4d(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_4d(data.shape, data.dtype)
 
 
-def scalar_from_array(array, normalize=True):
-    if numpy.iscomplexobj(array):
+def scalar_from_array(array: _ImageDataType, normalize: bool = True) -> _ImageDataType:
+    if numpy.iscomplexobj(array):  # type: ignore
         # numpy.nextafter returns the next possible represented number after 0 in the direction of 1
         # this prevents log from generating -inf from 0.0
         # quick way to drop out bottom percent:
@@ -337,7 +346,7 @@ def scalar_from_array(array, normalize=True):
         # unfortunately, this needs to be integrated into the display calculation, not the conversion here.
         # the annoying conversion to float64 is to prevent float32 + float64 returning a 0.0. argh.
         # TODO: consider optimizing log(abs) to 0.5*log(re**2 + im**2)
-        return numpy.log(numpy.abs(array).astype(numpy.float64) + numpy.nextafter(0,1))
+        return typing.cast(_ImageDataType, numpy.log(numpy.abs(array).astype(numpy.float64) + numpy.nextafter(0,1)))
     return array
 
 
@@ -347,9 +356,13 @@ def scalar_from_array(array, normalize=True):
 # if underlimit/overlimit are specified and display limits are specified, values out of the under/over
 #   limit percentage values are mapped to blue and red.
 # may return a new array or a view on the existing array
-def create_rgba_image_from_array(array, normalize=True, data_range=None, display_limits=None, underlimit=None, overlimit=None, lookup=None):
+def create_rgba_image_from_array(array: _ImageDataType, normalize: bool = True,
+                                 data_range: typing.Optional[typing.Tuple[float, float]] = None,
+                                 display_limits: typing.Optional[typing.Tuple[float, float]] = None,
+                                 underlimit: typing.Optional[float] = None, overlimit: typing.Optional[float] = None,
+                                 lookup: typing.Optional[_RGBAImageDataType] = None) -> _RGBAImageDataType:
     assert numpy.ndim(array) in (1, 2, 3)
-    assert numpy.can_cast(array.dtype, numpy.double)
+    assert numpy.can_cast(array.dtype, numpy.double)  # type: ignore
     if numpy.ndim(array) == 1:  # temporary hack to display 1-d images
         array = array.reshape((1,) + array.shape)
     if numpy.ndim(array) == 2:
@@ -361,7 +374,7 @@ def create_rgba_image_from_array(array, normalize=True, data_range=None, display
                 # scalar data assigned to each component of rgb view
                 m = 255.0 / (nmax_new - nmin_new) if nmax_new != nmin_new else 1
                 if lookup is not None:
-                    get_rgb_view(rgba_image)[:] = lookup[numpy.clip((m * (array - nmin_new)).astype(int), 0, 255)]
+                    get_rgb_view(rgba_image)[:] = lookup[numpy.clip(typing.cast(_ImageDataType, m * (array - nmin_new)).astype(int), 0, 255)]
                 else:
                     # slower by 5ms
                     # get_rgb_view(rgba_image)[:] = numpy.clip(numpy.multiply(m, numpy.subtract(array[..., numpy.newaxis], nmin_new)), 0, 255)
@@ -418,11 +431,11 @@ def create_rgba_image_from_array(array, normalize=True, data_range=None, display
             rgba_image[:,:,0:3] = array
             rgba_image[:,:,3] = 255
             return get_dtype_view(rgba_image, numpy.uint32).reshape(rgba_image.shape[:-1])  # squash the color into uint32
-    return None
+    raise Exception("Could not create RGBA from data.")
 
 
 # convert data to grayscale. may return same copy of data, or a copy.
-def convert_to_grayscale(data, data_type: typing.Any = numpy.uint32) -> numpy.ndarray:
+def convert_to_grayscale(data: _ImageDataType, data_type: numpy.typing.DTypeLike = numpy.uint32) -> _ImageDataType:
     if is_data_rgb(data) or is_data_rgba(data):
         image = numpy.empty(data.shape[:-1], data_type)
         # don't be tempted to use the numpy.dot operator; after testing, this explicit method

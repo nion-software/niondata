@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 # standard libraries
-import base64
 import copy
 import datetime
 import gettext
@@ -12,6 +13,8 @@ import typing
 import warnings
 
 import numpy
+import numpy.typing
+
 from nion.data import Calibration
 from nion.data import Image
 
@@ -23,8 +26,14 @@ Shape3dType = typing.Tuple[int, int, int]
 PositionType = typing.Sequence[int]
 CalibrationListType = typing.Sequence[Calibration.Calibration]
 MetadataType = typing.Mapping[str, typing.Any]
+_ImageDataType = Image._ImageDataType
+_ScalarDataType = typing.Union[int, float, complex]
+_InternalCalibrationListType = typing.Tuple[Calibration.Calibration, ...]
+# NOTE: typing.Any is only required when numpy < 1.21. once that requirement is removed (anaconda), switch this back.
+_SliceKeyElementType = typing.Any  # typing.Union[slice, int, ellipsis, None]
+_SliceKeyType = typing.Tuple[_SliceKeyElementType, ...]
+_SliceDictKeyType = typing.Sequence[typing.Dict[str, typing.Any]]
 
-_InternalCalibrationListType = tuple
 
 class DataDescriptor:
     """A class describing the layout of data."""
@@ -35,10 +44,10 @@ class DataDescriptor:
         self.collection_dimension_count = collection_dimension_count
         self.datum_dimension_count = datum_dimension_count
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return ("sequence of " if self.is_sequence else "") + "[" + str(self.collection_dimension_count) + "," + str(self.datum_dimension_count) + "]"
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return isinstance(other, self.__class__) and self.is_sequence == other.is_sequence and self.collection_dimension_count == other.collection_dimension_count and self.datum_dimension_count == other.datum_dimension_count
 
     @property
@@ -110,7 +119,7 @@ class DataMetadata:
     Values passed to init and set methods are copied before storing. Returned values are return directly and not copied.
     """
 
-    def __init__(self, data_shape_and_dtype: typing.Optional[typing.Tuple[ShapeType, numpy.dtype]],
+    def __init__(self, data_shape_and_dtype: typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]],
                  intensity_calibration: typing.Optional[Calibration.Calibration] = None,
                  dimensional_calibrations: typing.Optional[CalibrationListType] = None,
                  metadata: typing.Optional[MetadataType] = None,
@@ -144,7 +153,7 @@ class DataMetadata:
             dimensional_calibrations = list()
             for _ in dimensional_shape:
                 dimensional_calibrations.append(Calibration.Calibration())
-        self.dimensional_calibrations = _InternalCalibrationListType(copy.deepcopy(dimensional_calibrations))
+        self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
         self.timestamp = timestamp if timestamp else datetime.datetime.utcnow()
         self.timezone = timezone or str()
         self.timezone_offset = timezone_offset or str()
@@ -153,7 +162,7 @@ class DataMetadata:
         assert isinstance(self.metadata, dict)
         assert len(dimensional_calibrations) == len(dimensional_shape)
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         if not isinstance(other, self.__class__):
             return False
         if self.data_shape_and_dtype != other.data_shape_and_dtype:
@@ -178,7 +187,7 @@ class DataMetadata:
         return tuple(data_shape_and_dtype[0]) if data_shape_and_dtype is not None else tuple()
 
     @property
-    def data_dtype(self) -> typing.Optional[numpy.dtype]:
+    def data_dtype(self) -> typing.Optional[numpy.typing.DTypeLike]:
         data_shape_and_dtype = self.data_shape_and_dtype
         return data_shape_and_dtype[1] if data_shape_and_dtype is not None else None
 
@@ -298,14 +307,14 @@ class DataMetadata:
     def get_intensity_calibration(self) -> Calibration.Calibration:
         return self.intensity_calibration
 
-    def get_dimensional_calibration(self, index) -> Calibration.Calibration:
+    def get_dimensional_calibration(self, index: int) -> Calibration.Calibration:
         return self.dimensional_calibrations[index]
 
     def _set_intensity_calibration(self, intensity_calibration: Calibration.Calibration) -> None:
         self.intensity_calibration = copy.deepcopy(intensity_calibration)
 
     def _set_dimensional_calibrations(self, dimensional_calibrations: CalibrationListType) -> None:
-        self.dimensional_calibrations = _InternalCalibrationListType(copy.deepcopy(dimensional_calibrations))
+        self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
 
     def _set_data_descriptor(self, data_descriptor: DataDescriptor) -> None:
         self.data_descriptor = copy.deepcopy(data_descriptor)
@@ -422,7 +431,7 @@ class DataMetadata:
                 if self.is_data_rgb_type:
                     data_size_and_data_format_as_string = _("RGB (8-bit)") if self.is_data_rgb else _("RGBA (8-bit)")
                 else:
-                    data_type = self.data_dtype.type if self.data_dtype else None
+                    data_type = numpy.dtype(self.data_dtype).type if self.data_dtype else None
                     if data_type not in dtype_names:
                         logging.debug("Unknown dtype %s", data_type)
                     data_size_and_data_format_as_string = dtype_names[data_type] if data_type in dtype_names else _("Unknown Data Type")
@@ -447,13 +456,13 @@ class DataAndMetadata:
     directly and not copied.
     """
 
-    def __init__(self, data_fn: typing.Callable[[], numpy.ndarray],
-                 data_shape_and_dtype: typing.Optional[typing.Tuple[ShapeType, numpy.dtype]],
+    def __init__(self, data_fn: typing.Callable[[], _ImageDataType],
+                 data_shape_and_dtype: typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]],
                  intensity_calibration: typing.Optional[Calibration.Calibration] = None,
                  dimensional_calibrations: typing.Optional[CalibrationListType] = None,
                  metadata: typing.Optional[MetadataType] = None,
                  timestamp: typing.Optional[datetime.datetime] = None,
-                 data: typing.Optional[numpy.ndarray] = None,
+                 data: typing.Optional[_ImageDataType] = None,
                  data_descriptor: typing.Optional[DataDescriptor] = None,
                  timezone: typing.Optional[str] = None,
                  timezone_offset: typing.Optional[str] = None):
@@ -468,86 +477,40 @@ class DataAndMetadata:
                                             metadata, timestamp, data_descriptor=data_descriptor,
                                             timezone=timezone, timezone_offset=timezone_offset)
 
-    def __deepcopy__(self, memo):
+    def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> DataAndMetadata:
         # use numpy.copy so that it handles h5py arrays too (resulting in ndarray).
-        deepcopy = DataAndMetadata.from_data(numpy.copy(self.data), self.intensity_calibration,
-                                             self.dimensional_calibrations, self.metadata, self.timestamp,
-                                             self.data_descriptor, self.timezone, self.timezone_offset)
+        data_copy = numpy.copy(self.data)  # type: ignore
+        deepcopy = DataAndMetadata.from_data(data_copy, self.intensity_calibration, self.dimensional_calibrations,
+                                             self.metadata, self.timestamp, self.data_descriptor, self.timezone,
+                                             self.timezone_offset)
         memo[id(self)] = deepcopy
         return deepcopy
 
-    def __array__(self, dtype=None):
-        return self.data.__array__(dtype)
+    def __array__(self, dtype: typing.Optional[numpy.typing.DTypeLike] = None) -> _ImageDataType:
+        if self.data is not None:
+            return self.data.__array__(numpy.dtype(dtype))
+        raise Exception("Cannot convert to NumPy array.")
 
     @classmethod
     def from_data(cls,
-                  data: numpy.ndarray,
+                  data: _ImageDataType,
                   intensity_calibration: typing.Optional[Calibration.Calibration] = None,
                   dimensional_calibrations: typing.Optional[CalibrationListType] = None,
                   metadata: typing.Optional[MetadataType] = None,
                   timestamp: typing.Optional[datetime.datetime] = None,
                   data_descriptor: typing.Optional[DataDescriptor] = None,
                   timezone: typing.Optional[str] = None,
-                  timezone_offset: typing.Optional[str] = None):
+                  timezone_offset: typing.Optional[str] = None) -> DataAndMetadata:
         """Return a new data and metadata from an ndarray. Takes ownership of data."""
         data_shape_and_dtype = (data.shape, data.dtype) if data is not None else None
         return cls(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data, data_descriptor=data_descriptor, timezone=timezone, timezone_offset=timezone_offset)
-
-    @classmethod
-    def from_rpc_dict(cls, d):
-        if d is None:
-            return None
-        data = pickle.loads(base64.b64decode(d["data"].encode('utf-8')))
-        dimensional_shape = Image.dimensional_shape_from_data(data)
-        data_shape_and_dtype = data.shape, data.dtype
-        intensity_calibration = Calibration.Calibration.from_rpc_dict(d.get("intensity_calibration"))
-        if "dimensional_calibrations" in d:
-            dimensional_calibrations = [Calibration.Calibration.from_rpc_dict(dc) for dc in d.get("dimensional_calibrations")]
-        else:
-            dimensional_calibrations = None
-        metadata = d.get("metadata")
-        timestamp = datetime.datetime(*list(map(int, re.split('[^\\d]', d.get("timestamp"))))) if "timestamp" in d else None
-        timezone = d.get("timezone")
-        timezone_offset = d.get("timezone_offset")
-        is_sequence = d.get("is_sequence", False)
-        collection_dimension_count = d.get("collection_dimension_count")
-        datum_dimension_count = d.get("datum_dimension_count")
-        if collection_dimension_count is None:
-            collection_dimension_count = 2 if len(dimensional_shape) == 3 and not is_sequence else 0
-        if datum_dimension_count is None:
-            datum_dimension_count = len(dimensional_shape) - collection_dimension_count - (1 if is_sequence else 0)
-        data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
-        return DataAndMetadata(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor, timezone=timezone, timezone_offset=timezone_offset)
-
-    @property
-    def rpc_dict(self):
-        d = dict()
-        data = self.data
-        if data is not None:
-            d["data"] = base64.b64encode(numpy.ndarray.dumps(data)).decode('utf=8')
-        if self.intensity_calibration:
-            d["intensity_calibration"] = self.intensity_calibration.rpc_dict
-        if self.dimensional_calibrations:
-            d["dimensional_calibrations"] = [dimensional_calibration.rpc_dict for dimensional_calibration in self.dimensional_calibrations]
-        if self.timestamp:
-            d["timestamp"] = self.timestamp.isoformat()
-        if self.timezone:
-            d["timezone"] = self.timezone
-        if self.timezone_offset:
-            d["timezone_offset"] = self.timezone_offset
-        if self.metadata:
-            d["metadata"] = copy.deepcopy(self.metadata)
-        d["is_sequence"] = self.is_sequence
-        d["collection_dimension_count"] = self.collection_dimension_count
-        d["datum_dimension_count"] = self.datum_dimension_count
-        return d
 
     @property
     def is_data_valid(self) -> bool:
         return self.__data_valid
 
     @property
-    def data(self) -> typing.Optional[numpy.ndarray]:
+    def data(self) -> typing.Optional[_ImageDataType]:
         self.increment_data_ref_count()
         try:
             return self.__data
@@ -555,7 +518,7 @@ class DataAndMetadata:
             self.decrement_data_ref_count()
 
     @property
-    def _data_ex(self) -> numpy.ndarray:
+    def _data_ex(self) -> _ImageDataType:
         self.increment_data_ref_count()
         try:
             data = self.__data
@@ -587,11 +550,11 @@ class DataAndMetadata:
                 self.__data_valid = False
         return final_count
 
-    def clone_with_data(self, data: numpy.ndarray) -> "DataAndMetadata":
+    def clone_with_data(self, data: _ImageDataType) -> "DataAndMetadata":
         return new_data_and_metadata(data, intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations, data_descriptor=self.data_descriptor)
 
     @property
-    def data_shape_and_dtype(self) -> typing.Optional[typing.Tuple[ShapeType, numpy.dtype]]:
+    def data_shape_and_dtype(self) -> typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]]:
         return self.__data_metadata.data_shape_and_dtype if self.__data_metadata else None
 
     @property
@@ -603,7 +566,7 @@ class DataAndMetadata:
         return self.__data_metadata.data_shape
 
     @property
-    def data_dtype(self) -> typing.Optional[numpy.dtype]:
+    def data_dtype(self) -> typing.Optional[numpy.typing.DTypeLike]:
         return self.__data_metadata.data_dtype
 
     @property
@@ -722,7 +685,7 @@ class DataAndMetadata:
     def metadata(self) -> MetadataType:
         return self.__data_metadata.metadata
 
-    def _set_data(self, data: numpy.ndarray) -> None:
+    def _set_data(self, data: _ImageDataType) -> None:
         self.__data = data
         self.__data_valid = True
 
@@ -770,7 +733,7 @@ class DataAndMetadata:
         return self.__data_metadata.timezone
 
     @timezone.setter
-    def timezone(self, value):
+    def timezone(self, value: str) -> None:
         self.__data_metadata.timezone = value
 
     @property
@@ -778,7 +741,7 @@ class DataAndMetadata:
         return self.__data_metadata.timezone_offset
 
     @timezone_offset.setter
-    def timezone_offset(self, value):
+    def timezone_offset(self, value: str) -> None:
         self.__data_metadata.timezone_offset = value
 
     @property
@@ -836,7 +799,7 @@ class DataAndMetadata:
     def get_intensity_calibration(self) -> Calibration.Calibration:
         return self.intensity_calibration
 
-    def get_dimensional_calibration(self, index) -> Calibration.Calibration:
+    def get_dimensional_calibration(self, index: int) -> Calibration.Calibration:
         return self.dimensional_calibrations[index]
 
     def get_data_value(self, pos: ShapeType) -> typing.Any:
@@ -855,118 +818,118 @@ class DataAndMetadata:
                 return data[int(pos[0]), int(pos[1]), int(pos[2]), int(pos[3])]
         return None
 
-    def __unary_op(self, op):
-        return new_data_and_metadata(op(self.data), intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations)
+    def __unary_op(self, op: typing.Callable[[_ImageDataType], _ImageDataType]) -> DataAndMetadata:
+        return new_data_and_metadata(op(self._data_ex), intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations)
 
-    def __binary_op(self, op, other):
-        return new_data_and_metadata(op(self.data, extract_data(other)), intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations)
+    def __binary_op(self, op: typing.Callable[[_ImageDataType, _ImageDataType], _ImageDataType], other: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata:
+        return new_data_and_metadata(op(self._data_ex, extract_data(other)), intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations)
 
-    def __rbinary_op(self, op, other):
-        return new_data_and_metadata(op(extract_data(other), self.data), intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations)
+    def __rbinary_op(self, op: typing.Callable[[_ImageDataType, _ImageDataType], _ImageDataType], other: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata:
+        return new_data_and_metadata(op(extract_data(other), self._data_ex), intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations)
 
-    def __abs__(self):
+    def __abs__(self) -> DataAndMetadata:
         return self.__unary_op(numpy.abs)
 
-    def __neg__(self):
+    def __neg__(self) -> DataAndMetadata:
         return self.__unary_op(numpy.negative)
 
-    def __pos__(self):
+    def __pos__(self) -> DataAndMetadata:
         return self.__unary_op(numpy.positive)
 
-    def __add__(self, other):
+    def __add__(self, other: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata:
         return self.__binary_op(numpy.add, other)
 
-    def __radd__(self, other):
+    def __radd__(self, other: typing.Union[float, int, complex]) -> DataAndMetadata:
         return self.__rbinary_op(numpy.add, other)
 
-    def __sub__(self, other):
+    def __sub__(self, other: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata:
         return self.__binary_op(numpy.subtract, other)
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: typing.Union[float, int, complex]) -> DataAndMetadata:
         return self.__rbinary_op(numpy.subtract, other)
 
-    def __mul__(self, other):
+    def __mul__(self, other: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata:
         return self.__binary_op(numpy.multiply, other)
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: typing.Union[float, int, complex]) -> DataAndMetadata:
         return self.__rbinary_op(numpy.multiply, other)
 
-    def __div__(self, other):
+    def __div__(self, other: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata:
         return self.__binary_op(numpy.divide, other)
 
-    def __rdiv__(self, other):
+    def __rdiv__(self, other: typing.Union[float, int, complex]) -> DataAndMetadata:
         return self.__rbinary_op(numpy.divide, other)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata:
         return self.__binary_op(numpy.divide, other)
 
-    def __rtruediv__(self, other):
+    def __rtruediv__(self, other: typing.Union[float, int, complex]) -> DataAndMetadata:
         return self.__rbinary_op(numpy.divide, other)
 
-    def __floordiv__(self, other):
+    def __floordiv__(self, other: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata:
         return self.__binary_op(numpy.floor_divide, other)
 
-    def __rfloordiv__(self, other):
+    def __rfloordiv__(self, other: typing.Union[float, int, complex]) -> DataAndMetadata:
         return self.__rbinary_op(numpy.floor_divide, other)
 
-    def __mod__(self, other):
+    def __mod__(self, other: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata:
         return self.__binary_op(numpy.mod, other)
 
-    def __rmod__(self, other):
+    def __rmod__(self, other: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata:
         return self.__rbinary_op(numpy.mod, other)
 
-    def __pow__(self, other):
+    def __pow__(self, other: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata:
         return self.__binary_op(numpy.power, other)
 
-    def __rpow__(self, other):
+    def __rpow__(self, other: typing.Union[float, int, complex]) -> DataAndMetadata:
         return self.__rbinary_op(numpy.power, other)
 
-    def __complex__(self):
+    def __complex__(self) -> DataAndMetadata:
         raise Exception("Use astype(data, complex128) instead.")
 
-    def __int__(self):
+    def __int__(self) -> DataAndMetadata:
         raise Exception("Use astype(data, int) instead.")
 
-    def __long__(self):
+    def __long__(self) -> DataAndMetadata:
         raise Exception("Use astype(data, int64) instead.")
 
-    def __float__(self):
+    def __float__(self) -> DataAndMetadata:
         raise Exception("Use astype(data, float64) instead.")
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: typing.Union[_SliceKeyType, _SliceKeyElementType]) -> DataAndMetadata:
         return function_data_slice(self, key_to_list(key))
 
 
 class ScalarAndMetadata:
     """Represent the ability to calculate data and provide immediate calibrations."""
 
-    def __init__(self, value_fn, calibration: Calibration.Calibration, metadata: typing.Optional[MetadataType] = None,
-                 timestamp: typing.Optional[datetime.datetime] = None):
+    def __init__(self, value_fn: typing.Callable[[], _ScalarDataType], calibration: Calibration.Calibration,
+                 metadata: typing.Optional[MetadataType] = None, timestamp: typing.Optional[datetime.datetime] = None):
         self.value_fn = value_fn
         self.calibration = calibration
         self.timestamp = timestamp if not timestamp else datetime.datetime.utcnow()
         self.metadata = copy.deepcopy(dict(metadata)) if metadata is not None else dict()
 
     @classmethod
-    def from_value(cls, value, calibration: Calibration.Calibration = None) -> "ScalarAndMetadata":
+    def from_value(cls, value: _ScalarDataType, calibration: typing.Optional[Calibration.Calibration] = None) -> ScalarAndMetadata:
         calibration = calibration or Calibration.Calibration()
-        metadata: typing.Dict = dict()
+        metadata: MetadataType = dict()
         timestamp = datetime.datetime.utcnow()
         return cls(lambda: value, calibration, metadata, timestamp)
 
     @classmethod
-    def from_value_fn(cls, value_fn) -> "ScalarAndMetadata":
+    def from_value_fn(cls, value_fn: typing.Callable[[], _ScalarDataType]) -> ScalarAndMetadata:
         calibration = Calibration.Calibration()
-        metadata: typing.Dict = dict()
+        metadata: MetadataType = dict()
         timestamp = datetime.datetime.utcnow()
         return cls(value_fn, calibration, metadata, timestamp)
 
     @property
-    def value(self):
+    def value(self) -> _ScalarDataType:
         return self.value_fn()
 
 
-def is_equal(left, right):
+def is_equal(left: DataAndMetadata, right: DataAndMetadata) -> bool:
     if left is right:
         return True
     if (left is None) != (right is None):
@@ -975,10 +938,12 @@ def is_equal(left, right):
         return False
     if not left.data_metadata == right.data_metadata:
         return False
-    return numpy.array_equal(left.data, right.data)
+    if (left.data is None) != (right.data is None):
+        return False
+    return numpy.array_equal(left._data_ex, right._data_ex)
 
 
-def extract_data(evaluated_input):
+def extract_data(evaluated_input: typing.Any) -> typing.Any:
     if isinstance(evaluated_input, DataAndMetadata):
         return evaluated_input.data
     if isinstance(evaluated_input, ScalarAndMetadata):
@@ -986,7 +951,7 @@ def extract_data(evaluated_input):
     return evaluated_input
 
 
-def key_to_list(key):
+def key_to_list(key: typing.Union[_SliceKeyType, _SliceKeyElementType]) -> typing.List[typing.Dict[str, typing.Any]]:
     if not isinstance(key, tuple):
         key = (key,)
     l = list()
@@ -1012,19 +977,19 @@ def key_to_list(key):
     return l
 
 
-def list_to_key(l):
-    key = list()
+def list_to_key(l: _SliceDictKeyType) -> _SliceKeyType:
+    key: typing.List[_SliceKeyElementType] = list()
     for d in l:
         if isinstance(d, (slice, type(Ellipsis))):
             key.append(d)
         elif d is None:
             key.append(None)
         elif isinstance(d, numbers.Integral):
-            key.append(d)
+            key.append(int(d))
         elif "index" in d:
-            key.append(d.get("index"))
+            key.append(int(d.get("index", 0)))
         elif d.get("ellipses", False):
-            key.append(Ellipsis)
+            key.append(typing.cast(None, Ellipsis))  # some confusion about ellipsis https://bugs.python.org/issue41810
         elif d.get("newaxis", False):
             key.append(None)
         else:
@@ -1034,7 +999,7 @@ def list_to_key(l):
     return tuple(key)
 
 
-def function_data_slice(data_and_metadata, key):
+def function_data_slice(data_and_metadata_like: _DataAndMetadataLike, key: _SliceDictKeyType) -> DataAndMetadata:
     """Slice data.
 
     a[2, :]
@@ -1050,39 +1015,37 @@ def function_data_slice(data_and_metadata, key):
     # (4, 8, 8)[..., 2]
     # (4, 8, 8)[2, ..., 2]
 
-    if data_and_metadata is None:
-        return None
+    data_and_metadata = promote_ndarray(data_and_metadata_like)
 
-    data_and_metadata = promote_ndarray(data_and_metadata)
-
-    def non_ellipses_count(slices):
+    def non_ellipses_count(slices: _SliceKeyType) -> int:
         return sum(1 if not isinstance(slice, type(Ellipsis)) else 0 for slice in slices)
 
-    def new_axis_count(slices):
+    def new_axis_count(slices: _SliceKeyType) -> int:
         return sum(1 if slice is None else 0 for slice in slices)
 
-    def ellipses_count(slices):
+    def ellipses_count(slices: _SliceKeyType) -> int:
         return sum(1 if isinstance(slice, type(Ellipsis)) else 0 for slice in slices)
 
-    def normalize_slice(index: int, s: slice, shape: ShapeType, ellipse_count: int):
+    def normalize_slice(index: int, s: _SliceKeyElementType, shape: ShapeType, ellipse_count: int) -> typing.List[typing.Tuple[bool, bool, slice]]:
         size = shape[index] if index < len(shape) else 1
         is_collapsible = False  # if the index is fixed, it will disappear in final data
         is_new_axis = False
+        sl: slice = typing.cast(slice, s)  # questionable cast
         if isinstance(s, type(Ellipsis)):
             # for the ellipse, return a full slice for each ellipse dimension
-            slices = list()
+            slices: typing.List[typing.Tuple[bool, bool, slice]] = list()
             for ellipse_index in range(ellipse_count):
                 slices.append((False, False, slice(0, shape[index + ellipse_index], 1)))
             return slices
         elif isinstance(s, numbers.Integral):
-            s = slice(int(s), int(s + 1), 1)
+            sl = slice(int(s), int(s + 1), 1)
             is_collapsible = True
         elif s is None:
-            s = slice(0, size, 1)
+            sl = slice(0, size, 1)
             is_new_axis = True
-        s_start = s.start
-        s_stop = s.stop
-        s_step = s.step
+        s_start = sl.start
+        s_stop = sl.stop
+        s_step = sl.step
         s_start = s_start if s_start is not None else 0
         s_start = size + s_start if s_start < 0 else s_start
         s_stop = s_stop if s_stop is not None else size
@@ -1096,7 +1059,7 @@ def function_data_slice(data_and_metadata, key):
         slices = slices + (Ellipsis,)
 
     ellipse_count = len(data_and_metadata.data_shape) - non_ellipses_count(slices) + new_axis_count(slices)  # how many slices go into the ellipse
-    normalized_slices = list()  # type: typing.List[(bool, bool, slice)]
+    normalized_slices: typing.List[typing.Tuple[bool, bool, slice]] = list()
     slice_index = 0
     for s in slices:
         new_normalized_slices = normalize_slice(slice_index, s, data_and_metadata.data_shape, ellipse_count)
@@ -1106,13 +1069,12 @@ def function_data_slice(data_and_metadata, key):
                 slice_index += 1
 
     if any(s.start >= s.stop for c, n, s in normalized_slices):
-        return None
+        raise Exception("Invalid slice")
 
     cropped_dimensional_calibrations = list()
 
     dimensional_calibration_index = 0
-    for slice_index, dimensional_calibration in enumerate(normalized_slices):
-        normalized_slice = normalized_slices[slice_index]
+    for normalized_slice in normalized_slices:
         if normalized_slice[0]:  # if_collapsible
             dimensional_calibration_index += 1
         else:
@@ -1189,7 +1151,7 @@ def function_data_slice(data_and_metadata, key):
         datum_dimension_count = collection_dimension_count
         collection_dimension_count = 0
 
-    data = data_and_metadata.data[slices].copy()
+    data = data_and_metadata._data_ex[slices].copy()
     # print(f"was {new_data_and_metadata(data, data_and_metadata.intensity_calibration, cropped_dimensional_calibrations).data_descriptor}")
     # print(f"now [{is_sequence if is_sequence else ''}{collection_dimension_count},{datum_dimension_count}]")
 
@@ -1199,34 +1161,51 @@ def function_data_slice(data_and_metadata, key):
     return new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=cropped_dimensional_calibrations, data_descriptor=data_descriptor)
 
 
-def promote_ndarray(data: typing.Union[DataAndMetadata, numpy.ndarray, typing.Any]) -> DataAndMetadata:
+_DataAndMetadataLike = typing.Union[DataAndMetadata, _ImageDataType]
+_DataAndMetadataIndeterminateSizeLike = typing.Union[_DataAndMetadataLike, float, int, complex]
+_DataAndMetadataOrConstant = typing.Union[DataAndMetadata, float, int, complex]
+
+
+def promote_indeterminate_array(data: _DataAndMetadataIndeterminateSizeLike) -> _DataAndMetadataOrConstant:
+    # return data and metadata, promoting from array-like if required, or a constant
     if isinstance(data, DataAndMetadata):
         return data
     if isinstance(data, numpy.ndarray):
         return new_data_and_metadata(data)
     if hasattr(data, "__array__"):
-        return new_data_and_metadata(data)
+        return new_data_and_metadata(typing.cast(_ImageDataType, data))
     return data
 
 
-def determine_shape(*datas):
-    for data in datas:
-        if data is not None and hasattr(data, "data_shape"):
-            return data.data_shape
-    return None
-
-
-def promote_constant(data, shape):
+def promote_ndarray(data: _DataAndMetadataLike) -> DataAndMetadata:
+    # return data and metadata, promoting from array-like if required
+    assert data is not None
     if isinstance(data, DataAndMetadata):
         return data
-    if isinstance(data, numpy.ndarray):
+    if hasattr(data, "__array__"):
         return new_data_and_metadata(data)
-    if data is not None:
-        return new_data_and_metadata(numpy.full(shape, data))
-    return None
+    raise
 
 
-def new_data_and_metadata(data: numpy.ndarray,
+def determine_shape(*datas: _DataAndMetadataOrConstant) -> typing.Optional[ShapeType]:
+    # return the common shape between datas or None if they don't match, ignore constants
+    shape: typing.Optional[ShapeType] = None
+    for data in datas:
+        if isinstance(data, DataAndMetadata):
+            if shape is not None and data.data_shape != shape:
+                return None
+            shape = data.data_shape
+    return shape
+
+
+def promote_constant(data: _DataAndMetadataOrConstant, shape: ShapeType) -> DataAndMetadata:
+    # return data and metadata or constant with shape in form of data and metadata
+    if isinstance(data, DataAndMetadata):
+        return data
+    return new_data_and_metadata(numpy.full(shape, data))
+
+
+def new_data_and_metadata(data: _ImageDataType,
                           intensity_calibration: typing.Optional[Calibration.Calibration] = None,
                           dimensional_calibrations: typing.Optional[CalibrationListType] = None,
                           metadata: typing.Optional[MetadataType] = None,

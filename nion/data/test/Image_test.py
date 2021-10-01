@@ -2,6 +2,7 @@
 import h5py
 import os
 import shutil
+import typing
 import unittest
 
 # third party libraries
@@ -10,16 +11,19 @@ import numpy
 # local libraries
 from nion.data import Image
 
+_ImageDataType = Image._ImageDataType
+
+
 
 class TestImageClass(unittest.TestCase):
 
-    def setUp(self):
+    def setUp(self) -> None:
         pass
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         pass
 
-    def test_create_rgba_image_from_array(self):
+    def test_create_rgba_image_from_array(self) -> None:
         image_1d_16 = numpy.zeros((16, ), dtype=numpy.double)
         image_1d_16x1 = numpy.zeros((16, 1), dtype=numpy.double)
         self.assertIsNotNone(Image.create_rgba_image_from_array(image_1d_16))
@@ -27,7 +31,7 @@ class TestImageClass(unittest.TestCase):
         image_1d_rgb = numpy.zeros((16, 3), dtype=numpy.uint8)
         self.assertIsNotNone(Image.create_rgba_image_from_array(image_1d_rgb))
 
-    def test_rebin_expand_has_even_expansion(self):
+    def test_rebin_expand_has_even_expansion(self) -> None:
         # NOTE: statistical tests are only valid if expanded length is multiple of src length
         src = numpy.arange(0, 10)
         expanded = Image.rebin_1d(src, 50)
@@ -43,15 +47,15 @@ class TestImageClass(unittest.TestCase):
         self.assertAlmostEqual(numpy.mean(src), numpy.mean(expanded))
         self.assertAlmostEqual(numpy.var(src), numpy.var(expanded))
 
-    def test_scale_cubic_is_symmetry(self):
+    def test_scale_cubic_is_symmetry(self) -> None:
         src1 = numpy.zeros((8, 8))
         src2 = numpy.zeros((9, 9))
         src1[3:5, 3:5] = 1
         src2[3:6, 3:6] = 1
-        src1s = (Image.scaled(src1, (12, 12), 'cubic')*1000).astype(numpy.int32)
-        src2s = (Image.scaled(src1, (12, 12), 'cubic')*1000).astype(numpy.int32)
-        src1t = (Image.scaled(src1, (13, 13), 'cubic')*1000).astype(numpy.int32)
-        src2t = (Image.scaled(src1, (13, 13), 'cubic')*1000).astype(numpy.int32)
+        src1s = typing.cast(_ImageDataType, Image.scaled(src1, (12, 12), 'cubic')*1000).astype(numpy.int32)
+        src2s = typing.cast(_ImageDataType, Image.scaled(src1, (12, 12), 'cubic')*1000).astype(numpy.int32)
+        src1t = typing.cast(_ImageDataType, Image.scaled(src1, (13, 13), 'cubic')*1000).astype(numpy.int32)
+        src2t = typing.cast(_ImageDataType, Image.scaled(src1, (13, 13), 'cubic')*1000).astype(numpy.int32)
         self.assertTrue(numpy.array_equal(src1s[0:6, 0:6], src1s[0:6, 12:5:-1]))
         self.assertTrue(numpy.array_equal(src1s[0:6, 0:6], src1s[12:5:-1, 12:5:-1]))
         self.assertTrue(numpy.array_equal(src1s[0:6, 0:6], src1s[12:5:-1, 0:6]))
@@ -65,15 +69,15 @@ class TestImageClass(unittest.TestCase):
         self.assertTrue(numpy.array_equal(src2t[0:6, 0:6], src2t[13:6:-1, 13:6:-1]))
         self.assertTrue(numpy.array_equal(src2t[0:6, 0:6], src2t[13:6:-1, 0:6]))
 
-    def test_scale_linear_is_symmetry(self):
+    def test_scale_linear_is_symmetry(self) -> None:
         src1 = numpy.zeros((8, 8))
         src2 = numpy.zeros((9, 9))
         src1[3:5, 3:5] = 1
         src2[3:6, 3:6] = 1
-        src1s = (Image.scaled(src1, (12, 12), 'linear')*1000).astype(numpy.int32)
-        src2s = (Image.scaled(src1, (12, 12), 'linear')*1000).astype(numpy.int32)
-        src1t = (Image.scaled(src1, (13, 13), 'linear')*1000).astype(numpy.int32)
-        src2t = (Image.scaled(src1, (13, 13), 'linear')*1000).astype(numpy.int32)
+        src1s = typing.cast(_ImageDataType, Image.scaled(src1, (12, 12), 'linear')*1000).astype(numpy.int32)
+        src2s = typing.cast(_ImageDataType, Image.scaled(src1, (12, 12), 'linear')*1000).astype(numpy.int32)
+        src1t = typing.cast(_ImageDataType, Image.scaled(src1, (13, 13), 'linear')*1000).astype(numpy.int32)
+        src2t = typing.cast(_ImageDataType, Image.scaled(src1, (13, 13), 'linear')*1000).astype(numpy.int32)
         self.assertTrue(numpy.array_equal(src1s[0:6, 0:6], src1s[0:6, 12:5:-1]))
         self.assertTrue(numpy.array_equal(src1s[0:6, 0:6], src1s[12:5:-1, 12:5:-1]))
         self.assertTrue(numpy.array_equal(src1s[0:6, 0:6], src1s[12:5:-1, 0:6]))
@@ -87,7 +91,7 @@ class TestImageClass(unittest.TestCase):
         self.assertTrue(numpy.array_equal(src2t[0:6, 0:6], src2t[13:6:-1, 13:6:-1]))
         self.assertTrue(numpy.array_equal(src2t[0:6, 0:6], src2t[13:6:-1, 0:6]))
 
-    def test_rgba_can_be_created_from_h5py_array(self):
+    def test_rgba_can_be_created_from_h5py_array(self) -> None:
         current_working_directory = os.getcwd()
         workspace_dir = os.path.join(current_working_directory, "__Test")
         if os.path.exists(workspace_dir):
