@@ -35,7 +35,7 @@ jobs:
         mypy --version
     - name: Typing
       run: |
-        mypy --namespace-packages --ignore-missing-imports --follow-imports=silent nion/data
+        mypy --namespace-packages --ignore-missing-imports --follow-imports=silent --strict --no-warn-unused-ignores nion/data
     - name: Test
       run: |
         python -m unittest discover -p '*_test.py'
