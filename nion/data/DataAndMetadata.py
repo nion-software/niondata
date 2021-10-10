@@ -929,11 +929,13 @@ class ScalarAndMetadata:
         return self.value_fn()
 
 
-def is_equal(left: DataAndMetadata, right: DataAndMetadata) -> bool:
+def is_equal(left: typing.Optional[DataAndMetadata], right: typing.Optional[DataAndMetadata]) -> bool:
     if left is right:
         return True
     if (left is None) != (right is None):
         return False
+    assert left
+    assert right
     if not isinstance(right, left.__class__):
         return False
     if not left.data_metadata == right.data_metadata:
