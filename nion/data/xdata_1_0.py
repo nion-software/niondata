@@ -374,6 +374,6 @@ def norm_interval(start: float, end: float) -> Core.NormIntervalType:
     return start, end
 
 def norm_interval_to_px_interval(data_and_metadata: _DataAndMetadataLike, interval: Core.NormIntervalType) -> Core.NormIntervalType:
-    data_shape = data_and_metadata.data_shape
+    data_shape = data_and_metadata.data_shape if isinstance(data_and_metadata, DataAndMetadata.DataAndMetadata) else data_and_metadata.shape
     assert data_shape is not None
     return interval[0] * data_shape[0], interval[1] * data_shape[0]

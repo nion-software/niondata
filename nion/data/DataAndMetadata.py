@@ -456,7 +456,7 @@ class DataAndMetadata:
     directly and not copied.
     """
 
-    def __init__(self, data_fn: typing.Callable[[], _ImageDataType],
+    def __init__(self, data_fn: typing.Callable[[], typing.Optional[_ImageDataType]],
                  data_shape_and_dtype: typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]],
                  intensity_calibration: typing.Optional[Calibration.Calibration] = None,
                  dimensional_calibrations: typing.Optional[CalibrationListType] = None,
@@ -493,7 +493,7 @@ class DataAndMetadata:
 
     @classmethod
     def from_data(cls,
-                  data: _ImageDataType,
+                  data: typing.Optional[_ImageDataType],
                   intensity_calibration: typing.Optional[Calibration.Calibration] = None,
                   dimensional_calibrations: typing.Optional[CalibrationListType] = None,
                   metadata: typing.Optional[MetadataType] = None,
@@ -1207,7 +1207,7 @@ def promote_constant(data: _DataAndMetadataOrConstant, shape: ShapeType) -> Data
     return new_data_and_metadata(numpy.full(shape, data))
 
 
-def new_data_and_metadata(data: _ImageDataType,
+def new_data_and_metadata(data: typing.Optional[_ImageDataType],
                           intensity_calibration: typing.Optional[Calibration.Calibration] = None,
                           dimensional_calibrations: typing.Optional[CalibrationListType] = None,
                           metadata: typing.Optional[MetadataType] = None,

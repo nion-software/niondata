@@ -16,12 +16,11 @@ import typing
 
 ShapeType = typing.Sequence[int]
 Shape2DType = typing.Tuple[int, int]
-# NOTE: typing.Any is only required when numpy < 1.21. once that requirement is removed (anaconda), switch these back.
-_ImageDataType = typing.Any  # numpy.typing.NDArray[typing.Any]
-_RGBAImageDataType = typing.Any  # numpy.typing.NDArray[typing.Any]
-_RGBImageDataType = typing.Any  # numpy.typing.NDArray[typing.Any]
-_RGBA8ImageDataType = typing.Any  # numpy.typing.NDArray[typing.Any]
-_U8ImageDataType = typing.Any  # numpy.typing.NDArray[typing.Any]
+_ImageDataType = numpy.typing.NDArray[typing.Any]
+_RGBAImageDataType = numpy.typing.NDArray[typing.Any]
+_RGBImageDataType = numpy.typing.NDArray[typing.Any]
+_RGBA8ImageDataType = numpy.typing.NDArray[typing.Any]
+_U8ImageDataType = numpy.typing.NDArray[typing.Any]
 
 
 def scale_multidimensional(image: _ImageDataType, scaled_size: ShapeType) -> _ImageDataType:
