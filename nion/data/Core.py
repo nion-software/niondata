@@ -2029,7 +2029,7 @@ def calibrated_subtract_spectrum(data1: DataAndMetadata.DataAndMetadata, data2: 
     return data1[..., start_index1:end_index1] - data2[..., start_index2:end_index2]
 
 
-def iso_data(hist: _ImageDataType, bins: _ImageDataType) -> float:
+def _iso_data(hist: _ImageDataType, bins: _ImageDataType) -> float:
     """
     Implementation of the IsoData method: Ridler, TW & Calvard, S (1978),
     "Picture thresholding using an iterative selection method", IEEE Transactions on Systems,
@@ -2048,7 +2048,7 @@ def iso_data(hist: _ImageDataType, bins: _ImageDataType) -> float:
         return float(min_value)
 
 
-def yen(hist: _ImageDataType, bins: _ImageDataType) -> float:
+def _yen(hist: _ImageDataType, bins: _ImageDataType) -> float:
     """
     Implementation of Yen's auto threshold method: Yen JC, Chang FJ, Chang S (1995), "A New Criterion for Automatic
     Multilevel Thresholding", IEEE Trans. on Image Processing 4 (3): 370-378 and Sezgin, M & Sankur, B (2004),
@@ -2069,7 +2069,7 @@ def yen(hist: _ImageDataType, bins: _ImageDataType) -> float:
     return float(bins[numpy.argmax(crit)] + min_value)
 
 
-def kittler(hist: _ImageDataType, bins: _ImageDataType) -> float:
+def _kittler(hist: _ImageDataType, bins: _ImageDataType) -> float:
     """
     Implementation of Kittler's auto threshold method: M. I. Sezan, "A peak detection algorithm and its application
     to histogram-based image data reduction", Graph. Models Image Process. 29, 47–59, 1985 and Sezgin, M & Sankur,
@@ -2088,19 +2088,19 @@ def kittler(hist: _ImageDataType, bins: _ImageDataType) -> float:
     return float(bins[numpy.argmin(crit)] + min_value)
 
 
-def auto_threshold(image: _ImageDataType, *, auto_threshold_method: str='average', number_bins: int=1000, **kwargs: typing.Any) -> float:
+def auto_threshold(data_and_metadata_in: _DataAndMetadataLike, *, auto_threshold_method: str='average', number_bins: int=1000, **kwargs: typing.Any) -> float:
     """
     Finds a good threshold value for `image` by means of `auto_threshold_method`.
 
     Currently, three different methods are supported:
         'iso_data'
-            Implementation of the IsoData Method. See :py:func:`iso_data` for more details.
+            Implementation of the IsoData Method. See :py:func:`_iso_data` for more details.
 
         'yen'
-            Implementation of Yen's method. See :py:func:`yen` for more details.
+            Implementation of Yen's method. See :py:func:`_yen` for more details.
 
         'kittler'
-            Implementation of Kittler's method. See :py:func:`kittler` for more details.
+            Implementation of Kittler's method. See :py:func:`_kittler` for more details.
 
         'average'
             Returns the weighted average of the results of 'iso_data' and 'kittler'. 'iso_data' typically results in a
@@ -2109,13 +2109,20 @@ def auto_threshold(image: _ImageDataType, *, auto_threshold_method: str='average
             foreground. Using (2 * kittler + iso_data) / 3 has shown good results. Since these are very
             fast calculations (~100 us), the performance loss is negligible.
     """
-    hist, bins = numpy.histogram(image, bins=number_bins) # type: ignore
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
+
+    if not Image.is_data_valid(data_and_metadata.data):
+        raise ValueError("Line profile: invalid data")
+
+    data = data_and_metadata._data_ex
+
+    hist, bins = numpy.histogram(data, bins=number_bins) # type: ignore
     if auto_threshold_method == 'average':
-        return (kittler(hist, bins) * 2.0 + iso_data(hist, bins)) / 3.0
+        return (_kittler(hist, bins) * 2.0 + _iso_data(hist, bins)) / 3.0
     if auto_threshold_method == 'yen':
-        return yen(hist, bins)
+        return _yen(hist, bins)
     if auto_threshold_method == 'iso_data':
-        return iso_data(hist, bins)
+        return _iso_data(hist, bins)
     if auto_threshold_method == 'kittler':
-        return kittler(hist, bins)
+        return _kittler(hist, bins)
     raise ValueError(f'Unsupported auto threshold method {auto_threshold_method}.')
