@@ -2027,3 +2027,95 @@ def calibrated_subtract_spectrum(data1: DataAndMetadata.DataAndMetadata, data2: 
     start_index2 = round(calibration2.convert_from_calibrated_value(start))
     end_index2 = round(calibration2.convert_from_calibrated_value(end))
     return data1[..., start_index1:end_index1] - data2[..., start_index2:end_index2]
+
+
+def iso_data(hist: _ImageDataType, bins: _ImageDataType) -> float:
+    """
+    Implementation of the IsoData method: Ridler, TW & Calvard, S (1978),
+    "Picture thresholding using an iterative selection method", IEEE Transactions on Systems,
+    Man and Cybernetics 8: 630-632
+    """
+    min_value = bins[0]
+    bins = bins + (bins[1] - bins[0]) / 2 - min_value
+    indices = numpy.arange(1, len(hist)+1)
+    h = numpy.cumsum(hist*indices)/numpy.cumsum(hist)
+    l = (numpy.cumsum((hist*indices)[::-1])/numpy.cumsum(hist[::-1]))[::-1]
+    g = (h + l) /2
+    try:
+        return float(bins[numpy.nonzero(indices > g)[0][0]] + min_value) # condition is tested in order of the array, so entry 0 is the first
+                                                                         # index where indices > g
+    except IndexError:
+        return float(min_value)
+
+
+def yen(hist: _ImageDataType, bins: _ImageDataType) -> float:
+    """
+    Implementation of Yen's auto threshold method: Yen JC, Chang FJ, Chang S (1995), "A New Criterion for Automatic
+    Multilevel Thresholding", IEEE Trans. on Image Processing 4 (3): 370-378 and Sezgin, M & Sankur, B (2004),
+    "Survey over Image Thresholding Techniques and Quantitative Performance Evaluation", Journal of Electronic
+    Imaging 13(1): 146-165
+    """
+    min_value = bins[0]
+    bins = bins + (bins[1] - bins[0]) / 2 - min_value
+    norm_hist = hist / numpy.sum(hist)
+    p1 = numpy.cumsum(norm_hist)
+    p1_sq = numpy.cumsum(norm_hist**2)
+    p2_sq = numpy.cumsum(norm_hist[::-1]**2)[::-1]
+    first_part = p1_sq * p2_sq
+    second_part: _ImageDataType = p1 * (1 - p1)
+    first_part = numpy.where(first_part > 0, first_part, numpy.amin(first_part[first_part>0]))
+    second_part = numpy.where(second_part > 0, second_part, numpy.amin(second_part[second_part>0]))
+    crit = -1.0 * numpy.log(first_part) + 2.0 * numpy.log(second_part)
+    return float(bins[numpy.argmax(crit)] + min_value)
+
+
+def kittler(hist: _ImageDataType, bins: _ImageDataType) -> float:
+    """
+    Implementation of Kittler's auto threshold method: M. I. Sezan, "A peak detection algorithm and its application
+    to histogram-based image data reduction", Graph. Models Image Process. 29, 47–59, 1985 and Sezgin, M & Sankur,
+    B (2004), "Survey over Image Thresholding Techniques and Quantitative Performance Evaluation", Journal of
+    Electronic Imaging 13(1): 146-165
+    """
+    min_value = bins[0]
+    bins = bins + (bins[1] - bins[0]) / 2 - min_value
+    p_g = hist/numpy.sum(hist)
+    m_f = numpy.cumsum(bins[:-1]*p_g)
+    P_f = numpy.cumsum(p_g)
+    P_b = numpy.cumsum(p_g[::-1])[::-1]
+    var_f = numpy.cumsum((bins[:-1] - m_f)**2 * p_g)
+    var_b = numpy.cumsum(((bins[:-1] - m_f)**2 * p_g)[::-1])[::-1]
+    crit = P_f * numpy.log(numpy.sqrt(var_f)) + P_b * numpy.log(numpy.sqrt(var_b)) - P_f * numpy.log(P_f) - P_b * numpy.log(P_b)
+    return float(bins[numpy.argmin(crit)] + min_value)
+
+
+def auto_threshold(image: _ImageDataType, *, auto_threshold_method: str='average', number_bins: int=1000, **kwargs: typing.Any) -> float:
+    """
+    Finds a good threshold value for `image` by means of `auto_threshold_method`.
+
+    Currently, three different methods are supported:
+        'iso_data'
+            Implementation of the IsoData Method. See :py:func:`iso_data` for more details.
+
+        'yen'
+            Implementation of Yen's method. See :py:func:`yen` for more details.
+
+        'kittler'
+            Implementation of Kittler's method. See :py:func:`kittler` for more details.
+
+        'average'
+            Returns the weighted average of the results of 'iso_data' and 'kittler'. 'iso_data' typically results in a
+            rather high threshold so that dark foreground objects might be marked as background. 'kittler' on the
+            other hand ususally finds a very low threshold so that bright background objects can be marked as
+            foreground. Using (2 * kittler + iso_data) / 3 has shown good results. Since these are very
+            fast calculations (~100 us), the performance loss is negligible.
+    """
+    hist, bins = numpy.histogram(image, bins=number_bins) # type: ignore
+    if auto_threshold_method == 'average':
+        return (kittler(hist, bins) * 2.0 + iso_data(hist, bins)) / 3.0
+    if auto_threshold_method == 'yen':
+        return yen(hist, bins)
+    if auto_threshold_method == 'iso_data':
+        return iso_data(hist, bins)
+    if auto_threshold_method == 'kittler':
+        return kittler(hist, bins)
+    raise ValueError(f'Unsupported auto threshold method {auto_threshold_method}.')
