@@ -1377,7 +1377,7 @@ def function_sum_region(data_and_metadata_in: _DataAndMetadataLike, mask_data_an
     assert len(mask_data_and_metadata.dimensional_shape) == 2
 
     data = data_and_metadata._data_ex
-    mask_data = mask_data_and_metadata._data_ex.astype(bool)
+    mask_data = mask_data_and_metadata._data_ex.astype(bool)  # type: ignore
 
     start_index = 1 if data_and_metadata.is_sequence else 0
     result_data = numpy.sum(data, axis=tuple(range(start_index, len(data_and_metadata.dimensional_shape) - 1)), where=mask_data[..., numpy.newaxis])
@@ -1411,7 +1411,7 @@ def function_average_region(data_and_metadata_in: _DataAndMetadataLike, mask_dat
     assert len(mask_data_and_metadata.dimensional_shape) == 2
 
     data = data_and_metadata._data_ex
-    mask_data = mask_data_and_metadata._data_ex.astype(bool)
+    mask_data = mask_data_and_metadata._data_ex.astype(bool)  # type: ignore
 
     assert data is not None
 
@@ -1730,7 +1730,7 @@ def calculate_coordinates_for_affine_transform(data_and_metadata_in: _DataAndMet
     assert transformation_matrix.shape[0] == transformation_matrix.shape[1]
     assert transformation_matrix.shape[0] in {len(coords_shape), len(coords_shape) + 1}
     half_shape = (coords_shape[0] * 0.5, coords_shape[1] * 0.5)
-    coords = numpy.mgrid[0:coords_shape[0], 0:coords_shape[1]].astype(float)
+    coords = numpy.mgrid[0:coords_shape[0], 0:coords_shape[1]].astype(float)  # type: ignore
     coords[0] -= half_shape[0] - 0.5
     coords[1] -= half_shape[1] - 0.5
     if transformation_matrix.shape[0] == len(coords_shape) + 1:
