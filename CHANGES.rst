@@ -1,8 +1,9 @@
 Changelog (niondata)
 ====================
 
-NEXT
-----
+0.14.0 (2021-11-10)
+-------------------
+- Enable strict typing.
 - Drop support for Python 3.7.
 - Add auto-thresholding functions.
 
