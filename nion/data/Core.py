@@ -273,7 +273,7 @@ def function_crosscorrelate(*args: _DataAndMetadataIndeterminateSizeLike) -> Dat
         raise ValueError("Cross correlate: data shapes do not match or are indeterminate")
 
     data_and_metadata1 = DataAndMetadata.promote_constant(data_and_metadata_or_constant1, shape)
-    data_and_metadata2 = DataAndMetadata.promote_constant(data_and_metadata_or_constant1, shape)
+    data_and_metadata2 = DataAndMetadata.promote_constant(data_and_metadata_or_constant2, shape)
 
     def calculate_data() -> _ImageDataType:
         data1 = data_and_metadata1._data_ex
