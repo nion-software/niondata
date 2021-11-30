@@ -5,6 +5,7 @@ Changelog (niondata)
 -------------------
 - Enable support for Python 3.10.
 - Fix issue for cross correlation using only first image.
+- Fix regression with template register using rounded position.
 
 0.14.0 (2021-11-10)
 -------------------

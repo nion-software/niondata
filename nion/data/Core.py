@@ -394,7 +394,7 @@ def function_register_template(image_xdata_in: _DataAndMetadataLike, template_xd
         if ccorr_data is not None:
             error, ccoeff, max_pos = TemplateMatching.find_ccorr_max(ccorr_data)
             if not error and ccoeff is not None and max_pos is not None:
-                return ccoeff, tuple(round(max_pos[i]) - image_xdata.data_shape[i] * 0.5 for i in range(len(image_xdata.data_shape)))
+                return ccoeff, tuple(max_pos[i] - image_xdata.data_shape[i] * 0.5 for i in range(len(image_xdata.data_shape)))
     return 0.0, (0.0, ) * len(image_xdata.data_shape)
 
 
