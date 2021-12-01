@@ -570,9 +570,8 @@ def function_sequence_fourier_align(src_in: _DataAndMetadataLike, bounds: typing
 
 def function_sequence_integrate(src_in: _DataAndMetadataLike) -> DataAndMetadata.DataAndMetadata:
     src = DataAndMetadata.promote_ndarray(src_in)
-    if src.navigation_dimension_count != 1:
+    if not (src.is_sequence or src.collection_dimension_count == 1):
         raise ValueError("Sequence integrate: source must be a 1D collection or a sequence.")
-    dim = src.data_shape[1:]
     result = numpy.sum(src._data_ex, axis=0)
     intensity_calibration = src.intensity_calibration
     dimensional_calibrations = src.dimensional_calibrations[1:]
@@ -582,7 +581,7 @@ def function_sequence_integrate(src_in: _DataAndMetadataLike) -> DataAndMetadata
 
 def function_sequence_trim(src_in: _DataAndMetadataLike, trim_start: int, trim_end: int) -> DataAndMetadata.DataAndMetadata:
     src = DataAndMetadata.promote_ndarray(src_in)
-    if src.navigation_dimension_count != 1:
+    if not (src.is_sequence or src.collection_dimension_count == 1):
         raise ValueError("Sequence trim: source must be a 1D collection or a sequence.")
     c = src.sequence_dimension_shape[0]
     cs = max(0, int(trim_start))
