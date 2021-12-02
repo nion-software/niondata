@@ -379,19 +379,27 @@ def function_match_template(image_xdata_in: _DataAndMetadataLike, template_xdata
     return DataAndMetadata.new_data_and_metadata(ccorr, dimensional_calibrations=image_xdata.dimensional_calibrations)
 
 
-def function_register_template(image_xdata_in: _DataAndMetadataLike, template_xdata_in: _DataAndMetadataLike) -> typing.Tuple[float, typing.Tuple[float, ...]]:
+def function_register_template(image_xdata_in: _DataAndMetadataLike, template_xdata_in: _DataAndMetadataLike, ccorr_mask: typing.Optional[_DataAndMetadataLike] = None) -> typing.Tuple[float, typing.Tuple[float, ...]]:
     """
     Calculates and returns the position of a template on an image. The returned values are the intensity if the
     normalized cross-correlation peak (between -1 and 1) and the sub-pixel position of the template on the image.
     The sub-pixel position is calculated by fitting a parabola to the tip of the cross-correlation peak.
     Inputs can be 1D or 2D and the template must be smaller than or the same size as the image.
+    If "ccorr_mask" is not "None", it should be a boolean array with the same shape as "image_xdata_in". It is then
+    used to mask the cross-correlation array before finding the maximum.
     """
     image_xdata = DataAndMetadata.promote_ndarray(image_xdata_in)
     template_xdata = DataAndMetadata.promote_ndarray(template_xdata_in)
+    ccorr_mask_promoted = None
+    if ccorr_mask is not None:
+        ccorr_mask_promoted = DataAndMetadata.promote_ndarray(ccorr_mask)
     ccorr_xdata = function_match_template(image_xdata, template_xdata)
+
     if ccorr_xdata:
         ccorr_data = ccorr_xdata.data
         if ccorr_data is not None:
+            if ccorr_mask_promoted is not None:
+                ccorr_data *= ccorr_mask_promoted.data
             error, ccoeff, max_pos = TemplateMatching.find_ccorr_max(ccorr_data)
             if not error and ccoeff is not None and max_pos is not None:
                 return ccoeff, tuple(max_pos[i] - image_xdata.data_shape[i] * 0.5 for i in range(len(image_xdata.data_shape)))

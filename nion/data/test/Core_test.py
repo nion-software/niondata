@@ -5,6 +5,7 @@ import math
 import scipy
 import typing
 import unittest
+import scipy.ndimage
 
 # third party libraries
 import numpy
@@ -961,6 +962,25 @@ class TestCore(unittest.TestCase):
         self.assertEqual(len(max_pos), 2)
         self.assertTrue(numpy.allclose(max_pos, (0, -33), atol=0.1))
         self.assertAlmostEqual(ccoeff, 1.0, places=1)
+
+    def test_register_template_for_2d_data_with_mask(self) -> None:
+        data = numpy.zeros((100, 100))
+        data[5::10, 5::10] = 1
+        data = scipy.ndimage.gaussian_filter(data, 2)
+        image_xdata = DataAndMetadata.new_data_and_metadata(data)
+        template_xdata = DataAndMetadata.new_data_and_metadata(scipy.ndimage.shift(data, (-2.3, -3.7), order=1))
+        mask = numpy.zeros(data.shape, dtype=bool)
+        y, x = numpy.mgrid[-data.shape[0]/2:data.shape[0]/2:1j*data.shape[0], -data.shape[0]/2:data.shape[0]/2:1j*data.shape[0]] # type: ignore
+        mask[numpy.sqrt(x**2 + y**2) < 7] = True
+        # We make a mask that is one lattice site offset in y-direction
+        mask = numpy.roll(mask, (10, 0), axis=(0, 1)).astype(bool)
+        ccoeff, max_pos = Core.function_register_template(image_xdata, template_xdata, ccorr_mask=mask)
+        self.assertEqual(len(max_pos), 2)
+        self.assertTrue(numpy.allclose(max_pos, (12.3, 3.7), atol=0.5))
+        self.assertAlmostEqual(ccoeff, 1.0, delta=0.2)
+        # Now test that we get the original shift without a mask
+        ccoeff, max_pos = Core.function_register_template(image_xdata, template_xdata)
+        self.assertTrue(numpy.allclose(max_pos, (2.3, 3.7), atol=0.5))
 
     def test_sequence_join(self) -> None:
         xdata_list = [DataAndMetadata.new_data_and_metadata(numpy.ones((16, 32)), data_descriptor=DataAndMetadata.DataDescriptor(False, 1, 1))]
