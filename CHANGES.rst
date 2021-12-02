@@ -7,6 +7,8 @@ Changelog (niondata)
 - Fix issue for cross correlation using only first image.
 - Fix regression with template register using rounded position.
 - Extend sequence trim/integrate to work on sequences of collections.
+- Fix half-pixel offset in register_template.
+- Allow a mask in register_template for fine-tuning maximum finding.
 
 0.14.0 (2021-11-10)
 -------------------
