@@ -147,7 +147,7 @@ class Calibration:
         units = units if units is not None else self.units
         units_str = (" " + units) if include_units and self.__units else ""
         if hasattr(calibrated_value, 'dtype') and not getattr(calibrated_value, "shape"):  # convert NumPy types to Python scalar types
-            calibrated_value = numpy.asscalar(calibrated_value)  # type: ignore
+            calibrated_value = calibrated_value.item()  # type: ignore
         if isinstance(calibrated_value, integer_types) or isinstance(calibrated_value, float):
             if calibrated_value_range and samples:
                 calibrated_value0 = calibrated_value_range[0]
