@@ -1,7 +1,7 @@
 Changelog (niondata)
 ====================
 
-0.14.1 (UNRElEASED)
+0.14.1 (2021-12-13)
 -------------------
 - Enable support for Python 3.10.
 - Fix issue for cross correlation using only first image.
