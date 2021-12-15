@@ -165,7 +165,7 @@ def function_fft(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata.
                 else:
                     data_copy = numpy.sum(data[..., :] * (0.2126, 0.7152, 0.0722, 0.0), 2)
             else:
-                data_copy = data.copy()  # let other threads use data while we're processing
+                data_copy = numpy.copy(data)  # type: ignore  # let other threads use data while we're processing
             scaling = 1.0 / numpy.sqrt(data_shape[1] * data_shape[0])
             # note: the numpy.fft.fft2 is faster than scipy.fftpack.fft2, probably either because
             # our conda distribution compiles numpy for multiprocessing, the numpy version releases
@@ -205,7 +205,7 @@ def function_ifft(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata
             scaling = numpy.sqrt(data_shape[0])
             return scipy.fftpack.ifft(scipy.fftpack.ifftshift(data) * scaling)  # type: ignore
         elif Image.is_data_2d(data):
-            data_copy = data.copy()  # let other threads use data while we're processing
+            data_copy = numpy.copy(data)  # type: ignore  # let other threads use data while we're processing
             scaling = numpy.sqrt(data_shape[1] * data_shape[0])
             return scipy.fftpack.ifft2(scipy.fftpack.ifftshift(data_copy) * scaling)  # type: ignore
         else:
@@ -238,7 +238,7 @@ def function_autocorrelate(data_and_metadata_in: _DataAndMetadataLike) -> DataAn
         data = data_and_metadata.data
         assert data is not None
         if Image.is_data_2d(data):
-            data_copy = data.copy()  # let other threads use data while we're processing
+            data_copy = numpy.copy(data)  # type: ignore  # let other threads use data while we're processing
             data_std = data_copy.std(dtype=numpy.float64)
             if data_std != 0.0:
                 data_norm = (data_copy - data_copy.mean(dtype=numpy.float64)) / data_std
@@ -893,7 +893,7 @@ def function_transpose_flip(data_and_metadata_in: _DataAndMetadataLike, transpos
             data = numpy.flipud(data)  # type: ignore
         assert data is not None  # this is required, seems to be a bug in mypy about reassignment
         if id(data) == data_id:  # ensure real data, not a view
-            return data.copy()
+            return numpy.copy(data)  # type: ignore
         else:
             return data
 
@@ -1662,9 +1662,9 @@ def function_rebin_2d(data_and_metadata_in: _DataAndMetadataLike, shape: DataAnd
         data = data_and_metadata.data
         assert data is not None
         if data.shape[0] == height and data.shape[1] == width:
-            return data.copy()
+            return numpy.copy(data)  # type: ignore
         shape = height, data.shape[0] // height, width, data.shape[1] // width
-        return typing.cast(_ImageDataType, data.reshape(shape).mean(-1).mean(1))
+        return typing.cast(_ImageDataType, numpy.reshape(data, shape).mean(-1).mean(1))
 
     dimensions = height, width
     rebinned_dimensional_calibrations = [Calibration.Calibration(dimensional_calibrations[i].offset, dimensional_calibrations[i].scale * data_shape[i] / dimensions[i], dimensional_calibrations[i].units) for i in range(len(dimensional_calibrations))]
@@ -1687,7 +1687,7 @@ def function_resample_2d(data_and_metadata_in: _DataAndMetadataLike, shape: Data
         data = data_and_metadata.data
         assert data is not None
         if data.shape[0] == height and data.shape[1] == width:
-            return data.copy()
+            return numpy.copy(data)  # type: ignore
         return Image.scaled(data, (height, width))
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations

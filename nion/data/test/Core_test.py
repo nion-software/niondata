@@ -1,14 +1,17 @@
 # standard libraries
 import copy
+import io
 import logging
 import math
-import scipy
+import os
 import typing
 import unittest
-import scipy.ndimage
 
 # third party libraries
+import h5py
 import numpy
+import scipy
+import scipy.ndimage
 
 # local libraries
 from nion.data import Calibration
@@ -1021,6 +1024,19 @@ class TestCore(unittest.TestCase):
                 transformed = Core.function_affine_transform(original_data, transformation_matrix, order=1)
                 self.assertTrue(numpy.allclose(original_data, transformed._data_ex))
 
+    def test_operations_using_copy_on_h5py_array(self) -> None:
+        bio = io.BytesIO()
+        with h5py.File(bio, "w") as f:
+            dataset = f.create_dataset("data", data=numpy.ones((4, 4), dtype=float))
+            d = DataAndMetadata.new_data_and_metadata(dataset)
+            Core.function_fft(d)
+            Core.function_ifft(d)
+            Core.function_autocorrelate(d)
+            Core.function_transpose_flip(d)
+            Core.function_transpose_flip(d, True, True, True)
+            Core.function_rebin_2d(d, d.data_shape)
+            Core.function_rebin_2d(d, (2, 2))
+            Core.function_resample_2d(d, (3, 3))
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

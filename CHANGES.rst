@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+0.14.2 (UNRELEASED)
+-------------------
+- Improve compatibility with HDF5 backed data (use numpy.copy instead of d.copy).
+
 0.14.1 (2021-12-13)
 -------------------
 - Enable support for Python 3.10.

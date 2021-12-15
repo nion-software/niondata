@@ -1,11 +1,11 @@
 # standard libraries
-import h5py
 import os
 import shutil
 import typing
 import unittest
 
 # third party libraries
+import h5py
 import numpy
 
 # local libraries
