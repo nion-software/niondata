@@ -440,7 +440,7 @@ class TestCore(unittest.TestCase):
         self.assertGreater(image_rgb[15, 15], image_rgb[0, 0])
 
     def test_create_display_from_rgba_sequence_should_work(self) -> None:
-        data = typing.cast(_ImageDataType, numpy.random.rand(4, 64, 64, 3) * 255).astype(numpy.uint8)
+        data: _ImageDataType = typing.cast(_ImageDataType, numpy.random.rand(4, 64, 64, 3) * 255).astype(numpy.uint8)
         xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
         display_data, modified = Core.function_display_data_no_copy(xdata, 0)
         self.assertIsNotNone(display_data)
@@ -470,7 +470,7 @@ class TestCore(unittest.TestCase):
         # self.assertTrue(numpy.array_equal(data[1, 30, 20], xdata[1, 30, 20]))
 
     def test_rgb_slice_of_sequence_works(self) -> None:
-        data = typing.cast(_ImageDataType, numpy.random.rand(4, 64, 64, 3) * 255).astype(numpy.uint8)
+        data: _ImageDataType = typing.cast(_ImageDataType, numpy.random.rand(4, 64, 64, 3) * 255).astype(numpy.uint8)
         xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
         self.assertTrue(numpy.array_equal(data[1, ...], xdata[1, ...]))
         self.assertTrue(numpy.array_equal(data[1, ...], xdata[1]))
