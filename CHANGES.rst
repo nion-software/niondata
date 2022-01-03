@@ -1,7 +1,7 @@
 Changelog (niondata)
 ====================
 
-0.14.2 (UNRELEASED)
+0.14.2 (2022-01-03)
 -------------------
 - Improve compatibility with HDF5 backed data (use numpy.copy instead of d.copy).
 
