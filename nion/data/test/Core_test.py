@@ -219,7 +219,7 @@ class TestCore(unittest.TestCase):
         self.assertEqual(dimensional_calibrations[1], dst.dimensional_calibrations[1])
 
     def test_sum_over_rgb_produces_correct_data(self) -> None:
-        data = numpy.zeros((3, 3, 4), numpy.uint8)
+        data: numpy.typing.NDArray[numpy.uint8] = numpy.zeros((3, 3, 4), numpy.uint8)
         data[1, 0] = (3, 3, 3, 3)
         src = DataAndMetadata.DataAndMetadata.from_data(data)
         dst0 = Core.function_sum(src, 0)
@@ -336,7 +336,7 @@ class TestCore(unittest.TestCase):
         c2 = Calibration.Calibration(units="c")
         c3 = Calibration.Calibration(units="d")
         data = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[c1, c2, c3])  # last index is signal
-        mask_data = numpy.zeros((3, 4), numpy.int32)
+        mask_data: numpy.typing.NDArray[numpy.int32] = numpy.zeros((3, 4), numpy.int32)
         mask_data[0, 1] = 1
         mask_data[2, 2] = 1
         mask = DataAndMetadata.new_data_and_metadata(mask_data)
@@ -354,7 +354,7 @@ class TestCore(unittest.TestCase):
         c2 = Calibration.Calibration(units="c")
         c3 = Calibration.Calibration(units="d")
         data = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[cs, c1, c2, c3], data_descriptor=DataAndMetadata.DataDescriptor(True, 2, 1))  # last index is signal
-        mask_data = numpy.zeros((3, 4), numpy.int32)
+        mask_data: numpy.typing.NDArray[numpy.int32] = numpy.zeros((3, 4), numpy.int32)
         mask_data[0, 1] = 1
         mask_data[2, 2] = 1
         mask = DataAndMetadata.new_data_and_metadata(mask_data)
@@ -372,7 +372,7 @@ class TestCore(unittest.TestCase):
         c2 = Calibration.Calibration(units="c")
         c3 = Calibration.Calibration(units="d")
         data = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[c1, c2, c3])  # last index is signal
-        mask_data = numpy.zeros((3, 4), numpy.int32)
+        mask_data: numpy.typing.NDArray[numpy.int32] = numpy.zeros((3, 4), numpy.int32)
         mask_data[0, 1] = 1
         mask_data[2, 2] = 1
         mask = DataAndMetadata.new_data_and_metadata(mask_data)
@@ -390,7 +390,7 @@ class TestCore(unittest.TestCase):
         c2 = Calibration.Calibration(units="c")
         c3 = Calibration.Calibration(units="d")
         data = DataAndMetadata.new_data_and_metadata(random_data, intensity_calibration=c0, dimensional_calibrations=[cs, c1, c2, c3], data_descriptor=DataAndMetadata.DataDescriptor(True, 2, 1))  # last index is signal
-        mask_data = numpy.zeros((3, 4), numpy.int32)
+        mask_data: numpy.typing.NDArray[numpy.int32] = numpy.zeros((3, 4), numpy.int32)
         mask_data[0, 1] = 1
         mask_data[2, 2] = 1
         mask = DataAndMetadata.new_data_and_metadata(mask_data)
@@ -882,7 +882,7 @@ class TestCore(unittest.TestCase):
     def test_histogram_calibrates_x_axis(self) -> None:
         dimensional_calibrations = [Calibration.Calibration(-16, 2, "S"), Calibration.Calibration(-16, 2, "S")]
         intensity_calibration = Calibration.Calibration(2, 3, units="L")
-        data = numpy.ones((16, 16), numpy.uint32)
+        data: numpy.typing.NDArray[numpy.uint32] = numpy.ones((16, 16), numpy.uint32)
         data[:2, :2] = 4
         data[-2:, -2:] = 8
         xdata = DataAndMetadata.new_data_and_metadata(data, intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations)
@@ -895,7 +895,7 @@ class TestCore(unittest.TestCase):
         self.assertEqual(26, x_calibration.convert_to_calibrated_value(16))
 
     def test_crop_out_of_bounds_produces_proper_size_data(self) -> None:
-        data = numpy.ones((16, 16), numpy.uint32)
+        data: numpy.typing.NDArray[numpy.uint32] = numpy.ones((16, 16), numpy.uint32)
         xdata = DataAndMetadata.new_data_and_metadata(data)
         result = Core.function_crop(xdata, ((0.75, 0.75), (0.5, 0.5)))
         self.assertEqual((8, 8), result.data_shape)
@@ -903,7 +903,7 @@ class TestCore(unittest.TestCase):
         self.assertEqual(1, numpy.amax(result))
 
     def test_crop_rotated_produces_proper_size_data(self) -> None:
-        data = numpy.ones((16, 16), numpy.uint32)
+        data: numpy.typing.NDArray[numpy.uint32] = numpy.ones((16, 16), numpy.uint32)
         xdata = DataAndMetadata.new_data_and_metadata(data)
         result = Core.function_crop_rotated(xdata, ((0.75, 0.75), (0.5, 0.5)), 0.3)
         self.assertEqual((8, 8), result.data_shape)
@@ -919,13 +919,13 @@ class TestCore(unittest.TestCase):
         self.assertEqual((1, 115), result.data_shape)
 
     def test_redimension_basic_functionality(self) -> None:
-        data = numpy.ones((100, 100), dtype=numpy.int32)
+        data: numpy.typing.NDArray[numpy.int32] = numpy.ones((100, 100), dtype=numpy.int32)
         xdata = DataAndMetadata.new_data_and_metadata(data)
         xdata_redim = Core.function_redimension(xdata, DataAndMetadata.DataDescriptor(True, 0, 1))
         self.assertEqual(xdata.data_descriptor.expected_dimension_count, xdata_redim.data_descriptor.expected_dimension_count)
 
     def test_squeeze_does_not_remove_last_datum_dimension(self) -> None:
-        data = numpy.ones((1, 1, 1, 1), dtype=numpy.int32)
+        data: numpy.typing.NDArray[numpy.int32] = numpy.ones((1, 1, 1, 1), dtype=numpy.int32)
         xdata = DataAndMetadata.new_data_and_metadata(data)
         xdata_squeeze= Core.function_squeeze(xdata)
         self.assertEqual(1, xdata_squeeze.data_descriptor.expected_dimension_count)
@@ -972,7 +972,7 @@ class TestCore(unittest.TestCase):
         data = scipy.ndimage.gaussian_filter(data, 2)
         image_xdata = DataAndMetadata.new_data_and_metadata(data)
         template_xdata = DataAndMetadata.new_data_and_metadata(scipy.ndimage.shift(data, (-2.3, -3.7), order=1))
-        mask = numpy.zeros(data.shape, dtype=bool)
+        mask: numpy.typing.NDArray[numpy.bool_] = numpy.zeros(data.shape, dtype=bool)
         y, x = numpy.mgrid[-data.shape[0]/2:data.shape[0]/2:1j*data.shape[0], -data.shape[0]/2:data.shape[0]/2:1j*data.shape[0]] # type: ignore
         mask[numpy.sqrt(x**2 + y**2) < 7] = True
         # We make a mask that is one lattice site offset in y-direction
@@ -1009,9 +1009,9 @@ class TestCore(unittest.TestCase):
             with self.subTest(data_shape=data_shape):
                 original_data = numpy.zeros(data_shape)
                 original_data[1:-1, 2:-2] = 1
-                transformation_matrix = numpy.array(((numpy.cos(numpy.pi/2), -numpy.sin(numpy.pi/2), 0),
-                                                     (numpy.sin(numpy.pi/2),  numpy.cos(numpy.pi/2), 0),
-                                                     (0,                      0,                     1)))
+                transformation_matrix: numpy.typing.NDArray[typing.Any] = numpy.array(((numpy.cos(numpy.pi/2), -numpy.sin(numpy.pi/2), 0),
+                                                                          (numpy.sin(numpy.pi/2),  numpy.cos(numpy.pi/2), 0),
+                                                                          (0,                      0,                     1)))
                 transformed = Core.function_affine_transform(original_data, transformation_matrix, order=1)
                 self.assertTrue(numpy.allclose(numpy.rot90(original_data), transformed._data_ex))  # type: ignore
 
@@ -1020,7 +1020,7 @@ class TestCore(unittest.TestCase):
         for data_shape in data_shapes:
             with self.subTest(data_shape=data_shape):
                 original_data = numpy.random.rand(*data_shape)
-                transformation_matrix = numpy.array(((1, 0), (0, 1)))
+                transformation_matrix: numpy.typing.NDArray[typing.Any] = numpy.array(((1, 0), (0, 1)))
                 transformed = Core.function_affine_transform(original_data, transformation_matrix, order=1)
                 self.assertTrue(numpy.allclose(original_data, transformed._data_ex))
 

@@ -17,7 +17,7 @@ class TestCalibrationClass(unittest.TestCase):
 
     def test_calibration_should_work_for_complex_data(self) -> None:
         calibration = Calibration.Calibration(1.0, 2.0, "c")
-        value_array = numpy.zeros((1, ), dtype=numpy.complex128)
+        value_array: numpy.typing.NDArray[numpy.complex128] = numpy.zeros((1, ), dtype=numpy.complex128)
         value_array[0] = 3 + 4j
         self.assertEqual(calibration.convert_to_calibrated_value_str(value_array[0]), u"7+8j c")
         self.assertEqual(calibration.convert_to_calibrated_size_str(value_array[0]), u"6+8j c")
@@ -34,7 +34,7 @@ class TestCalibrationClass(unittest.TestCase):
 
     def test_calibration_should_work_for_rgb_data(self) -> None:
         calibration = Calibration.Calibration(1.0, 2.0, "c")
-        value = numpy.zeros((4, ), dtype=numpy.uint8)
+        value: numpy.typing.NDArray[numpy.uint8] = numpy.zeros((4, ), dtype=numpy.uint8)
         self.assertEqual(calibration.convert_to_calibrated_value_str(value), "0, 0, 0, 0")
         self.assertEqual(calibration.convert_to_calibrated_size_str(value), "0, 0, 0, 0")
 
