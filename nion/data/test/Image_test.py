@@ -7,6 +7,7 @@ import unittest
 # third party libraries
 import h5py
 import numpy
+import numpy.typing
 
 # local libraries
 from nion.data import Image
@@ -24,11 +25,11 @@ class TestImageClass(unittest.TestCase):
         pass
 
     def test_create_rgba_image_from_array(self) -> None:
-        image_1d_16 = numpy.zeros((16, ), dtype=numpy.double)
-        image_1d_16x1 = numpy.zeros((16, 1), dtype=numpy.double)
+        image_1d_16: numpy.typing.NDArray[numpy.double] = numpy.zeros((16, ), dtype=numpy.double)
+        image_1d_16x1: numpy.typing.NDArray[numpy.double] = numpy.zeros((16, 1), dtype=numpy.double)
         self.assertIsNotNone(Image.create_rgba_image_from_array(image_1d_16))
         self.assertIsNotNone(Image.create_rgba_image_from_array(image_1d_16x1))
-        image_1d_rgb = numpy.zeros((16, 3), dtype=numpy.uint8)
+        image_1d_rgb: numpy.typing.NDArray[numpy.uint8] = numpy.zeros((16, 3), dtype=numpy.uint8)
         self.assertIsNotNone(Image.create_rgba_image_from_array(image_1d_rgb))
 
     def test_rebin_expand_has_even_expansion(self) -> None:

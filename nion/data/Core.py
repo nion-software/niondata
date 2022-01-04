@@ -606,7 +606,7 @@ def function_sequence_insert(src1_in: _DataAndMetadataLike, src2_in: _DataAndMet
         raise ValueError("Sequence insert: both sources must have same datum shape.")
     c = src1.sequence_dimension_shape[0]
     channel = max(0, min(c, int(position)))
-    result = numpy.vstack([src1._data_ex[:channel], src2._data_ex, src1._data_ex[channel:]])
+    result: numpy.typing.NDArray[typing.Any] = numpy.vstack([src1._data_ex[:channel], src2._data_ex, src1._data_ex[channel:]])
     intensity_calibration = src1.intensity_calibration
     dimensional_calibrations = src1.dimensional_calibrations
     data_descriptor = src1.data_descriptor
@@ -753,13 +753,13 @@ def function_sobel(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadat
         data = data_and_metadata.data
         assert data is not None
         if Image.is_shape_and_dtype_rgb(data.shape, data.dtype):
-            rgb = numpy.empty(data.shape[:-1] + (3,), numpy.uint8)
+            rgb: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[:-1] + (3,), numpy.uint8)
             rgb[..., 0] = scipy.ndimage.sobel(data[..., 0])
             rgb[..., 1] = scipy.ndimage.sobel(data[..., 1])
             rgb[..., 2] = scipy.ndimage.sobel(data[..., 2])
             return rgb
         elif Image.is_shape_and_dtype_rgba(data.shape, data.dtype):
-            rgba = numpy.empty(data.shape[:-1] + (4,), numpy.uint8)
+            rgba: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[:-1] + (4,), numpy.uint8)
             rgba[..., 0] = scipy.ndimage.sobel(data[..., 0])
             rgba[..., 1] = scipy.ndimage.sobel(data[..., 1])
             rgba[..., 2] = scipy.ndimage.sobel(data[..., 2])
@@ -781,13 +781,13 @@ def function_laplace(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetad
         data = data_and_metadata.data
         assert data is not None
         if Image.is_shape_and_dtype_rgb(data.shape, data.dtype):
-            rgb = numpy.empty(data.shape[:-1] + (3,), numpy.uint8)
+            rgb: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[:-1] + (3,), numpy.uint8)
             rgb[..., 0] = scipy.ndimage.laplace(data[..., 0])
             rgb[..., 1] = scipy.ndimage.laplace(data[..., 1])
             rgb[..., 2] = scipy.ndimage.laplace(data[..., 2])
             return rgb
         elif Image.is_shape_and_dtype_rgba(data.shape, data.dtype):
-            rgba = numpy.empty(data.shape[:-1] + (4,), numpy.uint8)
+            rgba: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[:-1] + (4,), numpy.uint8)
             rgba[..., 0] = scipy.ndimage.laplace(data[..., 0])
             rgba[..., 1] = scipy.ndimage.laplace(data[..., 1])
             rgba[..., 2] = scipy.ndimage.laplace(data[..., 2])
@@ -825,13 +825,13 @@ def function_median_filter(data_and_metadata_in: _DataAndMetadataLike, size: int
         data = data_and_metadata.data
         assert data is not None
         if Image.is_shape_and_dtype_rgb(data.shape, data.dtype):
-            rgb = numpy.empty(data.shape[:-1] + (3,), numpy.uint8)
+            rgb: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[:-1] + (3,), numpy.uint8)
             rgb[..., 0] = scipy.ndimage.median_filter(data[..., 0], size=size)
             rgb[..., 1] = scipy.ndimage.median_filter(data[..., 1], size=size)
             rgb[..., 2] = scipy.ndimage.median_filter(data[..., 2], size=size)
             return rgb
         elif Image.is_shape_and_dtype_rgba(data.shape, data.dtype):
-            rgba = numpy.empty(data.shape[:-1] + (4,), numpy.uint8)
+            rgba: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[:-1] + (4,), numpy.uint8)
             rgba[..., 0] = scipy.ndimage.median_filter(data[..., 0], size=size)
             rgba[..., 1] = scipy.ndimage.median_filter(data[..., 1], size=size)
             rgba[..., 2] = scipy.ndimage.median_filter(data[..., 2], size=size)
@@ -855,13 +855,13 @@ def function_uniform_filter(data_and_metadata_in: _DataAndMetadataLike, size: in
         data = data_and_metadata.data
         assert data is not None
         if Image.is_shape_and_dtype_rgb(data.shape, data.dtype):
-            rgb = numpy.empty(data.shape[:-1] + (3,), numpy.uint8)
+            rgb: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[:-1] + (3,), numpy.uint8)
             rgb[..., 0] = scipy.ndimage.uniform_filter(data[..., 0], size=size)
             rgb[..., 1] = scipy.ndimage.uniform_filter(data[..., 1], size=size)
             rgb[..., 2] = scipy.ndimage.uniform_filter(data[..., 2], size=size)
             return rgb
         elif Image.is_shape_and_dtype_rgba(data.shape, data.dtype):
-            rgba = numpy.empty(data.shape[:-1] + (4,), numpy.uint8)
+            rgba: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[:-1] + (4,), numpy.uint8)
             rgba[..., 0] = scipy.ndimage.uniform_filter(data[..., 0], size=size)
             rgba[..., 1] = scipy.ndimage.uniform_filter(data[..., 1], size=size)
             rgba[..., 2] = scipy.ndimage.uniform_filter(data[..., 2], size=size)
@@ -980,7 +980,7 @@ def function_crop(data_and_metadata_in: _DataAndMetadataLike, bounds: NormRectan
     assert data_dtype is not None
 
     if data_and_metadata.is_data_rgb:
-        new_data = numpy.zeros((oheight, owidth, 3), dtype=data_dtype)
+        new_data: numpy.typing.NDArray[typing.Any] = numpy.zeros((oheight, owidth, 3), dtype=data_dtype)
         if height > 0 and width > 0:
             new_data[dtop:dtop + dheight, dleft:dleft + dwidth] = data[top:top + height, left:left + width]
     elif data_and_metadata.is_data_rgba:
@@ -1033,6 +1033,7 @@ def function_crop_rotated(data_and_metadata_in: _DataAndMetadataLike, bounds: No
         typing.cast(_ImageDataType, top + height // 2 + (typing.cast(_ImageDataType, x * angle_cos) - typing.cast(_ImageDataType, y * angle_sin))),
         typing.cast(_ImageDataType, left + width // 2 + (typing.cast(_ImageDataType, y * angle_cos) + typing.cast(_ImageDataType, x * angle_sin)))]
 
+    new_data: numpy.typing.NDArray[numpy.uint8]
     if data_and_metadata.is_data_rgb:
         new_data = numpy.zeros(coords[0].shape + (3,), numpy.uint8)
         new_data[..., 0] = scipy.ndimage.interpolation.map_coordinates(data[..., 0], coords)
@@ -1254,7 +1255,7 @@ def function_vstack(data_and_metadata_like_list: typing.Sequence[_DataAndMetadat
     data_descriptor = DataAndMetadata.DataDescriptor(data_descriptor.is_sequence, data_descriptor.collection_dimension_count + 1, data_descriptor.datum_dimension_count)
 
     data_list = list(data_and_metadata.data for data_and_metadata in data_and_metadata_list)
-    data = numpy.vstack(typing.cast(typing.Sequence[DataAndMetadata.DataAndMetadata], data_list))
+    data: numpy.typing.NDArray[typing.Any] = numpy.vstack(typing.cast(typing.Sequence[DataAndMetadata.DataAndMetadata], data_list))
 
     return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
 
@@ -1282,13 +1283,13 @@ def function_sum(data_and_metadata_in: _DataAndMetadataLike, axis: typing.Option
         assert data is not None
         if Image.is_shape_and_dtype_rgb_type(data.shape, data.dtype):
             if Image.is_shape_and_dtype_rgb(data.shape, data.dtype):
-                rgb_image = numpy.empty(data.shape[1:], numpy.uint8)
+                rgb_image: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[1:], numpy.uint8)
                 rgb_image[:, 0] = numpy.average(data[..., 0], axis)  # type: ignore
                 rgb_image[:, 1] = numpy.average(data[..., 1], axis)  # type: ignore
                 rgb_image[:, 2] = numpy.average(data[..., 2], axis)  # type: ignore
                 return rgb_image
             else:
-                rgba_image = numpy.empty(data.shape[1:], numpy.uint8)
+                rgba_image: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[1:], numpy.uint8)
                 rgba_image[:, 0] = numpy.average(data[..., 0], axis)  # type: ignore
                 rgba_image[:, 1] = numpy.average(data[..., 1], axis)  # type: ignore
                 rgba_image[:, 2] = numpy.average(data[..., 2], axis)  # type: ignore
@@ -1306,7 +1307,7 @@ def function_sum(data_and_metadata_in: _DataAndMetadataLike, axis: typing.Option
 
     if not keepdims or Image.is_shape_and_dtype_rgb_type(data_shape, data_dtype):
         assert axis is not None
-        axes = numpy.atleast_1d(axis)
+        axes: numpy.typing.NDArray[typing.Any] = numpy.atleast_1d(axis)
         for i in range(len(axes)):
             if axes[i] < 0:
                 axes[i] += len(dimensional_calibrations)
@@ -1330,13 +1331,13 @@ def function_mean(data_and_metadata_in: _DataAndMetadataLike, axis: typing.Optio
         assert data is not None
         if Image.is_shape_and_dtype_rgb_type(data.shape, data.dtype):
             if Image.is_shape_and_dtype_rgb(data.shape, data.dtype):
-                rgb_image = numpy.empty(data.shape[1:], numpy.uint8)
+                rgb_image: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[1:], numpy.uint8)
                 rgb_image[:, 0] = numpy.average(data[..., 0], axis)  # type: ignore
                 rgb_image[:, 1] = numpy.average(data[..., 1], axis)  # type: ignore
                 rgb_image[:, 2] = numpy.average(data[..., 2], axis)  # type: ignore
                 return rgb_image
             else:
-                rgba_image = numpy.empty(data.shape[1:], numpy.uint8)
+                rgba_image: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[1:], numpy.uint8)
                 rgba_image[:, 0] = numpy.average(data[..., 0], axis)  # type: ignore
                 rgba_image[:, 1] = numpy.average(data[..., 1], axis)  # type: ignore
                 rgba_image[:, 2] = numpy.average(data[..., 2], axis)  # type: ignore
@@ -1354,7 +1355,7 @@ def function_mean(data_and_metadata_in: _DataAndMetadataLike, axis: typing.Optio
 
     if not keepdims or Image.is_shape_and_dtype_rgb_type(data_shape, data_dtype):
         assert axis is not None
-        axes = numpy.atleast_1d(axis)
+        axes: numpy.typing.NDArray[typing.Any] = numpy.atleast_1d(axis)
         for i in range(len(axes)):
             if axes[i] < 0:
                 axes[i] += len(dimensional_calibrations)
@@ -1704,7 +1705,7 @@ def function_warp(data_and_metadata_in: _DataAndMetadataLike, coordinates_in: ty
     coords = numpy.moveaxis(numpy.dstack([coordinate.data for coordinate in coordinates]), -1, 0)  # type: ignore
     data = data_and_metadata._data_ex
     if data_and_metadata.is_data_rgb:
-        rgb = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (3,), numpy.uint8)
+        rgb: numpy.typing.NDArray[numpy.uint8] = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (3,), numpy.uint8)
         rgb[..., 0] = scipy.ndimage.interpolation.map_coordinates(data[..., 0], coords, order=order)
         rgb[..., 1] = scipy.ndimage.interpolation.map_coordinates(data[..., 1], coords, order=order)
         rgb[..., 2] = scipy.ndimage.interpolation.map_coordinates(data[..., 2], coords, order=order)
@@ -1712,7 +1713,7 @@ def function_warp(data_and_metadata_in: _DataAndMetadataLike, coordinates_in: ty
                                                      dimensional_calibrations=data_and_metadata.dimensional_calibrations,
                                                      intensity_calibration=data_and_metadata.intensity_calibration)
     elif data_and_metadata.is_data_rgba:
-        rgba = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (4,), numpy.uint8)
+        rgba: numpy.typing.NDArray[numpy.uint8] = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (4,), numpy.uint8)
         rgba[..., 0] = scipy.ndimage.interpolation.map_coordinates(data[..., 0], coords, order=order)
         rgba[..., 1] = scipy.ndimage.interpolation.map_coordinates(data[..., 1], coords, order=order)
         rgba[..., 2] = scipy.ndimage.interpolation.map_coordinates(data[..., 2], coords, order=order)
@@ -1768,7 +1769,7 @@ def function_histogram(data_and_metadata_in: _DataAndMetadataLike, bins: int) ->
     histogram_data = numpy.histogram(data_and_metadata._data_ex, bins=bins)  # type: ignore
     min_x = data_and_metadata.intensity_calibration.convert_to_calibrated_value(histogram_data[1][0])
     max_x = data_and_metadata.intensity_calibration.convert_to_calibrated_value(histogram_data[1][-1])
-    result_data = histogram_data[0].astype(numpy.int32)
+    result_data: numpy.typing.NDArray[numpy.int32] = histogram_data[0].astype(numpy.int32)
 
     x_calibration = Calibration.Calibration(min_x, (max_x - min_x) / bins, data_and_metadata.intensity_calibration.units)
 
@@ -1817,8 +1818,8 @@ def function_line_profile(data_and_metadata_in: _DataAndMetadataLike, vector: No
         if Image.is_data_rgb_type(data):
             data = Image.convert_to_grayscale(data, numpy.double)
         start, end = vector
-        start_data = numpy.array([int(shape[0] * start[0]), int(shape[1] * start[1])])
-        end_data = numpy.array([int(shape[0] * end[0]), int(shape[1] * end[1])])
+        start_data: numpy.typing.NDArray[typing.Any] = numpy.array([int(shape[0] * start[0]), int(shape[1] * start[1])])
+        end_data: numpy.typing.NDArray[typing.Any] = numpy.array([int(shape[0] * end[0]), int(shape[1] * end[1])])
         length = math.sqrt(math.pow(end_data[1] - start_data[1], 2) + math.pow(end_data[0] - start_data[0], 2))
         if length > 1.0:
             spline_order_lookup = {"nearest": 0, "linear": 1, "quadratic": 2, "cubic": 3}

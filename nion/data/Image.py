@@ -60,7 +60,7 @@ def scaled(image: _ImageDataType, size: ShapeType, method: str = 'linear') -> _I
             f = scipy.interpolate.RectBivariateSpline(numpy.arange(image.shape[0]), numpy.arange(image.shape[1]), image, ky=1, kx=1)
             return typing.cast(_ImageDataType, f(iy, ix))
         else:  # nearest
-            dst = numpy.empty(size, image.dtype)
+            dst: numpy.typing.NDArray[typing.Any] = numpy.empty(size, image.dtype)
             indices = numpy.indices(size)
             indices[0] = ((image.shape[0]-1) * indices[0].astype(float) / size[0]).round()
             indices[1] = ((image.shape[1]-1) * indices[1].astype(float) / size[1]).round()
@@ -68,7 +68,7 @@ def scaled(image: _ImageDataType, size: ShapeType, method: str = 'linear') -> _I
             return dst
     elif numpy.ndim(image) == 3:
         assert image.shape[2] in (3,4)  # rgb, rgba
-        dst_image = numpy.empty(size + (image.shape[2],), numpy.uint8)
+        dst_image: numpy.typing.NDArray[numpy.uint8] = numpy.empty(size + (image.shape[2],), numpy.uint8)
         dst_image[:, :, 0] = scaled(image[:, :, 0], size, method=method)
         dst_image[:, :, 1] = scaled(image[:, :, 1], size, method=method)
         dst_image[:, :, 2] = scaled(image[:, :, 2], size, method=method)
@@ -109,7 +109,7 @@ def rebin_1d(src: _ImageDataType, len: int, retained: typing.Optional[typing.Dic
         return typing.cast(_ImageDataType, numpy.sum(weighted_src, axis=1) * len / src_len)
     else:
         # linear
-        result = numpy.empty((len, ), dtype=numpy.double)
+        result: numpy.typing.NDArray[numpy.double] = numpy.empty((len, ), dtype=numpy.double)
         index = (numpy.arange(len) * src_len / len).astype(numpy.int32)
         result[:] = src[index]
         return result
@@ -365,7 +365,7 @@ def create_rgba_image_from_array(array: _ImageDataType, normalize: bool = True,
     if numpy.ndim(array) == 1:  # temporary hack to display 1-d images
         array = array.reshape((1,) + array.shape)
     if numpy.ndim(array) == 2:
-        rgba_image = numpy.empty(array.shape, numpy.uint32)
+        rgba_image: numpy.typing.NDArray[numpy.uint32] = numpy.empty(array.shape, numpy.uint32)
         if normalize:
             if display_limits and len(display_limits) == 2:
                 nmin_new = display_limits[0]
@@ -406,7 +406,7 @@ def create_rgba_image_from_array(array: _ImageDataType, normalize: bool = True,
                 else:
                     # get_rgb_view(rgba_image)[:] = m * (array[..., numpy.newaxis] - nmin)
                     # optimized version below
-                    r0 = numpy.empty(array.shape, numpy.uint8)
+                    r0: numpy.typing.NDArray[numpy.uint8] = numpy.empty(array.shape, numpy.uint8)
                     r0[:] = (m * (array - nmin))
                     rgb_view = get_dtype_view(rgba_image, numpy.uint8).reshape(rgba_image.shape + (-1, ))[..., :3]
                     rgb_view[..., 0] = rgb_view[..., 1] = rgb_view[..., 2] = r0
@@ -436,7 +436,7 @@ def create_rgba_image_from_array(array: _ImageDataType, normalize: bool = True,
 # convert data to grayscale. may return same copy of data, or a copy.
 def convert_to_grayscale(data: _ImageDataType, data_type: numpy.typing.DTypeLike = numpy.uint32) -> _ImageDataType:
     if is_data_rgb(data) or is_data_rgba(data):
-        image = numpy.empty(data.shape[:-1], data_type)
+        image: numpy.typing.NDArray[typing.Any] = numpy.empty(data.shape[:-1], data_type)
         # don't be tempted to use the numpy.dot operator; after testing, this explicit method
         # is faster by a factor of two. cem 2013-11-02.
         # note 0=b, 1=g, 2=r, 3=a. calculate luminosity.

@@ -94,7 +94,7 @@ def function_rgb(red_data_and_metadata_in: _DataAndMetadataIndeterminateSizeLike
     if any([not Image.is_data_valid(data_and_metadata.data) for data_and_metadata in channels]):
         raise ValueError("RGB: invalid data")
 
-    rgb_image = numpy.empty(shape + (3,), numpy.uint8)
+    rgb_image: numpy.typing.NDArray[numpy.uint8] = numpy.empty(shape + (3,), numpy.uint8)
     for channel_index, channel in enumerate(channels):
         data = channel._data_ex
         if data.dtype.kind in 'iu':
@@ -132,7 +132,7 @@ def function_rgba(red_data_and_metadata_in: _DataAndMetadataIndeterminateSizeLik
     if any([not Image.is_data_valid(data_and_metadata.data) for data_and_metadata in channels]):
         raise ValueError("RGB: invalid data")
 
-    rgba_image = numpy.empty(shape + (4,), numpy.uint8)
+    rgba_image: numpy.typing.NDArray[numpy.uint8] = numpy.empty(shape + (4,), numpy.uint8)
     for channel_index, channel in enumerate(channels):
         data = channel._data_ex
         if data.dtype.kind in 'iu':
