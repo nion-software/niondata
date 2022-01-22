@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+0.14.3 (UNRELEASED)
+-------------------
+- Fix issue where timezone/timezone_offset could get set to invalid values.
+
 0.14.2 (2022-01-03)
 -------------------
 - Improve compatibility with HDF5 backed data (use numpy.copy instead of d.copy).

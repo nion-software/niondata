@@ -145,6 +145,8 @@ class DataMetadata:
             data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
 
         assert data_descriptor.expected_dimension_count == dimension_count
+        assert timezone is None or timezone
+        assert timezone_offset is None or timezone_offset
 
         self.data_descriptor = data_descriptor
 
@@ -155,8 +157,8 @@ class DataMetadata:
                 dimensional_calibrations.append(Calibration.Calibration())
         self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
         self.timestamp = timestamp if timestamp else datetime.datetime.utcnow()
-        self.timezone = timezone or str()
-        self.timezone_offset = timezone_offset or str()
+        self.timezone = timezone
+        self.timezone_offset = timezone_offset
         self.metadata = copy.deepcopy(dict(metadata)) if metadata is not None else dict()
 
         assert isinstance(self.metadata, dict)
@@ -729,7 +731,7 @@ class DataAndMetadata:
         self.__data_metadata.timestamp = value
 
     @property
-    def timezone(self) -> str:
+    def timezone(self) -> typing.Optional[str]:
         return self.__data_metadata.timezone
 
     @timezone.setter
@@ -737,7 +739,7 @@ class DataAndMetadata:
         self.__data_metadata.timezone = value
 
     @property
-    def timezone_offset(self) -> str:
+    def timezone_offset(self) -> typing.Optional[str]:
         return self.__data_metadata.timezone_offset
 
     @timezone_offset.setter
