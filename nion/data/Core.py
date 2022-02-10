@@ -1036,17 +1036,17 @@ def function_crop_rotated(data_and_metadata_in: _DataAndMetadataLike, bounds: No
     new_data: numpy.typing.NDArray[numpy.uint8]
     if data_and_metadata.is_data_rgb:
         new_data = numpy.zeros(coords[0].shape + (3,), numpy.uint8)
-        new_data[..., 0] = scipy.ndimage.interpolation.map_coordinates(data[..., 0], coords)
-        new_data[..., 1] = scipy.ndimage.interpolation.map_coordinates(data[..., 1], coords)
-        new_data[..., 2] = scipy.ndimage.interpolation.map_coordinates(data[..., 2], coords)
+        new_data[..., 0] = scipy.ndimage.map_coordinates(data[..., 0], coords)
+        new_data[..., 1] = scipy.ndimage.map_coordinates(data[..., 1], coords)
+        new_data[..., 2] = scipy.ndimage.map_coordinates(data[..., 2], coords)
     elif data_and_metadata.is_data_rgba:
         new_data = numpy.zeros(coords[0].shape + (4,), numpy.uint8)
-        new_data[..., 0] = scipy.ndimage.interpolation.map_coordinates(data[..., 0], coords)
-        new_data[..., 1] = scipy.ndimage.interpolation.map_coordinates(data[..., 1], coords)
-        new_data[..., 2] = scipy.ndimage.interpolation.map_coordinates(data[..., 2], coords)
-        new_data[..., 3] = scipy.ndimage.interpolation.map_coordinates(data[..., 3], coords)
+        new_data[..., 0] = scipy.ndimage.map_coordinates(data[..., 0], coords)
+        new_data[..., 1] = scipy.ndimage.map_coordinates(data[..., 1], coords)
+        new_data[..., 2] = scipy.ndimage.map_coordinates(data[..., 2], coords)
+        new_data[..., 3] = scipy.ndimage.map_coordinates(data[..., 3], coords)
     else:
-        new_data = scipy.ndimage.interpolation.map_coordinates(data, coords)
+        new_data = scipy.ndimage.map_coordinates(data, coords)
 
     cropped_dimensional_calibrations = list()
     for index, dimensional_calibration in enumerate(dimensional_calibrations):
@@ -1706,24 +1706,24 @@ def function_warp(data_and_metadata_in: _DataAndMetadataLike, coordinates_in: ty
     data = data_and_metadata._data_ex
     if data_and_metadata.is_data_rgb:
         rgb: numpy.typing.NDArray[numpy.uint8] = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (3,), numpy.uint8)
-        rgb[..., 0] = scipy.ndimage.interpolation.map_coordinates(data[..., 0], coords, order=order)
-        rgb[..., 1] = scipy.ndimage.interpolation.map_coordinates(data[..., 1], coords, order=order)
-        rgb[..., 2] = scipy.ndimage.interpolation.map_coordinates(data[..., 2], coords, order=order)
+        rgb[..., 0] = scipy.ndimage.map_coordinates(data[..., 0], coords, order=order)
+        rgb[..., 1] = scipy.ndimage.map_coordinates(data[..., 1], coords, order=order)
+        rgb[..., 2] = scipy.ndimage.map_coordinates(data[..., 2], coords, order=order)
         return DataAndMetadata.new_data_and_metadata(rgb,
                                                      dimensional_calibrations=data_and_metadata.dimensional_calibrations,
                                                      intensity_calibration=data_and_metadata.intensity_calibration)
     elif data_and_metadata.is_data_rgba:
         rgba: numpy.typing.NDArray[numpy.uint8] = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (4,), numpy.uint8)
-        rgba[..., 0] = scipy.ndimage.interpolation.map_coordinates(data[..., 0], coords, order=order)
-        rgba[..., 1] = scipy.ndimage.interpolation.map_coordinates(data[..., 1], coords, order=order)
-        rgba[..., 2] = scipy.ndimage.interpolation.map_coordinates(data[..., 2], coords, order=order)
-        rgba[..., 3] = scipy.ndimage.interpolation.map_coordinates(data[..., 3], coords, order=order)
+        rgba[..., 0] = scipy.ndimage.map_coordinates(data[..., 0], coords, order=order)
+        rgba[..., 1] = scipy.ndimage.map_coordinates(data[..., 1], coords, order=order)
+        rgba[..., 2] = scipy.ndimage.map_coordinates(data[..., 2], coords, order=order)
+        rgba[..., 3] = scipy.ndimage.map_coordinates(data[..., 3], coords, order=order)
         return DataAndMetadata.new_data_and_metadata(rgba,
                                                      dimensional_calibrations=data_and_metadata.dimensional_calibrations,
                                                      intensity_calibration=data_and_metadata.intensity_calibration)
     else:
         return DataAndMetadata.new_data_and_metadata(
-            scipy.ndimage.interpolation.map_coordinates(data, coords, order=order),
+            scipy.ndimage.map_coordinates(data, coords, order=order),
             dimensional_calibrations=data_and_metadata.dimensional_calibrations,
             intensity_calibration=data_and_metadata.intensity_calibration)
 
