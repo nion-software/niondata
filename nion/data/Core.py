@@ -805,15 +805,28 @@ def function_laplace(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetad
 def function_gaussian_blur(data_and_metadata_in: _DataAndMetadataLike, sigma: float) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
 
-    def calculate_data() -> _ImageDataType:
-        data = data_and_metadata.data
-        assert data is not None
-        return scipy.ndimage.gaussian_filter(data, sigma=sigma)  # type: ignore
-
     if not Image.is_data_valid(data_and_metadata.data):
         raise ValueError("Gaussian blur: invalid data")
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
+    new_data: _ImageDataType
+    data = data_and_metadata._data_ex
+    if Image.is_shape_and_dtype_rgb(data.shape, data.dtype):
+        rgb: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[:-1] + (3,), numpy.uint8)
+        rgb[..., 0] = scipy.ndimage.gaussian_filter(data[..., 0], sigma=sigma)
+        rgb[..., 1] = scipy.ndimage.gaussian_filter(data[..., 1], sigma=sigma)
+        rgb[..., 2] = scipy.ndimage.gaussian_filter(data[..., 2], sigma=sigma)
+        new_data = rgb
+    elif Image.is_shape_and_dtype_rgba(data.shape, data.dtype):
+        rgba: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[:-1] + (4,), numpy.uint8)
+        rgba[..., 0] = scipy.ndimage.gaussian_filter(data[..., 0], sigma=sigma)
+        rgba[..., 1] = scipy.ndimage.gaussian_filter(data[..., 1], sigma=sigma)
+        rgba[..., 2] = scipy.ndimage.gaussian_filter(data[..., 2], sigma=sigma)
+        rgba[..., 3] = data[..., 3]
+        new_data = rgba
+    else:
+        new_data = scipy.ndimage.gaussian_filter(data, sigma=sigma)  # type: ignore
+
+    return DataAndMetadata.new_data_and_metadata(new_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
 def function_median_filter(data_and_metadata_in: _DataAndMetadataLike, size: int) -> DataAndMetadata.DataAndMetadata:
