@@ -1,7 +1,7 @@
 Changelog (niondata)
 ====================
 
-0.14.3 (UNRELEASED)
+0.14.3 (2022-02-18)
 -------------------
 - Fix issue where timezone/timezone_offset could get set to invalid values.
 - Improve Gaussian blur to handle RGB.
