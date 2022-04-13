@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+0.14.4 (UNRELEASED)
+-------------------
+- Simplify data and metadata by eliminating unloading capability (no effect on public API).
+
 0.14.3 (2022-02-18)
 -------------------
 - Fix issue where timezone/timezone_offset could get set to invalid values.

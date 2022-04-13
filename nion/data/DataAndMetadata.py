@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from __future__ import annotations
+
 # standard libraries
 import copy
 import datetime
@@ -26,7 +28,7 @@ Shape3dType = typing.Tuple[int, int, int]
 PositionType = typing.Sequence[int]
 CalibrationListType = typing.Sequence[Calibration.Calibration]
 MetadataType = typing.Mapping[str, typing.Any]
-_ImageDataType = Image._ImageDataType
+_ImageDataType = numpy.typing.NDArray[typing.Any]
 _ScalarDataType = typing.Union[int, float, complex]
 _InternalCalibrationListType = typing.Tuple[Calibration.Calibration, ...]
 # NOTE: typing.Any is only required when numpy < 1.21. once that requirement is removed (anaconda), switch this back.
@@ -316,6 +318,7 @@ class DataMetadata:
         self.intensity_calibration = copy.deepcopy(intensity_calibration)
 
     def _set_dimensional_calibrations(self, dimensional_calibrations: CalibrationListType) -> None:
+        assert len(dimensional_calibrations) == len(self.dimensional_shape)
         self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
 
     def _set_data_descriptor(self, data_descriptor: DataDescriptor) -> None:
@@ -458,22 +461,17 @@ class DataAndMetadata:
     directly and not copied.
     """
 
-    def __init__(self, data_fn: typing.Callable[[], typing.Optional[_ImageDataType]],
+    def __init__(self, data: _ImageDataType,
                  data_shape_and_dtype: typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]],
                  intensity_calibration: typing.Optional[Calibration.Calibration] = None,
                  dimensional_calibrations: typing.Optional[CalibrationListType] = None,
                  metadata: typing.Optional[MetadataType] = None,
                  timestamp: typing.Optional[datetime.datetime] = None,
-                 data: typing.Optional[_ImageDataType] = None,
                  data_descriptor: typing.Optional[DataDescriptor] = None,
                  timezone: typing.Optional[str] = None,
                  timezone_offset: typing.Optional[str] = None):
         self.__data_lock = threading.RLock()
-        self.__data_valid = data is not None
         self.__data = data
-        self.__data_ref_count = 0
-        self.unloadable = False
-        self.data_fn = data_fn
         assert isinstance(metadata, dict) if metadata is not None else True
         self.__data_metadata = DataMetadata(data_shape_and_dtype, intensity_calibration, dimensional_calibrations,
                                             metadata, timestamp, data_descriptor=data_descriptor,
@@ -495,7 +493,7 @@ class DataAndMetadata:
 
     @classmethod
     def from_data(cls,
-                  data: typing.Optional[_ImageDataType],
+                  data: _ImageDataType,
                   intensity_calibration: typing.Optional[Calibration.Calibration] = None,
                   dimensional_calibrations: typing.Optional[CalibrationListType] = None,
                   metadata: typing.Optional[MetadataType] = None,
@@ -505,54 +503,17 @@ class DataAndMetadata:
                   timezone_offset: typing.Optional[str] = None) -> DataAndMetadata:
         """Return a new data and metadata from an ndarray. Takes ownership of data."""
         data_shape_and_dtype = (data.shape, data.dtype) if data is not None else None
-        return cls(lambda: data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data, data_descriptor=data_descriptor, timezone=timezone, timezone_offset=timezone_offset)
+        return cls(data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor, timezone=timezone, timezone_offset=timezone_offset)
 
     @property
-    def is_data_valid(self) -> bool:
-        return self.__data_valid
-
-    @property
-    def data(self) -> typing.Optional[_ImageDataType]:
-        self.increment_data_ref_count()
-        try:
-            return self.__data
-        finally:
-            self.decrement_data_ref_count()
+    def data(self) -> _ImageDataType:
+        return self.__data
 
     @property
     def _data_ex(self) -> _ImageDataType:
-        self.increment_data_ref_count()
-        try:
-            data = self.__data
-            assert data is not None
-            return data
-        finally:
-            self.decrement_data_ref_count()
+        return self.data
 
-    @property
-    def data_if_loaded(self) -> bool:
-        return self.__data is not None
-
-    def increment_data_ref_count(self) -> int:
-        with self.__data_lock:
-            initial_count = self.__data_ref_count
-            self.__data_ref_count += 1
-            if initial_count == 0 and not self.__data_valid:
-                self.__data = self.data_fn()
-                self.__data_valid = True
-        return initial_count + 1
-
-    def decrement_data_ref_count(self) -> int:
-        with self.__data_lock:
-            assert self.__data_ref_count > 0
-            self.__data_ref_count -= 1
-            final_count = self.__data_ref_count
-            if final_count == 0 and self.unloadable:
-                self.__data = None
-                self.__data_valid = False
-        return final_count
-
-    def clone_with_data(self, data: _ImageDataType) -> "DataAndMetadata":
+    def clone_with_data(self, data: _ImageDataType) -> DataAndMetadata:
         return new_data_and_metadata(data, intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations, data_descriptor=self.data_descriptor)
 
     @property
@@ -688,24 +649,8 @@ class DataAndMetadata:
         return self.__data_metadata.metadata
 
     def _set_data(self, data: _ImageDataType) -> None:
+        assert len(data.shape) == len(self.data_shape)
         self.__data = data
-        self.__data_valid = True
-
-    def _add_data_ref_count(self, data_ref_count: int) -> None:
-        with self.__data_lock:
-            self.__data_ref_count += data_ref_count
-
-    def _subtract_data_ref_count(self, data_ref_count: int) -> None:
-        with self.__data_lock:
-            self.__data_ref_count -= data_ref_count
-            assert self.__data_ref_count >= 0
-            if self.__data_ref_count == 0 and self.unloadable:
-                self.__data = None
-                self.__data_valid = False
-
-    @property
-    def _data_ref_count(self) -> int:
-        return self.__data_ref_count
 
     def _set_intensity_calibration(self, intensity_calibration: Calibration.Calibration) -> None:
         self.__data_metadata._set_intensity_calibration(intensity_calibration)
@@ -1209,7 +1154,7 @@ def promote_constant(data: _DataAndMetadataOrConstant, shape: ShapeType) -> Data
     return new_data_and_metadata(numpy.full(shape, data))
 
 
-def new_data_and_metadata(data: typing.Optional[_ImageDataType],
+def new_data_and_metadata(data: _ImageDataType,
                           intensity_calibration: typing.Optional[Calibration.Calibration] = None,
                           dimensional_calibrations: typing.Optional[CalibrationListType] = None,
                           metadata: typing.Optional[MetadataType] = None,
