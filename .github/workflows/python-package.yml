@@ -27,23 +27,23 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Display Python version
       run: python -c "import sys; print(sys.version)"
+    - name: Build Distribution
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install build
+        python -m build
     - name: Install Test Dependencies
       run: |
         pip install -r test-requirements.txt
-        python -m pip install mypy==0.920
+        python -m pip install mypy==0.942
         python -m pip install flake8
         mypy --version
-    - name: Typing
+    - name: Type checking
       run: |
         mypy --namespace-packages --ignore-missing-imports --follow-imports=silent --strict --no-warn-unused-ignores -p nion.data
     - name: Test
       run: |
         python -m unittest discover -p '*_test.py'
-    - name: Build Distribution
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install wheel
-        python -m setup sdist bdist_wheel
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8'
