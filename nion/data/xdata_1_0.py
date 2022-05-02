@@ -133,6 +133,13 @@ def radius(shape: DataAndMetadata.Shape2dType, normalize: bool=True) -> DataAndM
     data: _ImageDataType = numpy.sqrt(icol * icol + irow * irow)  # type: ignore
     return DataAndMetadata.new_data_and_metadata(data)
 
+def axis_coordinates(data_and_metadata_in: _DataAndMetadataLike, axis: int) -> DataAndMetadata.DataAndMetadata:
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
+    calibration = data_and_metadata.dimensional_calibrations[axis]
+    data_shape = data_and_metadata.data_shape
+    data = numpy.linspace(0, data_shape[axis], data_shape[axis]) * calibration.scale + calibration.offset
+    return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=Calibration.Calibration(None, None, calibration.units))
+
 def gammapdf(data_and_metadata: _DataAndMetadataLike, a: float, mean: float, stddev: float) -> DataAndMetadata.DataAndMetadata:
     # pdf: probability density function
     return Core.apply_dist(data_and_metadata, mean, stddev, functools.partial(scipy.stats.gamma, a), 'pdf')
