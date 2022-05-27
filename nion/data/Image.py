@@ -187,7 +187,7 @@ def get_rgba_data_from_rgba(rgba_image: _RGBA8ImageDataType) -> _RGBImageDataTyp
     return get_dtype_view(rgba_image, numpy.uint32).reshape(rgba_image.shape[:-1])
 
 
-def dimensional_shape_from_shape_and_dtype(shape: ShapeType, dtype: numpy.typing.DTypeLike) -> typing.Optional[ShapeType]:
+def dimensional_shape_from_shape_and_dtype(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> typing.Optional[ShapeType]:
     if shape is None or dtype is None:
         return None
     return shape[:-1] if dtype == numpy.uint8 and shape[-1] in (3,4) and len(shape) > 1 else shape
