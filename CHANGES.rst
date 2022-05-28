@@ -1,7 +1,7 @@
 Changelog (niondata)
 ====================
 
-0.14.4 (UNRELEASED)
+0.15.0 (2022-02-28)
 -------------------
 - Add axis_coordinates function to generate coordinate values from calibrated xdata.
 - Simplify data and metadata by eliminating unloading capability (no effect on public API).
