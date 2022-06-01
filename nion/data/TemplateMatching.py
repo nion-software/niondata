@@ -1,4 +1,5 @@
 import numpy
+import scipy.fft
 import scipy.ndimage
 import typing
 
@@ -21,19 +22,19 @@ def normalized_corr(image: _ImageDataType, template: _ImageDataType) -> _ImageDa
     image = image.astype(numpy.float64)
     normalized_template = template - numpy.mean(template)
     # inverting the axis of a real image is the same as taking the conjugate of the fourier transform
-    fft_normalized_template_conj = numpy.fft.fft2(normalized_template[::-1, ::-1], s=image.shape)  # type: ignore
-    fft_image = numpy.fft.fft2(image)  # type: ignore
-    fft_image_squared = numpy.fft.fft2(image ** 2)  # type: ignore
+    fft_normalized_template_conj = scipy.fft.fft2(normalized_template[::-1, ::-1], s=image.shape)  # type: ignore
+    fft_image = scipy.fft.fft2(image)  # type: ignore
+    fft_image_squared = scipy.fft.fft2(image ** 2)  # type: ignore
     fft_image_squared_means = scipy.ndimage.fourier_uniform(fft_image_squared, template.shape)
-    image_means_squared = (numpy.fft.ifft2(
+    image_means_squared = (scipy.fft.ifft2(
         scipy.ndimage.fourier_uniform(fft_image, template.shape)).real) ** 2  # type: ignore
     # only normalizing the template is equivalent to normalizing both (see paper in docstring for details)
     fft_corr = fft_image * fft_normalized_template_conj
     # we need to shift the result back by half the template size
     shift = (int(-1 * (template.shape[0] - 1) / 2), int(-1 * (template.shape[1] - 1) / 2))
-    corr = numpy.roll(numpy.fft.ifft2(fft_corr).real, shift=shift, axis=(0, 1))  # type: ignore
+    corr = numpy.roll(scipy.fft.ifft2(fft_corr).real, shift=shift, axis=(0, 1))  # type: ignore
     # use Var(X) = E(X^2) - E(X)^2 to calculate variance
-    image_variance = numpy.fft.ifft2(fft_image_squared_means).real - image_means_squared  # type: ignore
+    image_variance = scipy.fft.ifft2(fft_image_squared_means).real - image_means_squared  # type: ignore
     denom = image_variance * template.size * numpy.sum(normalized_template ** 2)
     denom[denom < 0] = numpy.amax(denom)
     return typing.cast(_ImageDataType, corr / numpy.sqrt(denom))

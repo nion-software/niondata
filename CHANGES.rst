@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+0.15.1 (UNRELEASED)
+-------------------
+- Use scipy.fft for FFT's for better/consistent performance.
+
 0.15.0 (2022-02-28)
 -------------------
 - Add axis_coordinates function to generate coordinate values from calibrated xdata.

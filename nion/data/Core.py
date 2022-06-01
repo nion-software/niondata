@@ -7,10 +7,9 @@ import typing
 
 # third party libraries
 import numpy
-import numpy.fft
 import numpy.typing
 import scipy
-import scipy.fftpack
+import scipy.fft
 import scipy.ndimage
 import scipy.ndimage.filters
 import scipy.ndimage.fourier
@@ -157,7 +156,7 @@ def function_fft(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata.
         # see https://gist.github.com/endolith/1257010
         if Image.is_data_1d(data):
             scaling = 1.0 / numpy.sqrt(data_shape[0])
-            return scipy.fftpack.fftshift(numpy.multiply(scipy.fftpack.fft(data), scaling))  # type: ignore
+            return scipy.fft.fftshift(numpy.multiply(scipy.fft.fft(data), scaling))  # type: ignore
         elif Image.is_data_2d(data):
             if Image.is_data_rgb_type(data):
                 if Image.is_data_rgb(data):
@@ -167,10 +166,8 @@ def function_fft(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata.
             else:
                 data_copy = numpy.copy(data)  # type: ignore  # let other threads use data while we're processing
             scaling = 1.0 / numpy.sqrt(data_shape[1] * data_shape[0])
-            # note: the numpy.fft.fft2 is faster than scipy.fftpack.fft2, probably either because
-            # our conda distribution compiles numpy for multiprocessing, the numpy version releases
-            # the GIL, or both.
-            return scipy.fftpack.fftshift(numpy.multiply(numpy.fft.fft2(data_copy), scaling))  # type: ignore
+            # see https://gist.github.com/cmeyer/d2c9a7636df21d07d91cd73ee06d0ef9
+            return scipy.fft.fftshift(numpy.multiply(scipy.fft.fft2(data_copy), scaling))  # type: ignore
         else:
             raise NotImplementedError()
 
@@ -203,11 +200,11 @@ def function_ifft(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata
         # see https://gist.github.com/endolith/1257010
         if Image.is_data_1d(data):
             scaling = numpy.sqrt(data_shape[0])
-            return scipy.fftpack.ifft(scipy.fftpack.ifftshift(data) * scaling)  # type: ignore
+            return scipy.fft.ifft(scipy.fft.ifftshift(data) * scaling)  # type: ignore
         elif Image.is_data_2d(data):
             data_copy = numpy.copy(data)  # type: ignore  # let other threads use data while we're processing
             scaling = numpy.sqrt(data_shape[1] * data_shape[0])
-            return scipy.fftpack.ifft2(scipy.fftpack.ifftshift(data_copy) * scaling)  # type: ignore
+            return scipy.fft.ifft2(scipy.fft.ifftshift(data_copy) * scaling)  # type: ignore
         else:
             raise NotImplementedError()
 
@@ -245,8 +242,8 @@ def function_autocorrelate(data_and_metadata_in: _DataAndMetadataLike) -> DataAn
             else:
                 data_norm = data_copy
             scaling = 1.0 / (data_norm.shape[0] * data_norm.shape[1])
-            data_norm = numpy.fft.rfft2(data_norm)  # type: ignore
-            return numpy.fft.fftshift(numpy.fft.irfft2(data_norm * numpy.conj(data_norm))) * scaling  # type: ignore
+            data_norm = scipy.fft.rfft2(data_norm)  # type: ignore
+            return scipy.fft.fftshift(scipy.fft.irfft2(data_norm * numpy.conj(data_norm))) * scaling  # type: ignore
             # this gives different results. why? because for some reason scipy pads out to 1023 and does calculation.
             # see https://github.com/scipy/scipy/blob/master/scipy/signal/signaltools.py
             # return scipy.signal.fftconvolve(data_copy, numpy.conj(data_copy), mode='same')
@@ -290,7 +287,7 @@ def function_crosscorrelate(*args: _DataAndMetadataIndeterminateSizeLike) -> Dat
             else:
                 norm2 = data2
             scaling = 1.0 / (norm1.shape[0] * norm1.shape[1])
-            return numpy.fft.fftshift(numpy.fft.irfft2(numpy.fft.rfft2(norm1) * numpy.conj(numpy.fft.rfft2(norm2)))) * scaling  # type: ignore
+            return scipy.fft.fftshift(scipy.fft.irfft2(scipy.fft.rfft2(norm1) * numpy.conj(scipy.fft.rfft2(norm2)))) * scaling  # type: ignore
             # this gives different results. why? because for some reason scipy pads out to 1023 and does calculation.
             # see https://github.com/scipy/scipy/blob/master/scipy/signal/signaltools.py
             # return scipy.signal.fftconvolve(data1.copy(), numpy.conj(data2.copy()), mode='same')
@@ -419,14 +416,14 @@ def function_fourier_shift(src_in: _DataAndMetadataLike, shift: typing.Tuple[flo
     src = DataAndMetadata.promote_ndarray(src_in)
     if not Image.is_data_valid(src.data):
         raise ValueError("Shift: invalid data")
-    src_data = numpy.fft.fftn(src._data_ex)  # type: ignore
+    src_data = scipy.fft.fftn(src._data_ex)  # type: ignore
     do_squeeze = False
     if len(src_data.shape) == 1:
         src_data = src_data[..., numpy.newaxis]
         shift = tuple(shift) + (1,)
         do_squeeze = True
     # NOTE: fourier_shift assumes non-fft-shifted data.
-    shifted = numpy.fft.ifftn(scipy.ndimage.fourier_shift(src_data, shift)).real  # type: ignore
+    shifted = scipy.fft.ifftn(scipy.ndimage.fourier_shift(src_data, shift)).real  # type: ignore
     shifted = numpy.squeeze(shifted) if do_squeeze else shifted
     return DataAndMetadata.new_data_and_metadata(shifted)
 
