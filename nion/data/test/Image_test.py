@@ -36,17 +36,17 @@ class TestImageClass(unittest.TestCase):
         # NOTE: statistical tests are only valid if expanded length is multiple of src length
         src = numpy.arange(0, 10)
         expanded = Image.rebin_1d(src, 50)
-        self.assertAlmostEqual(numpy.mean(src), numpy.mean(expanded))
-        self.assertAlmostEqual(numpy.var(src), numpy.var(expanded))
+        self.assertAlmostEqual(numpy.mean(src).item(), numpy.mean(expanded).item())
+        self.assertAlmostEqual(numpy.var(src).item(), numpy.var(expanded).item())
         src = numpy.arange(0, 10)
         expanded = Image.rebin_1d(src, 500)
-        self.assertAlmostEqual(numpy.mean(src), numpy.mean(expanded))
-        self.assertAlmostEqual(numpy.var(src), numpy.var(expanded))
+        self.assertAlmostEqual(numpy.mean(src).item(), numpy.mean(expanded).item())
+        self.assertAlmostEqual(numpy.var(src).item(), numpy.var(expanded).item())
         # test larger values to make sure linear mapping works (failed once)
         src = numpy.arange(0, 200)
         expanded = Image.rebin_1d(src, 600)
-        self.assertAlmostEqual(numpy.mean(src), numpy.mean(expanded))
-        self.assertAlmostEqual(numpy.var(src), numpy.var(expanded))
+        self.assertAlmostEqual(numpy.mean(src).item(), numpy.mean(expanded).item())
+        self.assertAlmostEqual(numpy.var(src).item(), numpy.var(expanded).item())
 
     def test_scale_cubic_is_symmetry(self) -> None:
         src1 = numpy.zeros((8, 8))

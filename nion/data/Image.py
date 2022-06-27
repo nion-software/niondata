@@ -382,7 +382,7 @@ def create_rgba_image_from_array(array: _ImageDataType, normalize: bool = True,
                     # get_rgb_view(rgba_image)[:] = m * (clipped_array[..., numpy.newaxis] - nmin_new)
                     # best (in place)
                     clipped_array = numpy.clip(array, nmin_new, nmax_new)  # 12ms
-                    if clipped_array.dtype in (numpy.float32, numpy.float64):
+                    if clipped_array.dtype in (numpy.dtype(numpy.float32), numpy.dtype(numpy.float64)):
                         # 12ms
                         numpy.subtract(clipped_array, nmin_new, out=clipped_array)
                         numpy.multiply(clipped_array, m, out=clipped_array)
