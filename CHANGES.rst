@@ -1,7 +1,7 @@
 Changelog (niondata)
 ====================
 
-0.15.1 (UNRELEASED)
+0.15.1 (2022-07-25)
 -------------------
 - Use scipy.fft for FFT's for better/consistent performance.
 
