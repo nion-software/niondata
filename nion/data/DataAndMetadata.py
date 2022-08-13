@@ -19,6 +19,7 @@ import numpy.typing
 
 from nion.data import Calibration
 from nion.data import Image
+from nion.utils import DateTime
 
 _ = gettext.gettext
 
@@ -158,7 +159,7 @@ class DataMetadata:
             for _ in dimensional_shape:
                 dimensional_calibrations.append(Calibration.Calibration())
         self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
-        self.timestamp = timestamp if timestamp else datetime.datetime.utcnow()
+        self.timestamp = timestamp if timestamp else DateTime.utcnow()
         self.timezone = timezone
         self.timezone_offset = timezone_offset
         self.metadata = copy.deepcopy(dict(metadata)) if metadata is not None else dict()
@@ -854,21 +855,21 @@ class ScalarAndMetadata:
                  metadata: typing.Optional[MetadataType] = None, timestamp: typing.Optional[datetime.datetime] = None):
         self.value_fn = value_fn
         self.calibration = calibration
-        self.timestamp = timestamp if not timestamp else datetime.datetime.utcnow()
+        self.timestamp = timestamp if not timestamp else DateTime.utcnow()
         self.metadata = copy.deepcopy(dict(metadata)) if metadata is not None else dict()
 
     @classmethod
     def from_value(cls, value: _ScalarDataType, calibration: typing.Optional[Calibration.Calibration] = None) -> ScalarAndMetadata:
         calibration = calibration or Calibration.Calibration()
         metadata: MetadataType = dict()
-        timestamp = datetime.datetime.utcnow()
+        timestamp = DateTime.utcnow()
         return cls(lambda: value, calibration, metadata, timestamp)
 
     @classmethod
     def from_value_fn(cls, value_fn: typing.Callable[[], _ScalarDataType]) -> ScalarAndMetadata:
         calibration = Calibration.Calibration()
         metadata: MetadataType = dict()
-        timestamp = datetime.datetime.utcnow()
+        timestamp = DateTime.utcnow()
         return cls(value_fn, calibration, metadata, timestamp)
 
     @property
