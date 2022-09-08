@@ -10,7 +10,6 @@ import logging
 from nion.data import Core
 from nion.data import DataAndMetadata
 from nion.data import Calibration
-from nion.typeshed import API_1_0 as API
 
 
 try:
@@ -26,10 +25,11 @@ _ = gettext.gettext
 
 _ImageDataType = DataAndMetadata._ImageDataType
 
-
+# Note: use 'typing.Any' for integration_graphic here, otherwise we have to introduce 'nionswift' as a dependency just because
+# of this one type annotation
 def function_integrate_along_axis(input_xdata: DataAndMetadata.DataAndMetadata,
                                   integration_axes: typing.Tuple[int, ...],
-                                  integration_graphic: typing.Optional[API.Graphic]=None) -> DataAndMetadata.DataAndMetadata:
+                                  integration_graphic: typing.Any=None) -> DataAndMetadata.DataAndMetadata:
 
     navigation_shape = []
     navigation_axis_indices = []
