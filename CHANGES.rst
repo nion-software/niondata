@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+0.15.2 (UNRELEASED)
+-------------------
+- Add low level functions for general multi-dimensional processing.
+
 0.15.1 (2022-07-25)
 -------------------
 - Use scipy.fft for FFT's for better/consistent performance.
