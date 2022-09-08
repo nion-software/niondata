@@ -5,7 +5,6 @@ import numpy
 import scipy.ndimage
 
 # local libraries
-from nion.swift import Facade
 from nion.data import DataAndMetadata
 from nion.swift.test import TestContext
 from nion.ui import TestUI
@@ -14,9 +13,6 @@ from nion.swift import Application
 from nion.data import MultiDimensionalProcessing
 
 _ = gettext.gettext
-
-
-Facade.initialize()
 
 
 def create_memory_profile_context() -> TestContext.MemoryProfileContext:

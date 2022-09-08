@@ -10,7 +10,7 @@ import logging
 from nion.data import Core
 from nion.data import DataAndMetadata
 from nion.data import Calibration
-from nion.swift import Facade
+from nion.typeshed import API_1_0 as API
 
 
 try:
@@ -29,7 +29,7 @@ _ImageDataType = DataAndMetadata._ImageDataType
 
 def function_integrate_along_axis(input_xdata: DataAndMetadata.DataAndMetadata,
                                   integration_axes: typing.Tuple[int, ...],
-                                  integration_graphic: typing.Optional[Facade.Graphic]=None) -> DataAndMetadata.DataAndMetadata:
+                                  integration_graphic: typing.Optional[API.Graphic]=None) -> DataAndMetadata.DataAndMetadata:
 
     navigation_shape = []
     navigation_axis_indices = []
