@@ -6,27 +6,12 @@ import scipy.ndimage
 
 # local libraries
 from nion.data import DataAndMetadata
-from nion.swift.test import TestContext
-from nion.ui import TestUI
-from nion.swift import Application
-
 from nion.data import MultiDimensionalProcessing
 
 _ = gettext.gettext
 
 
-def create_memory_profile_context() -> TestContext.MemoryProfileContext:
-    return TestContext.MemoryProfileContext()
-
-
 class TestMultiDimensionalProcessing(unittest.TestCase):
-
-    def setUp(self) -> None:
-        self.app = Application.Application(TestUI.UserInterface(), set_global=True)
-        self.app.workspace_dir = str() # type: ignore
-
-    def tearDown(self) -> None:
-        pass
 
     def test_function_apply_multi_dimensional_shifts_4d(self) -> None:
         with self.subTest("Test for a sequence of SIs, shift collection dimensions along sequence axis"):
