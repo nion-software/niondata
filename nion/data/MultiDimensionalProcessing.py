@@ -1,15 +1,15 @@
-import typing
-import gettext
 import copy
+import gettext
+import logging
+import multiprocessing
 import numpy
 import scipy.ndimage
-import multiprocessing
 import threading
-import logging
+import typing
 
+from nion.data import Calibration
 from nion.data import Core
 from nion.data import DataAndMetadata
-from nion.data import Calibration
 
 
 try:
@@ -29,7 +29,7 @@ _ImageDataType = DataAndMetadata._ImageDataType
 # of this one type annotation
 def function_integrate_along_axis(input_xdata: DataAndMetadata.DataAndMetadata,
                                   integration_axes: typing.Tuple[int, ...],
-                                  integration_graphic: typing.Any=None) -> DataAndMetadata.DataAndMetadata:
+                                  integration_mask: typing.Optional[_ImageDataType] = None) -> DataAndMetadata.DataAndMetadata:
 
     navigation_shape = []
     navigation_axis_indices = []
@@ -53,9 +53,8 @@ def function_integrate_along_axis(input_xdata: DataAndMetadata.DataAndMetadata,
     # chr(97) == 'a' so we get letters in alphabetic order here (a, b, c, d, ...)
     sum_str = ''.join([chr(i + 97) for i in range(len(integration_axis_shape))])
     operands = [input_xdata.data]
-    if integration_graphic is not None:
-        mask = integration_graphic.mask_xdata_with_shape(integration_axis_shape)
-        operands.append(mask.data)
+    if integration_mask is not None:
+        operands.append(integration_mask)
         sum_str = data_str + ',' + mask_str
     else:
         sum_str = data_str + '->' + navigation_str
@@ -178,11 +177,11 @@ def _make_mask(max_shift: int, origin: typing.Tuple[int, ...], data_shape: typin
 
 
 def function_measure_multi_dimensional_shifts(xdata: DataAndMetadata.DataAndMetadata,
-                                              shift_axis: typing.Tuple[int, ...],
+                                              shift_axes: typing.Tuple[int, ...],
                                               reference_index: typing.Optional[int] = None,
-                                              bounds: typing.Optional[typing.Union[typing.Tuple[float, float], typing.Tuple[typing.Tuple[float, float], typing.Tuple[float, float]]]] = None,
+                                              bounds: typing.Optional[typing.Union[Core.NormIntervalType, Core.NormRectangleType]] = None,
                                               max_shift: typing.Optional[int] = None,
-                                              origin: typing.Tuple[int, ...] = (0, 0)) -> DataAndMetadata.DataAndMetadata:
+                                              origin: typing.Optional[typing.Tuple[int, ...]] = None) -> DataAndMetadata.DataAndMetadata:
     """
     "max_shift" defines the maximum allowed template shift in pixels. "max_shift" is calculated around "origin", which
     is the offset from the center of the image.
@@ -192,7 +191,7 @@ def function_measure_multi_dimensional_shifts(xdata: DataAndMetadata.DataAndMeta
     dimensional_calibrations = list()
     intensity_calibration = None
     for i in range(len(xdata.data_shape)):
-        if not i in shift_axis:
+        if not i in shift_axes:
             iteration_shape += (xdata.data_shape[i],)
             dimensional_calibrations.append(xdata.dimensional_calibrations[i])
         else:
@@ -202,7 +201,7 @@ def function_measure_multi_dimensional_shifts(xdata: DataAndMetadata.DataAndMeta
     register_slice: typing.Union[slice, typing.Tuple[slice, slice]]
 
     # If we are shifting along more than one axis the shifts will have an extra axis to hold the shifts for these axes.
-    if len(shift_axis) > 1:
+    if len(shift_axes) > 1:
         shifts_ndim = 1
     else:
         shifts_ndim = 0
@@ -214,7 +213,7 @@ def function_measure_multi_dimensional_shifts(xdata: DataAndMetadata.DataAndMeta
             assert numpy.ndim(bounds) == 2
             # Use an new variable for the 2D case to make typing happy.
             bounds_2d = typing.cast(typing.Tuple[typing.Tuple[float, float], typing.Tuple[float, float]], bounds)
-            shape = (xdata.data_shape[shift_axis[0]], xdata.data_shape[shift_axis[1]])
+            shape = (xdata.data_shape[shift_axes[0]], xdata.data_shape[shift_axes[1]])
             register_slice = (slice(max(0, int(round(bounds_2d[0][0] * shape[0]))), min(int(round((bounds_2d[0][0] + bounds_2d[1][0]) * shape[0])), shape[0])),
                               slice(max(0, int(round(bounds_2d[0][1] * shape[1]))), min(int(round((bounds_2d[0][1] + bounds_2d[1][1]) * shape[1])), shape[1])))
         else:
@@ -225,7 +224,7 @@ def function_measure_multi_dimensional_shifts(xdata: DataAndMetadata.DataAndMeta
             assert numpy.ndim(bounds) == 1
             # Also needed for typing
             bounds_1d = typing.cast(typing.Tuple[float, float], bounds)
-            shape = (xdata.data_shape[shift_axis[0]],)
+            shape = (xdata.data_shape[shift_axes[0]],)
             register_slice = slice(max(0, int(round(bounds_1d[0] * shape[0]))), min(int(round(bounds_1d[1] * shape[0])), shape[0]))
         else:
             register_slice = slice(0, None)
@@ -233,15 +232,17 @@ def function_measure_multi_dimensional_shifts(xdata: DataAndMetadata.DataAndMeta
     reference_data = None
     if reference_index is not None:
         coords = numpy.unravel_index(reference_index, iteration_shape)
-        data_coords = coords[:shift_axis[0]] + (...,) + coords[shift_axis[0]:]
+        data_coords = coords[:shift_axes[0]] + (...,) + coords[shift_axes[0]:]
         reference_data = xdata.data[data_coords]
 
     mask = None
     # If we measure shifts relative to the last frame, we can always use a mask that is centered around the input origin
     if max_shift is not None and reference_index is None:
         coords = numpy.unravel_index(0, iteration_shape)
-        data_coords = coords[:shift_axis[0]] + (...,) + coords[shift_axis[0]:]
+        data_coords = coords[:shift_axes[0]] + (...,) + coords[shift_axes[0]:]
         data_shape = xdata.data[data_coords][register_slice].shape
+        if origin is None:
+            origin = tuple([0] * len(data_shape))
         mask = _make_mask(max_shift, origin, data_shape)
 
     shifts = numpy.zeros(result_shape, dtype=numpy.float32)
@@ -281,19 +282,23 @@ def function_measure_multi_dimensional_shifts(xdata: DataAndMetadata.DataAndMeta
         try:
             for i in range_:
                 coords = numpy.unravel_index(i, iteration_shape)
-                data_coords = coords[:shift_axis[0]] + (...,) + coords[shift_axis[0]:]
+                data_coords = coords[:shift_axes[0]] + (...,) + coords[shift_axes[0]:]
                 if reference_index is None:
                     coords_ref = numpy.unravel_index(i - range_.step, iteration_shape)
-                    data_coords_ref = coords_ref[:shift_axis[0]] + (...,) + coords_ref[shift_axis[0]:]
+                    data_coords_ref = coords_ref[:shift_axes[0]] + (...,) + coords_ref[shift_axes[0]:]
                     local_reference_data = xdata.data[data_coords_ref]
                 elif max_shift is not None and i != range_.start:
                     last_coords = numpy.unravel_index(i - range_.step, iteration_shape)
                     last_shift = shifts[last_coords]
                     data_shape = local_reference_data[register_slice].shape
+                    # Use a local copy of origin here to avoid threading issues.
+                    local_origin = origin
+                    if local_origin is None:
+                        local_origin = tuple([0] * len(data_shape))
                     if len(data_shape) == 2:
-                        local_mask = _make_mask(max_shift, (origin[0] + round(last_shift[0]), origin[1] + round(last_shift[1])), data_shape)
+                        local_mask = _make_mask(max_shift, (local_origin[0] + round(last_shift[0]), local_origin[1] + round(last_shift[1])), data_shape)
                     else:
-                        local_mask = _make_mask(max_shift, (origin[0] + round(last_shift[0]),), data_shape)
+                        local_mask = _make_mask(max_shift, (local_origin[0] + round(last_shift[0]),), data_shape)
                 shifts[coords] = Core.function_register_template(local_reference_data[register_slice], xdata.data[data_coords][register_slice], ccorr_mask=local_mask)[1]
         finally:
             barrier.wait()
@@ -335,21 +340,21 @@ def function_measure_multi_dimensional_shifts(xdata: DataAndMetadata.DataAndMeta
 
 def function_apply_multi_dimensional_shifts(xdata: DataAndMetadata.DataAndMetadata,
                                             shifts: _ImageDataType,
-                                            shift_axis: typing.Tuple[int, ...],
+                                            shift_axes: typing.Tuple[int, ...],
                                             out: typing.Optional[DataAndMetadata.DataAndMetadata] = None) -> typing.Optional[DataAndMetadata.DataAndMetadata]:
 
     # Find the axes that we do not want to shift (== iteration shape)
     iteration_shape: typing.Tuple[int, ...] = tuple()
     iteration_shape_offset = 0
     for i in range(len(xdata.data_shape)):
-        if not i in shift_axis:
+        if not i in shift_axes:
             iteration_shape += (xdata.data_shape[i],)
         elif len(iteration_shape) == 0:
             iteration_shape_offset += 1
     # If we are shifting along more than one axis the shifts will have an extra axis to hold the shifts for these axes.
     # For finding matching iteration axis we only consider the iteration shape though, so we need to remove this last
     # axis.
-    if len(shift_axis) > 1:
+    if len(shift_axes) > 1:
         shifts_shape = shifts.shape[:-1]
     else:
         shifts_shape = shifts.shape
@@ -370,7 +375,7 @@ def function_apply_multi_dimensional_shifts(xdata: DataAndMetadata.DataAndMetada
     # Chunking it up finer (still aligned with chunks on disk) does not make it faster (actually slower by about a factor
     # of 3). This might change with a storage handler that allows multi-threaded access but for now with h5py we don't
     # want to use this.
-    # squeezed_iteration_shape = iteration_shape[:max(shifts_end_axis, shift_axis_indices[0])]
+    # squeezed_iteration_shape = iteration_shape[:max(shifts_end_axis, shift_axes_indices[0])]
 
     if out is None:
         result = numpy.empty(xdata.data_shape, dtype=xdata.data_dtype)
@@ -384,12 +389,12 @@ def function_apply_multi_dimensional_shifts(xdata: DataAndMetadata.DataAndMetada
 
     def run_on_thread(range_: range) -> None:
         try:
-            shifts_array = numpy.zeros(len(shift_axis) + (len(iteration_shape) - len(squeezed_iteration_shape)))
+            shifts_array = numpy.zeros(len(shift_axes) + (len(iteration_shape) - len(squeezed_iteration_shape)))
             if shifts_end_axis < len(shifts.shape):
                 for i in range_:
                     coords = numpy.unravel_index(i, squeezed_iteration_shape)
                     shift_coords = coords[:shifts_end_axis]
-                    for j, ind in enumerate(shift_axis):
+                    for j, ind in enumerate(shift_axes):
                         shifts_array[ind - len(squeezed_iteration_shape)] = shifts[shift_coords][j]
                     # if i % max((range_.stop - range_.start) // 4, 1) == 0:
                     #     print(f'Working on slice {coords}: shifting by {shifts_array}')

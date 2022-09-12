@@ -329,6 +329,19 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
             self.assertSequenceEqual(integrated.data_shape, (5, 4))
             self.assertTrue(numpy.allclose(integrated.data, 3.0))
 
+        with self.subTest("Test for a sequence of 2D images. Integrate data axes with mask."):
+            data = numpy.ones((5, 7, 8))
+
+            data_descriptor = DataAndMetadata.DataDescriptor(True, 0, 2)
+            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=data_descriptor)
+
+            mask = numpy.zeros((7, 8))
+            mask[1:4, 2:6] = 1.0
+            integrated = MultiDimensionalProcessing.function_integrate_along_axis(xdata, (1, 2), integration_mask=mask)
+
+            self.assertSequenceEqual(integrated.data_shape, (5,))
+            self.assertTrue(numpy.allclose(integrated.data, 12.0))
+
     def test_function_integrate_along_axis_4d(self) -> None:
         with self.subTest("Test for a 2D collection of 2D images. Integrate all data axes."):
             data = numpy.ones((5, 3, 4, 2))
