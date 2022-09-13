@@ -1,7 +1,7 @@
 Changelog (niondata)
 ====================
 
-0.15.2 (UNRELEASED)
+0.15.2 (2022-09-13)
 -------------------
 - Add low level functions for general multi-dimensional processing.
 
