@@ -13,6 +13,13 @@ _ = gettext.gettext
 
 class TestMultiDimensionalProcessing(unittest.TestCase):
 
+    def setUp(self) -> None:
+        self.__random_state = numpy.random.get_state()
+        numpy.random.seed(42)
+
+    def tearDown(self) -> None:
+        numpy.random.set_state(self.__random_state)
+
     def test_function_apply_multi_dimensional_shifts_4d(self) -> None:
         with self.subTest("Test for a sequence of SIs, shift collection dimensions along sequence axis"):
             shape = (5, 2, 3, 4)
