@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+0.15.3 (UNRELEASED)
+-------------------
+- Add is_valid method to calibrations and use when converting to strings.
+
 0.15.2 (2022-09-13)
 -------------------
 - Add low level functions for general multi-dimensional processing.

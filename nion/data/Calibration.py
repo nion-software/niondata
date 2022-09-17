@@ -109,6 +109,14 @@ class Calibration:
     def units(self, value: typing.Optional[str]) -> None:
         self.__units = str(value) if value else None
 
+    @property
+    def is_valid(self) -> bool:
+        if self.__scale is not None and (math.isnan(self.__scale) or math.isinf(self.__scale)):
+            return False
+        if self.__offset is not None and (math.isnan(self.__offset) or math.isinf(self.__offset)):
+            return False
+        return True
+
     @typing.overload
     def convert_to_calibrated_value(self, value: float) -> float: ...
 
@@ -148,6 +156,8 @@ class Calibration:
         units_str = (" " + units) if include_units and self.__units else ""
         if hasattr(calibrated_value, 'dtype') and not getattr(calibrated_value, "shape"):  # convert NumPy types to Python scalar types
             calibrated_value = calibrated_value.item()  # type: ignore
+        if not self.is_valid:
+            return str()
         if isinstance(calibrated_value, integer_types) or isinstance(calibrated_value, float):
             if calibrated_value_range and samples:
                 calibrated_value0 = calibrated_value_range[0]
@@ -176,6 +186,8 @@ class Calibration:
                                         samples: typing.Optional[int] = None, display_inverted: bool = False) -> str:
         if hasattr(value, 'dtype') and not getattr(value, "shape"):  # convert NumPy types to Python scalar types
             value = typing.cast(_ImageDataType, value).item()
+        if not self.is_valid:
+            return str()
         if isinstance(value, integer_types) or isinstance(value, float):
             calibrated_value = self.convert_to_calibrated_value(value)
             if value_range and samples:
@@ -206,6 +218,8 @@ class Calibration:
         units_str = (" " + self.units) if include_units and self.__units else ""
         if hasattr(size, 'dtype') and not getattr(size, "shape"):  # convert NumPy types to Python scalar types
             size = typing.cast(_ImageDataType, size).item()
+        if not self.is_valid:
+            return str()
         if isinstance(size, integer_types) or isinstance(size, float):
             calibrated_value = self.convert_to_calibrated_size(size)
             if value_range and samples:
