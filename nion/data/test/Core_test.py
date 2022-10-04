@@ -100,7 +100,7 @@ class TestCore(unittest.TestCase):
         src_data = Core.radius(d)
         fft = Core.function_fft(src_data)
         src_data_2 = fft.data
-        self.assertLess(numpy.sqrt(numpy.mean(numpy.square(numpy.absolute(src_data)))) - numpy.sqrt(numpy.mean(numpy.square(numpy.absolute(src_data_2)))), 1E-12)  # type: ignore
+        self.assertLess(numpy.sqrt(numpy.mean(numpy.square(numpy.absolute(src_data)))) - numpy.sqrt(numpy.mean(numpy.square(numpy.absolute(src_data_2)))), 1E-12)
 
     def test_fft_1d_rms_is_same_as_original(self) -> None:
         d = numpy.random.randn(256, 1)
@@ -117,7 +117,7 @@ class TestCore(unittest.TestCase):
         a2 = DataAndMetadata.DataAndMetadata.from_data(src_data2, dimensional_calibrations=dimensional_calibrations)
         c0 = Core.function_concatenate([a1, a2], 0)
         self.assertEqual(tuple(c0._data_ex.shape), tuple(c0.data_shape))
-        self.assertTrue(numpy.array_equal(c0._data_ex, numpy.concatenate([src_data1, src_data2], 0)))  # type: ignore
+        self.assertTrue(numpy.array_equal(c0._data_ex, numpy.concatenate([src_data1, src_data2], 0)))
 
     def test_concatenate_propagates_data_descriptor(self) -> None:
         data1 = numpy.ones((16, 32))
@@ -253,7 +253,7 @@ class TestCore(unittest.TestCase):
             mask = DataAndMetadata.DataAndMetadata.from_data(typing.cast(_ImageDataType, numpy.random.randn(h, w) > 0).astype(numpy.float32))
             fft = Core.function_fft(data)
             masked_data = Core.function_ifft(Core.function_fourier_mask(fft, mask))._data_ex
-            self.assertAlmostEqual(numpy.sum(numpy.imag(masked_data)), 0)  # type: ignore
+            self.assertAlmostEqual(numpy.sum(numpy.imag(masked_data)), 0)
 
     def test_slice_sum_grabs_signal_index(self) -> None:
         random_data = numpy.random.randn(3, 4, 5)
@@ -1013,7 +1013,7 @@ class TestCore(unittest.TestCase):
                                                                           (numpy.sin(numpy.pi/2),  numpy.cos(numpy.pi/2), 0),
                                                                           (0,                      0,                     1)))
                 transformed = Core.function_affine_transform(original_data, transformation_matrix, order=1)
-                self.assertTrue(numpy.allclose(numpy.rot90(original_data), transformed._data_ex))  # type: ignore
+                self.assertTrue(numpy.allclose(numpy.rot90(original_data), transformed._data_ex))
 
     def test_affine_transform_does_identity_correctly(self) -> None:
         data_shapes = [(4, 4), (5, 5)]

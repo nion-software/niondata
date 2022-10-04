@@ -40,7 +40,7 @@ jobs:
         mypy --version
     - name: Type Checking
       run: |
-        mypy --namespace-packages --ignore-missing-imports --follow-imports=silent --strict --no-warn-redundant-casts --no-warn-unused-ignores -p nion.data
+        mypy --namespace-packages --ignore-missing-imports --strict -p nion.data
     - name: Test
       run: |
         python -m unittest discover -s nion/data -p '*_test.py'

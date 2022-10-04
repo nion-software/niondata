@@ -111,7 +111,7 @@ def column(shape: DataAndMetadata.Shape2dType, start: typing.Optional[int]=None,
     stop_0 = stop if stop is not None else shape[0]
     start_1 = start if start is not None else 0
     stop_1 = stop if stop is not None else shape[1]
-    data: _ImageDataType = numpy.meshgrid(numpy.linspace(start_1, stop_1, shape[1]), numpy.linspace(start_0, stop_0, shape[0]))[0]  # type: ignore
+    data: _ImageDataType = numpy.meshgrid(numpy.linspace(start_1, stop_1, shape[1]), numpy.linspace(start_0, stop_0, shape[0]))[0]
     return DataAndMetadata.new_data_and_metadata(data)
 
 def row(shape: DataAndMetadata.Shape2dType, start: typing.Optional[int]=None, stop: typing.Optional[int]=None) -> DataAndMetadata.DataAndMetadata:
@@ -119,7 +119,7 @@ def row(shape: DataAndMetadata.Shape2dType, start: typing.Optional[int]=None, st
     stop_0 = stop if stop is not None else shape[0]
     start_1 = start if start is not None else 0
     stop_1 = stop if stop is not None else shape[1]
-    data: _ImageDataType = numpy.meshgrid(numpy.linspace(start_1, stop_1, shape[1]), numpy.linspace(start_0, stop_0, shape[0]))[1]  # type: ignore
+    data: _ImageDataType = numpy.meshgrid(numpy.linspace(start_1, stop_1, shape[1]), numpy.linspace(start_0, stop_0, shape[0]))[1]
     return DataAndMetadata.new_data_and_metadata(data)
 
 def radius(shape: DataAndMetadata.Shape2dType, normalize: bool=True) -> DataAndMetadata.DataAndMetadata:
@@ -129,8 +129,8 @@ def radius(shape: DataAndMetadata.Shape2dType, normalize: bool=True) -> DataAndM
     stop_1 = -start_1
     icol: _ImageDataType
     irow: _ImageDataType
-    icol, irow = numpy.meshgrid(numpy.linspace(start_1, stop_1, shape[1]), numpy.linspace(start_0, stop_0, shape[0]), sparse=True)  # type: ignore
-    data: _ImageDataType = numpy.sqrt(icol * icol + irow * irow)  # type: ignore
+    icol, irow = numpy.meshgrid(numpy.linspace(start_1, stop_1, shape[1]), numpy.linspace(start_0, stop_0, shape[0]), sparse=True)
+    data: _ImageDataType = numpy.sqrt(icol * icol + irow * irow)
     return DataAndMetadata.new_data_and_metadata(data)
 
 def axis_coordinates(data_and_metadata_in: _DataAndMetadataLike, axis: int) -> DataAndMetadata.DataAndMetadata:
