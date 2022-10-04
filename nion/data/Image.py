@@ -86,7 +86,7 @@ def rebin_1d(src: _ImageDataType, len: int, retained: typing.Optional[typing.Dic
         if retained is not None and "w" in retained:
             w = retained["w"]
         else:
-            ix, iy = numpy.meshgrid(numpy.linspace(0, src_len-1, src_len), numpy.linspace(0, len-1, len))  # type: ignore
+            ix, iy = numpy.meshgrid(numpy.linspace(0, src_len-1, src_len), numpy.linspace(0, len-1, len))
             # # create linear bins
             # ss = numpy.linspace(0, float(src_len), len+1)
             # # create some useful row and column values using meshgrid
@@ -336,7 +336,7 @@ def is_data_4d(data: typing.Optional[_ImageDataType]) -> bool:
 
 
 def scalar_from_array(array: _ImageDataType, normalize: bool = True) -> _ImageDataType:
-    if numpy.iscomplexobj(array):  # type: ignore
+    if numpy.iscomplexobj(array):
         # numpy.nextafter returns the next possible represented number after 0 in the direction of 1
         # this prevents log from generating -inf from 0.0
         # quick way to drop out bottom percent:
@@ -361,7 +361,7 @@ def create_rgba_image_from_array(array: _ImageDataType, normalize: bool = True,
                                  underlimit: typing.Optional[float] = None, overlimit: typing.Optional[float] = None,
                                  lookup: typing.Optional[_RGBAImageDataType] = None) -> _RGBAImageDataType:
     assert numpy.ndim(array) in (1, 2, 3)
-    assert numpy.can_cast(array.dtype, numpy.double)  # type: ignore
+    assert numpy.can_cast(array.dtype, numpy.double)
     if numpy.ndim(array) == 1:  # temporary hack to display 1-d images
         array = array.reshape((1,) + array.shape)
     if numpy.ndim(array) == 2:

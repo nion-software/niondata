@@ -50,8 +50,8 @@ def column(data_and_metadata_in: _DataAndMetadataLike, start: int, stop: int) ->
         stop_1 = stop if stop is not None else data_shape(data_and_metadata)[1]
         meshgrid = numpy.meshgrid(numpy.linspace(start_1, stop_1, data_shape(data_and_metadata)[1]),
                                   numpy.linspace(start_0, stop_0, data_shape(data_and_metadata)[0]),
-                                  sparse=True)  # type: ignore
-        return meshgrid[0]  # type: ignore
+                                  sparse=True)
+        return meshgrid[0]
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
@@ -65,8 +65,8 @@ def row(data_and_metadata_in: _DataAndMetadataLike, start: int, stop: int) -> Da
         start_1 = start if start is not None else 0
         stop_1 = stop if stop is not None else data_shape(data_and_metadata)[1]
         meshgrid = numpy.meshgrid(numpy.linspace(start_1, stop_1, data_shape(data_and_metadata)[1]),
-                                  numpy.linspace(start_0, stop_0, data_shape(data_and_metadata)[0]), sparse=True)  # type: ignore
-        return meshgrid[1]  # type: ignore
+                                  numpy.linspace(start_0, stop_0, data_shape(data_and_metadata)[0]), sparse=True)
+        return meshgrid[1]
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
@@ -79,7 +79,7 @@ def radius(data_and_metadata_in: _DataAndMetadataLike, normalize: bool = True) -
         stop_0 = -start_0
         start_1 = -1 if normalize else -data_shape(data_and_metadata)[1] * 0.5
         stop_1 = -start_1
-        icol, irow = numpy.meshgrid(numpy.linspace(start_1, stop_1, data_shape(data_and_metadata)[1]), numpy.linspace(start_0, stop_0, data_shape(data_and_metadata)[0]), sparse=True)  # type: ignore
+        icol, irow = numpy.meshgrid(numpy.linspace(start_1, stop_1, data_shape(data_and_metadata)[1]), numpy.linspace(start_0, stop_0, data_shape(data_and_metadata)[0]), sparse=True)
         return numpy.sqrt(icol * icol + irow * irow)  # type: ignore
 
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
@@ -164,7 +164,7 @@ def function_fft(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata.
                 else:
                     data_copy = numpy.sum(data[..., :] * (0.2126, 0.7152, 0.0722, 0.0), 2)
             else:
-                data_copy = numpy.copy(data)  # type: ignore  # let other threads use data while we're processing
+                data_copy = numpy.copy(data)  # let other threads use data while we're processing
             scaling = 1.0 / numpy.sqrt(data_shape[1] * data_shape[0])
             # see https://gist.github.com/cmeyer/d2c9a7636df21d07d91cd73ee06d0ef9
             return scipy.fft.fftshift(numpy.multiply(scipy.fft.fft2(data_copy), scaling))  # type: ignore
@@ -202,7 +202,7 @@ def function_ifft(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata
             scaling = numpy.sqrt(data_shape[0])
             return scipy.fft.ifft(scipy.fft.ifftshift(data) * scaling)  # type: ignore
         elif Image.is_data_2d(data):
-            data_copy = numpy.copy(data)  # type: ignore  # let other threads use data while we're processing
+            data_copy = numpy.copy(data)  # let other threads use data while we're processing
             scaling = numpy.sqrt(data_shape[1] * data_shape[0])
             return scipy.fft.ifft2(scipy.fft.ifftshift(data_copy) * scaling)  # type: ignore
         else:
@@ -235,14 +235,14 @@ def function_autocorrelate(data_and_metadata_in: _DataAndMetadataLike) -> DataAn
         data = data_and_metadata.data
         assert data is not None
         if Image.is_data_2d(data):
-            data_copy = numpy.copy(data)  # type: ignore  # let other threads use data while we're processing
+            data_copy = numpy.copy(data)  # let other threads use data while we're processing
             data_std = data_copy.std(dtype=numpy.float64)
             if data_std != 0.0:
                 data_norm = (data_copy - data_copy.mean(dtype=numpy.float64)) / data_std
             else:
                 data_norm = data_copy
             scaling = 1.0 / (data_norm.shape[0] * data_norm.shape[1])
-            data_norm = scipy.fft.rfft2(data_norm)  # type: ignore
+            data_norm = scipy.fft.rfft2(data_norm)
             return scipy.fft.fftshift(scipy.fft.irfft2(data_norm * numpy.conj(data_norm))) * scaling  # type: ignore
             # this gives different results. why? because for some reason scipy pads out to 1023 and does calculation.
             # see https://github.com/scipy/scipy/blob/master/scipy/signal/signaltools.py
@@ -337,8 +337,8 @@ def function_register(data1_in: _DataAndMetadataLike, data2_in: _DataAndMetadata
         assert data2 is not None
     # subtract the means if desired
     if subtract_means:
-        data1 = data1 - typing.cast(float, numpy.average(data1))  # type: ignore
-        data2 = data2 - typing.cast(float, numpy.average(data2))  # type: ignore
+        data1 = data1 - typing.cast(float, numpy.average(data1))
+        data2 = data2 - typing.cast(float, numpy.average(data2))
     # carry out the registration
     ccorr = scipy.signal.correlate(data1, data2, mode="same")
     max_pos = TemplateMatching.find_ccorr_max(ccorr)[2]
@@ -416,14 +416,14 @@ def function_fourier_shift(src_in: _DataAndMetadataLike, shift: typing.Tuple[flo
     src = DataAndMetadata.promote_ndarray(src_in)
     if not Image.is_data_valid(src.data):
         raise ValueError("Shift: invalid data")
-    src_data = scipy.fft.fftn(src._data_ex)  # type: ignore
+    src_data = scipy.fft.fftn(src._data_ex)
     do_squeeze = False
     if len(src_data.shape) == 1:
         src_data = src_data[..., numpy.newaxis]
         shift = tuple(shift) + (1,)
         do_squeeze = True
     # NOTE: fourier_shift assumes non-fft-shifted data.
-    shifted = scipy.fft.ifftn(scipy.ndimage.fourier_shift(src_data, shift)).real  # type: ignore
+    shifted = scipy.fft.ifftn(scipy.ndimage.fourier_shift(src_data, shift)).real
     shifted = numpy.squeeze(shifted) if do_squeeze else shifted
     return DataAndMetadata.new_data_and_metadata(shifted)
 
@@ -453,7 +453,7 @@ def function_sequence_register_translation(src_in: _DataAndMetadataLike, subtrac
         raise ValueError("Sequence register translation: source must be have 1 or 2 dimension data.")
     src_shape = tuple(src.data_shape)
     s_shape = src_shape[0:-d_rank]
-    c = int(numpy.product(s_shape, dtype=numpy.uint64))  # type: ignore
+    c = int(numpy.product(s_shape, dtype=numpy.uint64))
     result = numpy.empty(s_shape + (d_rank, ))
     previous_data = None
     src_data = src._data_ex
@@ -480,7 +480,7 @@ def function_sequence_measure_relative_translation(src_in: _DataAndMetadataLike,
         raise ValueError("Sequence register translation: source must be have 1 or 2 dimension data.")
     src_shape = tuple(src.data_shape)
     s_shape = src_shape[0:-d_rank]
-    c = int(numpy.product(s_shape, dtype=numpy.uint64))  # type: ignore
+    c = int(numpy.product(s_shape, dtype=numpy.uint64))
     result = numpy.empty(s_shape + (d_rank, ))
     src_data = src._data_ex
     for i in range(c):
@@ -534,13 +534,13 @@ def function_sequence_align(src_in: _DataAndMetadataLike, bounds: typing.Optiona
         raise ValueError("Sequence register translation: source must be have 1 or 2 dimension data.")
     src_shape = list(src.data_shape)
     s_shape = src_shape[0:-d_rank]
-    c = int(numpy.product(s_shape, dtype=numpy.uint64))  # type: ignore
+    c = int(numpy.product(s_shape, dtype=numpy.uint64))
     ref = src[numpy.unravel_index(0, s_shape) + (..., )]
     translations = function_sequence_measure_relative_translation(src, ref, True, bounds=bounds)
-    result_data = numpy.copy(src.data)  # type: ignore
+    result_data = numpy.copy(src.data)
     for i in range(1, c):
         ii = numpy.unravel_index(i, s_shape) + (..., )
-        new_data = numpy.copy(result_data[ii])  # type: ignore
+        new_data = numpy.copy(result_data[ii])
         current_xdata = DataAndMetadata.new_data_and_metadata(new_data)
         translation = translations._data_ex[numpy.unravel_index(i, s_shape)]
         shift_xdata = function_shift(current_xdata, tuple(translation))
@@ -558,13 +558,13 @@ def function_sequence_fourier_align(src_in: _DataAndMetadataLike, bounds: typing
         raise ValueError("Sequence register translation: source must be have 1 or 2 dimension data.")
     src_shape = list(src.data_shape)
     s_shape = src_shape[0:-d_rank]
-    c = int(numpy.product(s_shape, dtype=numpy.uint64))  # type: ignore
+    c = int(numpy.product(s_shape, dtype=numpy.uint64))
     ref = src[numpy.unravel_index(0, s_shape) + (..., )]
     translations = function_sequence_measure_relative_translation(src, ref, True, bounds=bounds)
-    result_data = numpy.copy(src.data)  # type: ignore
+    result_data = numpy.copy(src.data)
     for i in range(1, c):
         ii = numpy.unravel_index(i, s_shape) + (..., )
-        new_data = numpy.copy(result_data[ii])  # type: ignore
+        new_data = numpy.copy(result_data[ii])
         current_xdata = DataAndMetadata.new_data_and_metadata(new_data)
         translation = translations._data_ex[numpy.unravel_index(i, s_shape)]
         shift_xdata = function_fourier_shift(current_xdata, tuple(translation))
@@ -821,7 +821,7 @@ def function_gaussian_blur(data_and_metadata_in: _DataAndMetadataLike, sigma: fl
         rgba[..., 3] = data[..., 3]
         new_data = rgba
     else:
-        new_data = scipy.ndimage.gaussian_filter(data, sigma=sigma)  # type: ignore
+        new_data = scipy.ndimage.gaussian_filter(data, sigma=sigma)
 
     return DataAndMetadata.new_data_and_metadata(new_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
@@ -898,12 +898,12 @@ def function_transpose_flip(data_and_metadata_in: _DataAndMetadataLike, transpos
             elif len(data_and_metadata.data_shape) == 2:
                 data = numpy.transpose(data, [1, 0])
         if flip_h and len(data_and_metadata.data_shape) == 2:
-            data = numpy.fliplr(data)  # type: ignore
+            data = numpy.fliplr(data)
         if flip_v and len(data_and_metadata.data_shape) == 2:
-            data = numpy.flipud(data)  # type: ignore
+            data = numpy.flipud(data)
         assert data is not None  # this is required, seems to be a bug in mypy about reassignment
         if id(data) == data_id:  # ensure real data, not a view
-            return numpy.copy(data)  # type: ignore
+            return numpy.copy(data)
         else:
             return data
 
@@ -1033,7 +1033,7 @@ def function_crop_rotated(data_and_metadata_in: _DataAndMetadataLike, bounds: No
 
     y: _ImageDataType
     x: _ImageDataType
-    y, x = numpy.meshgrid(numpy.arange(-(width // 2), width - width // 2), numpy.arange(-(height // 2), height - height // 2))  # type: ignore
+    y, x = numpy.meshgrid(numpy.arange(-(width // 2), width - width // 2), numpy.arange(-(height // 2), height - height // 2))
 
     angle_sin = math.sin(angle)
     angle_cos = math.cos(angle)
@@ -1196,7 +1196,7 @@ def function_concatenate(data_and_metadata_like_list: typing.Sequence[_DataAndMe
     data_descriptor = data_and_metadata_list[0].data_descriptor
 
     data_list = list(data_and_metadata.data for data_and_metadata in data_and_metadata_list)
-    data = numpy.concatenate(data_list, axis)  # type: ignore
+    data = numpy.concatenate(data_list, axis)
 
     return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=data_descriptor)
 
@@ -1294,16 +1294,16 @@ def function_sum(data_and_metadata_in: _DataAndMetadataLike, axis: typing.Option
         if Image.is_shape_and_dtype_rgb_type(data.shape, data.dtype):
             if Image.is_shape_and_dtype_rgb(data.shape, data.dtype):
                 rgb_image: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[1:], numpy.uint8)
-                rgb_image[:, 0] = numpy.average(data[..., 0], axis)  # type: ignore
-                rgb_image[:, 1] = numpy.average(data[..., 1], axis)  # type: ignore
-                rgb_image[:, 2] = numpy.average(data[..., 2], axis)  # type: ignore
+                rgb_image[:, 0] = numpy.average(data[..., 0], axis)
+                rgb_image[:, 1] = numpy.average(data[..., 1], axis)
+                rgb_image[:, 2] = numpy.average(data[..., 2], axis)
                 return rgb_image
             else:
                 rgba_image: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[1:], numpy.uint8)
-                rgba_image[:, 0] = numpy.average(data[..., 0], axis)  # type: ignore
-                rgba_image[:, 1] = numpy.average(data[..., 1], axis)  # type: ignore
-                rgba_image[:, 2] = numpy.average(data[..., 2], axis)  # type: ignore
-                rgba_image[:, 3] = numpy.average(data[..., 3], axis)  # type: ignore
+                rgba_image[:, 0] = numpy.average(data[..., 0], axis)
+                rgba_image[:, 1] = numpy.average(data[..., 1], axis)
+                rgba_image[:, 2] = numpy.average(data[..., 2], axis)
+                rgba_image[:, 3] = numpy.average(data[..., 3], axis)
                 return rgba_image
         else:
             return typing.cast(_ImageDataType, numpy.sum(data, typing.cast(typing.Any, axis), keepdims=keepdims))
@@ -1342,16 +1342,16 @@ def function_mean(data_and_metadata_in: _DataAndMetadataLike, axis: typing.Optio
         if Image.is_shape_and_dtype_rgb_type(data.shape, data.dtype):
             if Image.is_shape_and_dtype_rgb(data.shape, data.dtype):
                 rgb_image: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[1:], numpy.uint8)
-                rgb_image[:, 0] = numpy.average(data[..., 0], axis)  # type: ignore
-                rgb_image[:, 1] = numpy.average(data[..., 1], axis)  # type: ignore
-                rgb_image[:, 2] = numpy.average(data[..., 2], axis)  # type: ignore
+                rgb_image[:, 0] = numpy.average(data[..., 0], axis)
+                rgb_image[:, 1] = numpy.average(data[..., 1], axis)
+                rgb_image[:, 2] = numpy.average(data[..., 2], axis)
                 return rgb_image
             else:
                 rgba_image: numpy.typing.NDArray[numpy.uint8] = numpy.empty(data.shape[1:], numpy.uint8)
-                rgba_image[:, 0] = numpy.average(data[..., 0], axis)  # type: ignore
-                rgba_image[:, 1] = numpy.average(data[..., 1], axis)  # type: ignore
-                rgba_image[:, 2] = numpy.average(data[..., 2], axis)  # type: ignore
-                rgba_image[:, 3] = numpy.average(data[..., 3], axis)  # type: ignore
+                rgba_image[:, 0] = numpy.average(data[..., 0], axis)
+                rgba_image[:, 1] = numpy.average(data[..., 1], axis)
+                rgba_image[:, 2] = numpy.average(data[..., 2], axis)
+                rgba_image[:, 3] = numpy.average(data[..., 3], axis)
                 return rgba_image
         else:
             return typing.cast(_ImageDataType, numpy.mean(data, axis, keepdims=keepdims))
@@ -1395,7 +1395,7 @@ def function_sum_region(data_and_metadata_in: _DataAndMetadataLike, mask_data_an
     assert len(mask_data_and_metadata.dimensional_shape) == 2
 
     data = data_and_metadata._data_ex
-    mask_data = mask_data_and_metadata._data_ex.astype(bool)  # type: ignore
+    mask_data = mask_data_and_metadata._data_ex.astype(bool)
 
     start_index = 1 if data_and_metadata.is_sequence else 0
     result_data = numpy.sum(data, axis=tuple(range(start_index, len(data_and_metadata.dimensional_shape) - 1)), where=mask_data[..., numpy.newaxis])
@@ -1429,7 +1429,7 @@ def function_average_region(data_and_metadata_in: _DataAndMetadataLike, mask_dat
     assert len(mask_data_and_metadata.dimensional_shape) == 2
 
     data = data_and_metadata._data_ex
-    mask_data = mask_data_and_metadata._data_ex.astype(bool)  # type: ignore
+    mask_data = mask_data_and_metadata._data_ex.astype(bool)
 
     assert data is not None
 
@@ -1600,7 +1600,7 @@ def function_resize(data_and_metadata_in: _DataAndMetadataLike, shape: DataAndMe
                 pads.append((left, new_size - left - data_size))
             else:
                 pads.append((0, 0))
-        return typing.cast(_ImageDataType, numpy.pad(data, pads, 'constant', constant_values=c))  # type: ignore
+        return typing.cast(_ImageDataType, numpy.pad(data, pads, 'constant', constant_values=c))
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
@@ -1673,7 +1673,7 @@ def function_rebin_2d(data_and_metadata_in: _DataAndMetadataLike, shape: DataAnd
         data = data_and_metadata.data
         assert data is not None
         if data.shape[0] == height and data.shape[1] == width:
-            return numpy.copy(data)  # type: ignore
+            return numpy.copy(data)
         shape = height, data.shape[0] // height, width, data.shape[1] // width
         return typing.cast(_ImageDataType, numpy.reshape(data, shape).mean(-1).mean(1))
 
@@ -1698,7 +1698,7 @@ def function_resample_2d(data_and_metadata_in: _DataAndMetadataLike, shape: Data
         data = data_and_metadata.data
         assert data is not None
         if data.shape[0] == height and data.shape[1] == width:
-            return numpy.copy(data)  # type: ignore
+            return numpy.copy(data)
         return Image.scaled(data, (height, width))
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
@@ -1712,7 +1712,7 @@ def function_resample_2d(data_and_metadata_in: _DataAndMetadataLike, shape: Data
 def function_warp(data_and_metadata_in: _DataAndMetadataLike, coordinates_in: typing.Sequence[_DataAndMetadataLike], order: int = 1) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
     coordinates = [DataAndMetadata.promote_ndarray(c) for c in coordinates_in]
-    coords = numpy.moveaxis(numpy.dstack([coordinate.data for coordinate in coordinates]), -1, 0)  # type: ignore
+    coords = numpy.moveaxis(numpy.dstack([coordinate.data for coordinate in coordinates]), -1, 0)
     data = data_and_metadata._data_ex
     if data_and_metadata.is_data_rgb:
         rgb: numpy.typing.NDArray[numpy.uint8] = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (3,), numpy.uint8)
@@ -1748,11 +1748,11 @@ def calculate_coordinates_for_affine_transform(data_and_metadata_in: _DataAndMet
     assert transformation_matrix.shape[0] == transformation_matrix.shape[1]
     assert transformation_matrix.shape[0] in {len(coords_shape), len(coords_shape) + 1}
     half_shape = (coords_shape[0] * 0.5, coords_shape[1] * 0.5)
-    coords = numpy.mgrid[0:coords_shape[0], 0:coords_shape[1]].astype(float)  # type: ignore
+    coords = numpy.mgrid[0:coords_shape[0], 0:coords_shape[1]].astype(float)
     coords[0] -= half_shape[0] - 0.5
     coords[1] -= half_shape[1] - 0.5
     if transformation_matrix.shape[0] == len(coords_shape) + 1:
-        coords = numpy.concatenate([numpy.ones((1,) + coords.shape[1:]), coords])  # type: ignore
+        coords = numpy.concatenate([numpy.ones((1,) + coords.shape[1:]), coords])
     coords = coords[::-1, ...]
     transformed = numpy.einsum('ij,ikm', transformation_matrix, coords)
     transformed = transformed[::-1, ...]
@@ -1776,7 +1776,7 @@ def function_histogram(data_and_metadata_in: _DataAndMetadataLike, bins: int) ->
     if not Image.is_data_valid(data_and_metadata.data):
         raise ValueError("Resample: invalid data")
 
-    histogram_data = numpy.histogram(data_and_metadata._data_ex, bins=bins)  # type: ignore
+    histogram_data = numpy.histogram(data_and_metadata._data_ex, bins=bins)
     min_x = data_and_metadata.intensity_calibration.convert_to_calibrated_value(histogram_data[1][0])
     max_x = data_and_metadata.intensity_calibration.convert_to_calibrated_value(histogram_data[1][-1])
     result_data: numpy.typing.NDArray[numpy.int32] = histogram_data[0].astype(numpy.int32)
@@ -1813,7 +1813,7 @@ def function_line_profile(data_and_metadata_in: _DataAndMetadataLike, vector: No
         t = numpy.linspace(-(n - 1) * 0.5, (n - 1) * 0.5, round(n))  # transverse
         dy = (end[0] - start[0]) / samples
         dx = (end[1] - start[1]) / samples
-        ix, iy = numpy.meshgrid(a, t)  # type: ignore
+        ix, iy = numpy.meshgrid(a, t)
         yy = start[0] + dy * ix + dx * iy
         xx = start[1] + dx * ix - dy * iy
         return yy, xx
@@ -2134,7 +2134,7 @@ def auto_threshold(data_and_metadata_in: _DataAndMetadataLike, *, auto_threshold
 
     data = data_and_metadata._data_ex
 
-    hist, bins = numpy.histogram(data, bins=number_bins) # type: ignore
+    hist, bins = numpy.histogram(data, bins=number_bins)
     if auto_threshold_method == 'average':
         return (_kittler(hist, bins) * 2.0 + _iso_data(hist, bins)) / 3.0
     if auto_threshold_method == 'yen':

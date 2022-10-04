@@ -480,7 +480,7 @@ class DataAndMetadata:
 
     def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> DataAndMetadata:
         # use numpy.copy so that it handles h5py arrays too (resulting in ndarray).
-        data_copy = numpy.copy(self.data)  # type: ignore
+        data_copy = numpy.copy(self.data)
         deepcopy = DataAndMetadata.from_data(data_copy, self.intensity_calibration, self.dimensional_calibrations,
                                              self.metadata, self.timestamp, self.data_descriptor, self.timezone,
                                              self.timezone_offset)
