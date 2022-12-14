@@ -1683,6 +1683,63 @@ def function_rebin_2d(data_and_metadata_in: _DataAndMetadataLike, shape: DataAnd
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=rebinned_dimensional_calibrations)
 
 
+def _binned_data_shape_and_crop_slices(shape: DataAndMetadata.ShapeType, binning: typing.Tuple[int, ...]) -> typing.Tuple[typing.Tuple[int, ...], typing.Optional[typing.Tuple[slice, ...]]]:
+    if all([binning[i] == 1 for i in range(len(binning))]):
+        return shape, None
+    new_shape = [shape[i] // binning[i] for i in range(len(shape))]
+    residue = [shape[i] % binning[i] for i in range(len(shape))]
+    half_residue = [residue[i] // 2 for i in range(len(residue))]
+    return tuple(new_shape), tuple([slice(half_residue[i] + residue[i] % 2, -half_residue[i] if half_residue[i] > 0 else None) for i in range(len(residue))])
+
+
+def _rebin(arr: _ImageDataType, new_shape: DataAndMetadata.ShapeType, dtype: typing.Optional[numpy.typing.DTypeLike] = None, out: typing.Optional[_ImageDataType] = None) -> typing.Optional[_ImageDataType]:
+    if new_shape == arr.shape:
+        if out is not None:
+            out[:] = arr
+        else:
+            return arr
+    array_shape = arr.shape
+    assert len(array_shape) == len(new_shape)
+    if len(new_shape) == 1:
+        new_shape = (1,) + new_shape
+        array_shape = (1,) + array_shape
+    dtype2 = dtype or arr.dtype
+    shape = (int(new_shape[0]), int(array_shape[0] // new_shape[0]),
+             int(new_shape[1]), int(array_shape[1] // new_shape[1]))
+    if out is not None:
+        numpy.sum(numpy.reshape(arr, shape), axis=(1, -1), out=out)
+    else:
+        rebinned: _ImageDataType = arr.reshape(shape).sum((-1, 1)).astype(dtype2, copy=False)
+        new_shape_array = numpy.array(new_shape)
+        return rebinned.reshape(tuple(new_shape_array[new_shape_array>1]))
+
+    return None
+
+
+def function_rebin_factor(data_and_metadata_in: _DataAndMetadataLike, binning: typing.Tuple[int, ...]) -> DataAndMetadata.DataAndMetadata:
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
+
+    if not Image.is_data_valid(data_and_metadata.data):
+        raise ValueError("Rebin: invalid data")
+
+    if not (Image.is_data_2d(data_and_metadata.data) or Image.is_data_1d(data_and_metadata.data)):
+        raise ValueError("Rebin: data must be 1D or 2D")
+
+    data_shape = data_and_metadata.data_shape
+    binning = tuple([min(binning[i], data_shape[i]) for i in range(len(binning))])
+    new_shape, crop_slices = _binned_data_shape_and_crop_slices(data_shape, binning)
+    if crop_slices is not None:
+        cropped_data = data_and_metadata.data[crop_slices]
+    else:
+        cropped_data = data_and_metadata.data
+    cropped_shape = cropped_data.shape
+    rebinned = typing.cast(_ImageDataType, _rebin(cropped_data, new_shape))
+    dimensional_calibrations = data_and_metadata.dimensional_calibrations
+    rebinned_dimensional_calibrations = [Calibration.Calibration(dimensional_calibrations[i].offset, dimensional_calibrations[i].scale * cropped_shape[i] / new_shape[i], dimensional_calibrations[i].units) for i in range(len(dimensional_calibrations)) if new_shape[i] > 1]
+
+    return DataAndMetadata.new_data_and_metadata(rebinned, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=rebinned_dimensional_calibrations)
+
+
 def function_resample_2d(data_and_metadata_in: _DataAndMetadataLike, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
 
