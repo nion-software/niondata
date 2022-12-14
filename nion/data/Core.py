@@ -1683,7 +1683,7 @@ def function_rebin_2d(data_and_metadata_in: _DataAndMetadataLike, shape: DataAnd
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=rebinned_dimensional_calibrations)
 
 
-def _binned_data_shape_and_crop_slices(shape: DataAndMetadata.ShapeType, binning: typing.Tuple[int, ...]):
+def _binned_data_shape_and_crop_slices(shape: DataAndMetadata.ShapeType, binning: typing.Tuple[int, ...]) -> typing.Tuple[typing.Tuple[int, ...], typing.Optional[typing.Tuple[slice, ...]]]:
     if binning == 1:
         return shape, None
     new_shape = [shape[i] // binning[i] for i in range(len(shape))]
@@ -1692,7 +1692,7 @@ def _binned_data_shape_and_crop_slices(shape: DataAndMetadata.ShapeType, binning
     return tuple(new_shape), tuple([slice(half_residue[i] + residue[i] % 2, -half_residue[i] if half_residue[i] > 0 else None) for i in range(len(residue))])
 
 
-def _rebin(arr, new_shape, dtype=None, out=None):
+def _rebin(arr: _ImageDataType, new_shape: DataAndMetadata.ShapeType, dtype: typing.Optional[numpy.typing.DTypeLike] = None, out: typing.Optional[_ImageDataType] = None) -> typing.Optional[_ImageDataType]:
     if new_shape == arr.shape:
         if out is not None:
             out[:] = arr
