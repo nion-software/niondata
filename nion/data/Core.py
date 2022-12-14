@@ -1684,7 +1684,7 @@ def function_rebin_2d(data_and_metadata_in: _DataAndMetadataLike, shape: DataAnd
 
 
 def _binned_data_shape_and_crop_slices(shape: DataAndMetadata.ShapeType, binning: typing.Tuple[int, ...]) -> typing.Tuple[typing.Tuple[int, ...], typing.Optional[typing.Tuple[slice, ...]]]:
-    if binning == 1:
+    if all([binning[i] == 1 for i in range(len(binning))]):
         return shape, None
     new_shape = [shape[i] // binning[i] for i in range(len(shape))]
     residue = [shape[i] % binning[i] for i in range(len(shape))]
@@ -1709,9 +1709,11 @@ def _rebin(arr: _ImageDataType, new_shape: DataAndMetadata.ShapeType, dtype: typ
     if out is not None:
         numpy.sum(numpy.reshape(arr, shape), axis=(1, -1), out=out)
     else:
-        rebinned = arr.reshape(shape).sum((-1, 1)).astype(dtype2, copy=False)
-        new_shape = numpy.array(new_shape)
-        return rebinned.reshape(tuple(new_shape[new_shape>1]))
+        rebinned: _ImageDataType = arr.reshape(shape).sum((-1, 1)).astype(dtype2, copy=False)
+        new_shape_array = numpy.array(new_shape)
+        return rebinned.reshape(tuple(new_shape_array[new_shape_array>1]))
+
+    return None
 
 
 def function_rebin(data_and_metadata_in: _DataAndMetadataLike, binning: typing.Tuple[int, ...]) -> DataAndMetadata.DataAndMetadata:
@@ -1726,9 +1728,12 @@ def function_rebin(data_and_metadata_in: _DataAndMetadataLike, binning: typing.T
     data_shape = data_and_metadata.data_shape
     binning = tuple([min(binning[i], data_shape[i]) for i in range(len(binning))])
     new_shape, crop_slices = _binned_data_shape_and_crop_slices(data_shape, binning)
-    cropped_data = data_and_metadata.data[crop_slices]
+    if crop_slices is not None:
+        cropped_data = data_and_metadata.data[crop_slices]
+    else:
+        cropped_data = data_and_metadata.data
     cropped_shape = cropped_data.shape
-    rebinned = _rebin(cropped_data, new_shape)
+    rebinned = typing.cast(_ImageDataType, _rebin(cropped_data, new_shape))
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
     rebinned_dimensional_calibrations = [Calibration.Calibration(dimensional_calibrations[i].offset, dimensional_calibrations[i].scale * cropped_shape[i] / new_shape[i], dimensional_calibrations[i].units) for i in range(len(dimensional_calibrations)) if new_shape[i] > 1]
 
