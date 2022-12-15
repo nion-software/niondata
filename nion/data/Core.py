@@ -1716,7 +1716,7 @@ def _rebin(arr: _ImageDataType, new_shape: DataAndMetadata.ShapeType, dtype: typ
     return None
 
 
-def function_rebin(data_and_metadata_in: _DataAndMetadataLike, binning: typing.Tuple[int, ...]) -> DataAndMetadata.DataAndMetadata:
+def function_rebin_factor(data_and_metadata_in: _DataAndMetadataLike, binning: typing.Tuple[int, ...]) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
 
     if not Image.is_data_valid(data_and_metadata.data):

@@ -91,8 +91,11 @@ def sum_region(data_and_metadata: _DataAndMetadataLike, mask_data_and_metadata: 
 def average_region(data_and_metadata: _DataAndMetadataLike, mask_data_and_metadata: _DataAndMetadataLike) -> DataAndMetadata.DataAndMetadata:
     return Core.function_average_region(data_and_metadata, mask_data_and_metadata)
 
-def rebin_image(data_and_metadata: _DataAndMetadataLike, binning: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
-    return Core.function_rebin(data_and_metadata, binning)
+def rebin_image(data_and_metadata: _DataAndMetadataLike, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_rebin_2d(data_and_metadata, shape)
+
+def rebin_factor(data_and_metadata: _DataAndMetadataLike, binning: typing.Tuple[int, ...]) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_rebin_factor(data_and_metadata, binning)
 
 def resample_image(data_and_metadata: _DataAndMetadataLike, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
     return Core.function_resample_2d(data_and_metadata, shape)
