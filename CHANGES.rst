@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+0.15.4 (UNRELEASED)
+-------------------
+- Introduce rebin_factor xdata function.
+
 0.15.3 (2022-10-03)
 -------------------
 - Add is_valid method to calibrations and use when converting to strings.
