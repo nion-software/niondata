@@ -184,7 +184,7 @@ def function_fft(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata.
                                 "1/" + dimensional_calibration.units) for dimensional_calibration, data_shape_n in
         zip(src_dimensional_calibrations, data_shape)]
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), dimensional_calibrations=dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), dimensional_calibrations=dimensional_calibrations, intensity_calibration=data_and_metadata.intensity_calibration)
 
 
 def function_ifft(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata.DataAndMetadata:
@@ -225,7 +225,7 @@ def function_ifft(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata
                                                         remove_one_slash(dimensional_calibration.units)) for
         dimensional_calibration, data_shape_n in zip(src_dimensional_calibrations, data_shape)]
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), dimensional_calibrations=dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(), dimensional_calibrations=dimensional_calibrations, intensity_calibration=data_and_metadata.intensity_calibration)
 
 
 def function_autocorrelate(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata.DataAndMetadata:
