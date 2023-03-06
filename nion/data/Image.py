@@ -1,7 +1,7 @@
 # standard libraries
 import functools
-import math
 import sys
+import warnings
 
 # third party libraries
 import numpy
@@ -389,9 +389,12 @@ def create_rgba_image_from_array(array: _ImageDataType, normalize: bool = True,
                     else:
                         clipped_array = (clipped_array - nmin_new) * m
                     # 16ms
-                    get_red_view(rgba_image)[:] = clipped_array
-                    get_green_view(rgba_image)[:] = clipped_array
-                    get_blue_view(rgba_image)[:] = clipped_array
+                    with warnings.catch_warnings():
+                        # clipped_array may have NaNs; ignore the warnings, by experiment they get treated as zero.
+                        warnings.simplefilter("ignore")
+                        get_red_view(rgba_image)[:] = clipped_array
+                        get_green_view(rgba_image)[:] = clipped_array
+                        get_blue_view(rgba_image)[:] = clipped_array
                 if overlimit:
                     rgba_image = numpy.where(numpy.less(array - nmin_new, nmax_new - nmin_new * overlimit), rgba_image, 0xFFFF0000)
                 if underlimit:
