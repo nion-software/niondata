@@ -186,6 +186,10 @@ class DataMetadata:
             return False
         return True
 
+    def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> DataMetadata:
+        return DataMetadata(self.data_shape_and_dtype, self.intensity_calibration, self.dimensional_calibrations,
+                            self.metadata, self.timestamp, self.data_descriptor, self.timezone, self.timezone_offset)
+
     @property
     def data_shape(self) -> ShapeType:
         data_shape_and_dtype = self.data_shape_and_dtype

@@ -5,6 +5,7 @@ Changelog (niondata)
 -------------------
 - Introduce rebin_factor xdata function.
 - Carry through intensity calibration during FFT/IFFT.
+- Add copy magic method to data metadata.
 
 0.15.3 (2022-10-03)
 -------------------
