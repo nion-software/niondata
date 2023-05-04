@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-from __future__ import annotations
-
 # standard libraries
 import copy
 import datetime
 import gettext
 import logging
 import numbers
-import pickle
-import re
 import threading
 import typing
 import warnings
@@ -132,7 +128,8 @@ class DataMetadata:
                  timezone_offset: typing.Optional[str] = None):
         if data_shape_and_dtype is not None and data_shape_and_dtype[0] is not None and not all([type(data_shape_item) == int for data_shape_item in data_shape_and_dtype[0]]):
             warnings.warn('using a non-integer shape in DataAndMetadata', DeprecationWarning, stacklevel=2)
-        self.data_shape_and_dtype = (tuple(data_shape_and_dtype[0]), numpy.dtype(data_shape_and_dtype[1])) if data_shape_and_dtype is not None else None
+
+        self.__data_shape_and_dtype = (tuple(data_shape_and_dtype[0]), typing.cast(numpy.typing.DTypeLike, numpy.dtype(data_shape_and_dtype[1]))) if data_shape_and_dtype is not None else None
 
         dimensional_shape: typing.List[int] = list()
         if data_shape_and_dtype is not None:
@@ -151,18 +148,18 @@ class DataMetadata:
         assert timezone is None or timezone
         assert timezone_offset is None or timezone_offset
 
-        self.data_descriptor = data_descriptor
+        self.__data_descriptor = data_descriptor
 
-        self.intensity_calibration: Calibration.Calibration = copy.deepcopy(intensity_calibration) if intensity_calibration else Calibration.Calibration()
+        self.__intensity_calibration: Calibration.Calibration = copy.deepcopy(intensity_calibration) if intensity_calibration else Calibration.Calibration()
         if dimensional_calibrations is None:
             dimensional_calibrations = list()
             for _ in dimensional_shape:
                 dimensional_calibrations.append(Calibration.Calibration())
-        self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
-        self.timestamp = timestamp if timestamp else DateTime.utcnow()
-        self.timezone = timezone
-        self.timezone_offset = timezone_offset
-        self.metadata = copy.deepcopy(dict(metadata)) if metadata is not None else dict()
+        self.__dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
+        self.__timestamp = timestamp if timestamp else DateTime.utcnow()
+        self.__timezone = timezone
+        self.__timezone_offset = timezone_offset
+        self.__metadata = copy.deepcopy(dict(metadata)) if metadata is not None else dict()
 
         assert isinstance(self.metadata, dict)
         assert len(dimensional_calibrations) == len(dimensional_shape)
@@ -186,6 +183,14 @@ class DataMetadata:
             return False
         return True
 
+    def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> DataMetadata:
+        return DataMetadata(self.data_shape_and_dtype, self.intensity_calibration, self.dimensional_calibrations,
+                            self.metadata, self.timestamp, self.data_descriptor, self.timezone, self.timezone_offset)
+
+    @property
+    def data_shape_and_dtype(self) -> typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]]:
+        return self.__data_shape_and_dtype
+
     @property
     def data_shape(self) -> ShapeType:
         data_shape_and_dtype = self.data_shape_and_dtype
@@ -195,6 +200,34 @@ class DataMetadata:
     def data_dtype(self) -> typing.Optional[numpy.typing.DTypeLike]:
         data_shape_and_dtype = self.data_shape_and_dtype
         return data_shape_and_dtype[1] if data_shape_and_dtype is not None else None
+
+    @property
+    def data_descriptor(self) -> DataDescriptor:
+        return self.__data_descriptor
+
+    @property
+    def intensity_calibration(self) -> Calibration.Calibration:
+        return copy.deepcopy(self.__intensity_calibration)
+
+    @property
+    def dimensional_calibrations(self) -> CalibrationListType:
+        return self.__dimensional_calibrations
+
+    @property
+    def timestamp(self) -> datetime.datetime:
+        return self.__timestamp
+
+    @property
+    def timezone(self) -> typing.Optional[str]:
+        return self.__timezone
+
+    @property
+    def timezone_offset(self) -> typing.Optional[str]:
+        return self.__timezone_offset
+
+    @property
+    def metadata(self) -> MetadataType:
+        return copy.deepcopy(self.__metadata)
 
     @property
     def dimensional_shape(self) -> ShapeType:
@@ -315,21 +348,30 @@ class DataMetadata:
     def get_dimensional_calibration(self, index: int) -> Calibration.Calibration:
         return self.dimensional_calibrations[index]
 
+    def _set_data_shape_and_dtype(self, data_shape_and_dtype: typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]]) -> None:
+        self.__data_shape_and_dtype = data_shape_and_dtype
+
     def _set_intensity_calibration(self, intensity_calibration: Calibration.Calibration) -> None:
-        self.intensity_calibration = copy.deepcopy(intensity_calibration)
+        self.__intensity_calibration = copy.deepcopy(intensity_calibration)
 
     def _set_dimensional_calibrations(self, dimensional_calibrations: CalibrationListType) -> None:
         assert len(dimensional_calibrations) == len(self.dimensional_shape)
-        self.dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
+        self.__dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
 
     def _set_data_descriptor(self, data_descriptor: DataDescriptor) -> None:
-        self.data_descriptor = copy.deepcopy(data_descriptor)
+        self.__data_descriptor = copy.deepcopy(data_descriptor)
 
     def _set_metadata(self, metadata: MetadataType) -> None:
-        self.metadata = copy.deepcopy(dict(metadata))
+        self.__metadata = copy.deepcopy(dict(metadata))
 
     def _set_timestamp(self, timestamp: datetime.datetime) -> None:
-        self.timestamp = timestamp
+        self.__timestamp = timestamp
+
+    def _set_timezone(self, timezone: typing.Optional[str]) -> None:
+        self.__timezone = timezone
+
+    def _set_timezone_offset(self, timezone_offset: typing.Optional[str]) -> None:
+        self.__timezone_offset = timezone_offset
 
     @property
     def is_data_1d(self) -> bool:
@@ -674,7 +716,7 @@ class DataAndMetadata:
 
     @timestamp.setter
     def timestamp(self, value: datetime.datetime) -> None:
-        self.__data_metadata.timestamp = value
+        self.__data_metadata._set_timestamp(value)
 
     @property
     def timezone(self) -> typing.Optional[str]:
@@ -682,7 +724,7 @@ class DataAndMetadata:
 
     @timezone.setter
     def timezone(self, value: str) -> None:
-        self.__data_metadata.timezone = value
+        self.__data_metadata._set_timezone(value)
 
     @property
     def timezone_offset(self) -> typing.Optional[str]:
@@ -690,7 +732,7 @@ class DataAndMetadata:
 
     @timezone_offset.setter
     def timezone_offset(self, value: str) -> None:
-        self.__data_metadata.timezone_offset = value
+        self.__data_metadata._set_timezone_offset(value)
 
     @property
     def is_data_1d(self) -> bool:
