@@ -1176,7 +1176,7 @@ def promote_ndarray(data: _DataAndMetadataLike) -> DataAndMetadata:
         return data
     if hasattr(data, "__array__"):
         return new_data_and_metadata(data)
-    raise
+    raise Exception(f"Unable to convert {data} to DataAndMetadata.")
 
 
 def determine_shape(*datas: _DataAndMetadataOrConstant) -> typing.Optional[ShapeType]:
