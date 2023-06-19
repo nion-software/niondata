@@ -1,12 +1,13 @@
 Changelog (niondata)
 ====================
 
-0.15.4 (UNRELEASED)
+0.15.4 (2023-06-19)
 -------------------
 - Introduce rebin_factor xdata function.
 - Carry through intensity calibration during FFT/IFFT.
 - Add copy magic method to data metadata.
 - Make read-only accessors to all DataMetadata properties instead of having them be read/write.
+- Require Python 3.9 or higher.
 
 0.15.3 (2022-10-03)
 -------------------
