@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+0.15.5 (UNRELEASED)
+-------------------
+- Revert breaking change: DataMetadata read-only accessors.
+
 0.15.4 (2023-06-19)
 -------------------
 - Introduce rebin_factor xdata function.
