@@ -1,6 +1,11 @@
 Changelog (niondata)
 ====================
 
+0.16.0 (UNRELEASED)
+-------------------
+- Reapply DataMetadata read-only accessors change.
+- Make read-only accessors to all DataMetadata properties instead of having them be read/write.
+
 0.15.5 (2023-06-21)
 -------------------
 - Revert breaking change: DataMetadata read-only accessors.
