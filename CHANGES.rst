@@ -1,7 +1,7 @@
 Changelog (niondata)
 ====================
 
-0.15.5 (UNRELEASED)
+0.15.5 (2023-06-21)
 -------------------
 - Revert breaking change: DataMetadata read-only accessors.
 
