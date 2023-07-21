@@ -22,7 +22,6 @@ class Calibration:
     """
 
     def __init__(self, offset: typing.Optional[float] = None, scale: typing.Optional[float] = None, units: typing.Optional[str] = None) -> None:
-        super(Calibration, self).__init__()
         self.__offset = float(offset) if offset else None
         self.__scale = float(scale) if scale else None
         self.__units = str(units) if units else None
@@ -47,6 +46,9 @@ class Calibration:
         return "{0:s} offset:{1:g} scale:{2:g} units:\'{3:s}\'".format(self.__repr__(), self.offset, self.scale, self.units)
 
     def __copy__(self) -> Calibration:
+        return type(self)(self.__offset, self.__scale, self.__units)
+
+    def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> Calibration:
         return type(self)(self.__offset, self.__scale, self.__units)
 
     def read_dict(self, storage_dict: typing.Mapping[str, typing.Any]) -> Calibration:

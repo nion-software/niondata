@@ -453,7 +453,7 @@ def function_sequence_register_translation(src_in: _DataAndMetadataLike, subtrac
         raise ValueError("Sequence register translation: source must be have 1 or 2 dimension data.")
     src_shape = tuple(src.data_shape)
     s_shape = src_shape[0:-d_rank]
-    c = int(numpy.product(s_shape, dtype=numpy.uint64))
+    c = int(numpy.prod(s_shape, dtype=numpy.uint64))
     result = numpy.empty(s_shape + (d_rank, ))
     previous_data = None
     src_data = src._data_ex
@@ -480,7 +480,7 @@ def function_sequence_measure_relative_translation(src_in: _DataAndMetadataLike,
         raise ValueError("Sequence register translation: source must be have 1 or 2 dimension data.")
     src_shape = tuple(src.data_shape)
     s_shape = src_shape[0:-d_rank]
-    c = int(numpy.product(s_shape, dtype=numpy.uint64))
+    c = int(numpy.prod(s_shape, dtype=numpy.uint64))
     result = numpy.empty(s_shape + (d_rank, ))
     src_data = src._data_ex
     for i in range(c):
@@ -534,7 +534,7 @@ def function_sequence_align(src_in: _DataAndMetadataLike, bounds: typing.Optiona
         raise ValueError("Sequence register translation: source must be have 1 or 2 dimension data.")
     src_shape = list(src.data_shape)
     s_shape = src_shape[0:-d_rank]
-    c = int(numpy.product(s_shape, dtype=numpy.uint64))
+    c = int(numpy.prod(s_shape, dtype=numpy.uint64))
     ref = src[numpy.unravel_index(0, s_shape) + (..., )]
     translations = function_sequence_measure_relative_translation(src, ref, True, bounds=bounds)
     result_data = numpy.copy(src.data)
@@ -558,7 +558,7 @@ def function_sequence_fourier_align(src_in: _DataAndMetadataLike, bounds: typing
         raise ValueError("Sequence register translation: source must be have 1 or 2 dimension data.")
     src_shape = list(src.data_shape)
     s_shape = src_shape[0:-d_rank]
-    c = int(numpy.product(s_shape, dtype=numpy.uint64))
+    c = int(numpy.prod(s_shape, dtype=numpy.uint64))
     ref = src[numpy.unravel_index(0, s_shape) + (..., )]
     translations = function_sequence_measure_relative_translation(src, ref, True, bounds=bounds)
     result_data = numpy.copy(src.data)
