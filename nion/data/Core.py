@@ -1145,7 +1145,7 @@ def function_pick(data_and_metadata_in: _DataAndMetadataLike, position: PickPosi
     data_descriptor = DataAndMetadata.DataDescriptor(data_and_metadata.is_sequence, 0, data_and_metadata.datum_dimension_count)
 
     if len(position) != data_and_metadata.collection_dimension_count:
-        raise ValueError("Pick: position length much master navigation dimension count.")
+        raise ValueError("Pick: position length must match navigation dimension count.")
 
     if data_and_metadata.is_sequence:
         dimensional_calibrations = [dimensional_calibrations[0]] + list(dimensional_calibrations[data_and_metadata.datum_dimension_slice])
