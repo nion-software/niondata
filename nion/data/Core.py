@@ -126,11 +126,14 @@ def astype(data: _ImageDataType, dtype: numpy.typing.DTypeLike) -> _ImageDataTyp
     return data.astype(dtype)
 
 
-dtype_map: typing.Mapping[typing.Any, str] = {int: "int", float: "float", complex: "complex", numpy.int16: "int16",
-                                              numpy.int32: "int32", numpy.int64: "int64", numpy.uint8: "uint8",
-                                              numpy.uint16: "uint16", numpy.uint32: "uint32", numpy.uint64: "uint64",
-                                              numpy.float32: "float32", numpy.float64: "float64",
-                                              numpy.complex64: "complex64", numpy.complex128: "complex128"}
+dtype_map: typing.Mapping[numpy.typing.DTypeLike, str] = {int: "int", float: "float", complex: "complex",
+                                                          numpy.int16: "int16",
+                                                          numpy.int32: "int32", numpy.int64: "int64",
+                                                          numpy.uint8: "uint8",
+                                                          numpy.uint16: "uint16", numpy.uint32: "uint32",
+                                                          numpy.uint64: "uint64",
+                                                          numpy.float32: "float32", numpy.float64: "float64",
+                                                          numpy.complex64: "complex64", numpy.complex128: "complex128"}
 
 dtype_inverse_map = {dtype_map[k]: k for k in dtype_map}
 
