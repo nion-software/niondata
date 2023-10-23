@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+15.6.1 (2023-10-23)
+-------------------
+- Minor update for typing compatibility.
+
 15.6.0 (2023-08-17)
 -------------------
 - Reapply DataMetadata read-only accessors change.
