@@ -600,7 +600,7 @@ class TestCore(unittest.TestCase):
             d_index = [slice(30, 40) for _ in range(len(data_shape))]
             data[tuple(d_index)] += 10
             xdata = DataAndMetadata.new_data_and_metadata(data)
-            s_total = numpy.product(s_shape).item()
+            s_total = numpy.prod(s_shape).item()
             for i in range(s_total):
                 ii = numpy.unravel_index(i, s_shape)
                 shift = 3.5 * i / s_total
@@ -619,7 +619,7 @@ class TestCore(unittest.TestCase):
             self.assertEqual(sequence_xdata.collection_dimension_shape, measured.collection_dimension_shape)
             self.assertEqual(1, measured.datum_dimension_count)
             self.assertAlmostEqual(0.0, numpy.amin(-measured), places=1)
-            s_max = numpy.product(s_shape).item()
+            s_max = numpy.prod(s_shape).item()
             expected_max = 3.5 * (s_max - 1) / s_max
             self.assertAlmostEqual(expected_max, numpy.amax(-measured).item(), delta=0.5)
             measured_squeezed = Core.function_squeeze_measurement(measured)

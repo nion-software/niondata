@@ -1,12 +1,22 @@
 Changelog (niondata)
 ====================
 
-0.15.4 (UNRELEASED)
+15.6.0 (2023-08-17)
+-------------------
+- Reapply DataMetadata read-only accessors change.
+- Make read-only accessors to all DataMetadata properties instead of having them be read/write.
+
+0.15.5 (2023-06-21)
+-------------------
+- Revert breaking change: DataMetadata read-only accessors.
+
+0.15.4 (2023-06-19)
 -------------------
 - Introduce rebin_factor xdata function.
 - Carry through intensity calibration during FFT/IFFT.
 - Add copy magic method to data metadata.
 - Make read-only accessors to all DataMetadata properties instead of having them be read/write.
+- Require Python 3.9 or higher.
 
 0.15.3 (2022-10-03)
 -------------------

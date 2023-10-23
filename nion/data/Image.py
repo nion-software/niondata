@@ -341,7 +341,7 @@ def scalar_from_array(array: _ImageDataType, normalize: bool = True) -> _ImageDa
         # this prevents log from generating -inf from 0.0
         # quick way to drop out bottom percent:
         # samples = 2000, fraction=0.10
-        # numpy.log(numpy.sort(numpy.abs(numpy.random.choice(data.reshape(numpy.product(data.shape)), samples)))[samples*fraction])
+        # numpy.log(numpy.sort(numpy.abs(numpy.random.choice(data.reshape(numpy.prod(data.shape)), samples)))[samples*fraction])
         # unfortunately, this needs to be integrated into the display calculation, not the conversion here.
         # the annoying conversion to float64 is to prevent float32 + float64 returning a 0.0. argh.
         # TODO: consider optimizing log(abs) to 0.5*log(re**2 + im**2)
