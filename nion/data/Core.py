@@ -2018,6 +2018,8 @@ def function_scalar_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetad
             result = function_array(numpy.imag, result)
         elif complex_display_type == "absolute":
             result = function_array(numpy.absolute, result)
+        elif  complex_display_type == "phase":
+            result = function_array(numpy.angle,  result)
         else:  # default, log-absolute
             def log_absolute(d: _ImageDataType) -> _ImageDataType:
                 return typing.cast(_ImageDataType, numpy.log(numpy.abs(d).astype(numpy.float64) + numpy.nextafter(0, 1)))
