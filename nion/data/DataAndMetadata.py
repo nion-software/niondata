@@ -1152,7 +1152,13 @@ def function_data_slice(data_and_metadata_like: _DataAndMetadataLike, key: _Slic
     data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
     # print(f"data descriptor {data_descriptor}")
 
-    return new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=cropped_dimensional_calibrations, data_descriptor=data_descriptor)
+    return new_data_and_metadata(data,
+                                 intensity_calibration=data_and_metadata.intensity_calibration,
+                                 dimensional_calibrations=cropped_dimensional_calibrations,
+                                 data_descriptor=data_descriptor,
+                                 timestamp=data_and_metadata.timestamp,
+                                 timezone=data_and_metadata.timezone,
+                                 timezone_offset=data_and_metadata.timezone_offset)
 
 
 _DataAndMetadataLike = typing.Union[DataAndMetadata, _ImageDataType]
