@@ -1927,6 +1927,48 @@ def function_line_profile(data_and_metadata_in: _DataAndMetadataLike, vector: No
                                                  dimensional_calibrations=dimensional_calibrations)
 
 
+def function_radial_profile(data_and_metadata_in: _DataAndMetadataLike, center: typing.Optional[NormPointType] = None) -> DataAndMetadata.DataAndMetadata:
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
+
+    if not Image.is_data_valid(data_and_metadata.data):
+        raise ValueError("Radial profile: invalid data")
+
+    if not Image.is_data_2d(data_and_metadata.data):
+        raise ValueError("Radial profile: data must be 2D")
+
+    if data_and_metadata.is_data_complex_type:
+        raise ValueError("Radial profile: data must be scalar (not complex)")
+
+    dimensional_calibrations = data_and_metadata.dimensional_calibrations
+    is_uniform_calibration = dimensional_calibrations[0].units == dimensional_calibrations[1].units
+
+    if center:
+        center_point = Geometry.FloatPoint.make(center)
+    elif is_uniform_calibration:
+        center_point = Geometry.FloatPoint(y=dimensional_calibrations[0].convert_from_calibrated_value(0.0), x=dimensional_calibrations[1].convert_from_calibrated_value(0.0))
+    else:
+        center_point = Geometry.FloatPoint(y=data_and_metadata.data_shape[0] / 2.0, x=data_and_metadata.data_shape[1] / 2.0)
+
+    # see https://stackoverflow.com/questions/21242011/most-efficient-way-to-calculate-radial-profile
+    y, x = numpy.indices((data_and_metadata.data_shape))
+    r = (numpy.sqrt((x - center_point.x) ** 2 + (y - center_point.y) ** 2)).astype(int)
+    total_binned = numpy.bincount(r.ravel(), data_and_metadata.data.ravel())
+    radial_count = numpy.bincount(r.ravel())
+    result_data = total_binned / radial_count
+
+    if is_uniform_calibration:
+        dimensional_calibrations = [Calibration.Calibration(0.0, dimensional_calibrations[1].scale, dimensional_calibrations[1].units)]
+    else:
+        dimensional_calibrations = [Calibration.Calibration()]
+
+    return DataAndMetadata.new_data_and_metadata(result_data,
+                                                 intensity_calibration=data_and_metadata.intensity_calibration,
+                                                 dimensional_calibrations=dimensional_calibrations,
+                                                 timestamp=data_and_metadata.timestamp,
+                                                 timezone=data_and_metadata.timezone,
+                                                 timezone_offset=data_and_metadata.timezone_offset)
+
+
 def function_make_point(y: float, x: float) -> NormPointType:
     return y, x
 

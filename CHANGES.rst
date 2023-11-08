@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+15.6.2 (UNRELEASED)
+-------------------
+- Add radial profile function.
+
 15.6.1 (2023-10-23)
 -------------------
 - Minor update for typing compatibility.

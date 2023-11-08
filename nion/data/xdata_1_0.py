@@ -269,6 +269,9 @@ def line_profile(data_and_metadata: _DataAndMetadataLike, vector: Core.NormVecto
 def invert(data_and_metadata: _DataAndMetadataLike) -> DataAndMetadata.DataAndMetadata:
     return Core.function_invert(data_and_metadata)
 
+def radial_profile(data_and_metadata: _DataAndMetadataLike, center: typing.Optional[Core.NormPointType] = None) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_radial_profile(data_and_metadata, center)
+
 # sequences: registration, shifting, alignment, integrate, trim, insert, concat, extract
 
 def register_translation(xdata1: _DataAndMetadataLike, xdata2: _DataAndMetadataLike, upsample_factor: typing.Optional[int] = None, subtract_means: bool = True) -> typing.Tuple[float, ...]:
