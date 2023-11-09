@@ -195,12 +195,12 @@ class Calibration:
             if value_range and samples:
                 calibrated_value0 = self.convert_to_calibrated_value(value_range[0])
                 calibrated_value1 = self.convert_to_calibrated_value(value_range[1])
-                if display_inverted and self.units.startswith("1/") and abs(calibrated_value) > 1e-13:
+                if display_inverted and self.units.startswith("1/") and abs(calibrated_value) > 1e-13 and calibrated_value0 and calibrated_value1:
                     return self.convert_calibrated_value_to_str(1 / calibrated_value, include_units, (1/ calibrated_value1, 1/ calibrated_value0), samples, units=self.units[2:])
                 else:
                     return self.convert_calibrated_value_to_str(calibrated_value, include_units, (calibrated_value0, calibrated_value1), samples)
             else:
-                if display_inverted and self.units.startswith("1/") and abs(calibrated_value) > 1e-13:
+                if display_inverted and self.units.startswith("1/") and abs(calibrated_value) > 1e-13 and calibrated_value:
                     return self.convert_calibrated_value_to_str(1 / calibrated_value, include_units, units=self.units[2:])
                 else:
                     return self.convert_calibrated_value_to_str(calibrated_value, include_units)

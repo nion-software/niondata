@@ -5,6 +5,7 @@ Changelog (niondata)
 -------------------
 - Add power function.
 - Add radial profile function.
+- Improve handing of invalid inverse coordinates (1/0).
 
 15.6.1 (2023-10-23)
 -------------------
