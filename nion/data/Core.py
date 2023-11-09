@@ -1950,7 +1950,7 @@ def function_radial_profile(data_and_metadata_in: _DataAndMetadataLike, center: 
         center_point = Geometry.FloatPoint(y=data_and_metadata.data_shape[0] / 2.0, x=data_and_metadata.data_shape[1] / 2.0)
 
     # see https://stackoverflow.com/questions/21242011/most-efficient-way-to-calculate-radial-profile
-    y, x = numpy.indices((data_and_metadata.data_shape))
+    y, x = numpy.indices((data_and_metadata.data_shape), sparse=True)
     r = (numpy.sqrt((x - center_point.x) ** 2 + (y - center_point.y) ** 2)).astype(int)
     total_binned = numpy.bincount(r.ravel(), data_and_metadata.data.ravel())
     radial_count = numpy.bincount(r.ravel())
