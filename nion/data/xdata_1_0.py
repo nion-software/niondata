@@ -195,6 +195,9 @@ def conj(data_and_metadata: _DataAndMetadataLike) -> DataAndMetadata.DataAndMeta
 def real_if_close(data_and_metadata: _DataAndMetadataLike, tol: int=100) -> DataAndMetadata.DataAndMetadata:
     return Core.function_array(numpy.real_if_close, data_and_metadata, tol)
 
+def power(data_and_metadata: _DataAndMetadataLike, exponent: float) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_array(numpy.power, data_and_metadata, exponent)
+
 # rgb
 
 def red(data_and_metadata: _DataAndMetadataLike) -> DataAndMetadata.DataAndMetadata:

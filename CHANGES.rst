@@ -3,6 +3,7 @@ Changelog (niondata)
 
 15.6.2 (UNRELEASED)
 -------------------
+- Add power function.
 - Add radial profile function.
 
 15.6.1 (2023-10-23)
