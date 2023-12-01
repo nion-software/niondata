@@ -1,7 +1,17 @@
 Changelog (niondata)
 ====================
 
-0.16.0 (UNRELEASED)
+15.6.2 (UNRELEASED)
+-------------------
+- Add power function.
+- Add radial profile function.
+- Improve handing of invalid inverse coordinates (1/0).
+
+15.6.1 (2023-10-23)
+-------------------
+- Minor update for typing compatibility.
+
+15.6.0 (2023-08-17)
 -------------------
 - Reapply DataMetadata read-only accessors change.
 - Make read-only accessors to all DataMetadata properties instead of having them be read/write.

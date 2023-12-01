@@ -126,11 +126,14 @@ def astype(data: _ImageDataType, dtype: numpy.typing.DTypeLike) -> _ImageDataTyp
     return data.astype(dtype)
 
 
-dtype_map: typing.Mapping[typing.Any, str] = {int: "int", float: "float", complex: "complex", numpy.int16: "int16",
-                                              numpy.int32: "int32", numpy.int64: "int64", numpy.uint8: "uint8",
-                                              numpy.uint16: "uint16", numpy.uint32: "uint32", numpy.uint64: "uint64",
-                                              numpy.float32: "float32", numpy.float64: "float64",
-                                              numpy.complex64: "complex64", numpy.complex128: "complex128"}
+dtype_map: typing.Mapping[numpy.typing.DTypeLike, str] = {int: "int", float: "float", complex: "complex",
+                                                          numpy.int16: "int16",
+                                                          numpy.int32: "int32", numpy.int64: "int64",
+                                                          numpy.uint8: "uint8",
+                                                          numpy.uint16: "uint16", numpy.uint32: "uint32",
+                                                          numpy.uint64: "uint64",
+                                                          numpy.float32: "float32", numpy.float64: "float64",
+                                                          numpy.complex64: "complex64", numpy.complex128: "complex128"}
 
 dtype_inverse_map = {dtype_map[k]: k for k in dtype_map}
 
@@ -1117,7 +1120,14 @@ def function_slice_sum(data_and_metadata_in: _DataAndMetadataLike, slice_center:
 
     dimensional_calibrations = dimensional_calibrations[0:signal_index]
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(
+        calculate_data(),
+        intensity_calibration=data_and_metadata.intensity_calibration,
+        dimensional_calibrations=dimensional_calibrations,
+        timestamp=data_and_metadata.timestamp,
+        timezone=data_and_metadata.timezone,
+        timezone_offset=data_and_metadata.timezone_offset
+    )
 
 
 def function_pick(data_and_metadata_in: _DataAndMetadataLike, position: PickPositionType) -> DataAndMetadata.DataAndMetadata:
@@ -1145,7 +1155,7 @@ def function_pick(data_and_metadata_in: _DataAndMetadataLike, position: PickPosi
     data_descriptor = DataAndMetadata.DataDescriptor(data_and_metadata.is_sequence, 0, data_and_metadata.datum_dimension_count)
 
     if len(position) != data_and_metadata.collection_dimension_count:
-        raise ValueError("Pick: position length much master navigation dimension count.")
+        raise ValueError("Pick: position length must match navigation dimension count.")
 
     if data_and_metadata.is_sequence:
         dimensional_calibrations = [dimensional_calibrations[0]] + list(dimensional_calibrations[data_and_metadata.datum_dimension_slice])
@@ -1647,7 +1657,12 @@ def function_rescale(data_and_metadata_in: _DataAndMetadataLike,
 
     intensity_calibration = Calibration.Calibration()
 
-    return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(calculate_data(),
+                                                 intensity_calibration=intensity_calibration,
+                                                 dimensional_calibrations=data_and_metadata.dimensional_calibrations,
+                                                 timestamp=data_and_metadata.timestamp,
+                                                 timezone=data_and_metadata.timezone,
+                                                 timezone_offset=data_and_metadata.timezone_offset)
 
 
 def function_rebin_2d(data_and_metadata_in: _DataAndMetadataLike, shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
@@ -1912,6 +1927,48 @@ def function_line_profile(data_and_metadata_in: _DataAndMetadataLike, vector: No
                                                  dimensional_calibrations=dimensional_calibrations)
 
 
+def function_radial_profile(data_and_metadata_in: _DataAndMetadataLike, center: typing.Optional[NormPointType] = None) -> DataAndMetadata.DataAndMetadata:
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
+
+    if not Image.is_data_valid(data_and_metadata.data):
+        raise ValueError("Radial profile: invalid data")
+
+    if not Image.is_data_2d(data_and_metadata.data):
+        raise ValueError("Radial profile: data must be 2D")
+
+    if data_and_metadata.is_data_complex_type:
+        raise ValueError("Radial profile: data must be scalar (not complex)")
+
+    dimensional_calibrations = data_and_metadata.dimensional_calibrations
+    is_uniform_calibration = dimensional_calibrations[0].units == dimensional_calibrations[1].units
+
+    if center:
+        center_point = Geometry.FloatPoint.make(center)
+    elif is_uniform_calibration:
+        center_point = Geometry.FloatPoint(y=dimensional_calibrations[0].convert_from_calibrated_value(0.0), x=dimensional_calibrations[1].convert_from_calibrated_value(0.0))
+    else:
+        center_point = Geometry.FloatPoint(y=data_and_metadata.data_shape[0] / 2.0, x=data_and_metadata.data_shape[1] / 2.0)
+
+    # see https://stackoverflow.com/questions/21242011/most-efficient-way-to-calculate-radial-profile
+    y, x = numpy.indices((data_and_metadata.data_shape), sparse=True)
+    r = (numpy.sqrt((x - center_point.x) ** 2 + (y - center_point.y) ** 2)).astype(int)
+    total_binned = numpy.bincount(r.ravel(), data_and_metadata.data.ravel())
+    radial_count = numpy.bincount(r.ravel())
+    result_data = total_binned / radial_count
+
+    if is_uniform_calibration:
+        dimensional_calibrations = [Calibration.Calibration(0.0, dimensional_calibrations[1].scale, dimensional_calibrations[1].units)]
+    else:
+        dimensional_calibrations = [Calibration.Calibration()]
+
+    return DataAndMetadata.new_data_and_metadata(result_data,
+                                                 intensity_calibration=data_and_metadata.intensity_calibration,
+                                                 dimensional_calibrations=dimensional_calibrations,
+                                                 timestamp=data_and_metadata.timestamp,
+                                                 timezone=data_and_metadata.timezone,
+                                                 timezone_offset=data_and_metadata.timezone_offset)
+
+
 def function_make_point(y: float, x: float) -> NormPointType:
     return y, x
 
@@ -1945,7 +2002,12 @@ def function_make_shape(*args: typing.Any) -> DataAndMetadata.ShapeType:
 def function_array(array_fn: typing.Callable[..., typing.Any], data_and_metadata_in: _DataAndMetadataLike, *args: typing.Any, **kwargs: typing.Any) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
     data = array_fn(data_and_metadata.data, *args, **kwargs)
-    return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(data,
+                                                 intensity_calibration=data_and_metadata.intensity_calibration,
+                                                 dimensional_calibrations=data_and_metadata.dimensional_calibrations,
+                                                 timestamp=data_and_metadata.timestamp,
+                                                 timezone=data_and_metadata.timezone,
+                                                 timezone_offset=data_and_metadata.timezone_offset)
 
 
 def function_scalar(op: typing.Callable[[_ImageDataType], DataAndMetadata._ScalarDataType], data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata.ScalarAndMetadata:
@@ -1953,7 +2015,7 @@ def function_scalar(op: typing.Callable[[_ImageDataType], DataAndMetadata._Scala
     return DataAndMetadata.ScalarAndMetadata(lambda: op(data_and_metadata._data_ex), data_and_metadata.intensity_calibration)
 
 
-def function_element_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetadata,
+def function_element_data_no_copy(data_and_metadata: DataAndMetadata._DataAndMetadataLike,
                                   sequence_index: int = 0,
                                   collection_index: typing.Optional[DataAndMetadata.PositionType] = None,
                                   slice_center: int = 0,
@@ -1962,6 +2024,7 @@ def function_element_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMeta
                                   flag16: bool = True) -> typing.Tuple[typing.Optional[DataAndMetadata.DataAndMetadata], bool]:
     # extract an element (2d or 1d data element) from data and metadata using the indexes and slices.
     # flag16 is for backwards compatibility with 0.15.2 and earlier. new callers should set it to False.
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
     result: typing.Optional[DataAndMetadata.DataAndMetadata] = data_and_metadata
     dimensional_shape = data_and_metadata.dimensional_shape
     modified = False
@@ -2005,7 +2068,8 @@ def function_element_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMeta
     return result, modified
 
 
-def function_scalar_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetadata, complex_display_type: typing.Optional[str] = None, *, _modified: bool = False) -> typing.Tuple[typing.Optional[DataAndMetadata.DataAndMetadata], bool]:
+def function_scalar_data_no_copy(data_and_metadata: DataAndMetadata._DataAndMetadataLike, complex_display_type: typing.Optional[str] = None, *, _modified: bool = False) -> typing.Tuple[typing.Optional[DataAndMetadata.DataAndMetadata], bool]:
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
     modified = _modified
     result: typing.Optional[DataAndMetadata.DataAndMetadata] = data_and_metadata
     if result and result.is_data_complex_type:
@@ -2015,6 +2079,8 @@ def function_scalar_data_no_copy(data_and_metadata: DataAndMetadata.DataAndMetad
             result = function_array(numpy.imag, result)
         elif complex_display_type == "absolute":
             result = function_array(numpy.absolute, result)
+        elif  complex_display_type == "phase":
+            result = function_array(numpy.angle,  result)
         else:  # default, log-absolute
             def log_absolute(d: _ImageDataType) -> _ImageDataType:
                 return typing.cast(_ImageDataType, numpy.log(numpy.abs(d).astype(numpy.float64) + numpy.nextafter(0, 1)))
@@ -2054,7 +2120,7 @@ def function_display_rgba(data_and_metadata: DataAndMetadata.DataAndMetadata,
         assert display_range is not None
     assert len(Image.dimensional_shape_from_data(data_2d) or ()) == 2
     rgba_data = Image.create_rgba_image_from_array(data_2d, display_limits=display_range, lookup=color_table)
-    return DataAndMetadata.new_data_and_metadata(rgba_data)
+    return DataAndMetadata.new_data_and_metadata(rgba_data, timestamp=data_and_metadata.timestamp, timezone=data_and_metadata.timezone, timezone_offset=data_and_metadata.timezone_offset)
 
 
 def function_extract_datum(data_and_metadata: DataAndMetadata.DataAndMetadata, sequence_index: int = 0,

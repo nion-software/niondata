@@ -159,9 +159,10 @@ class DataMetadata:
         self.__timestamp = timestamp if timestamp else DateTime.utcnow()
         self.__timezone = timezone
         self.__timezone_offset = timezone_offset
-        self.__metadata = copy.deepcopy(dict(metadata)) if metadata is not None else dict()
 
-        assert isinstance(self.metadata, dict)
+        self.__metadata = dict(metadata) if metadata is not None else dict()
+        # assert isinstance(self.metadata, dict)  # disable for performance. it is enforced above.
+
         assert len(dimensional_calibrations) == len(dimensional_shape)
 
     def __eq__(self, other: typing.Any) -> bool:
@@ -184,8 +185,9 @@ class DataMetadata:
         return True
 
     def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> DataMetadata:
+        # do not copy metadata since it will be copied in constructor
         return DataMetadata(self.data_shape_and_dtype, self.intensity_calibration, self.dimensional_calibrations,
-                            self.metadata, self.timestamp, self.data_descriptor, self.timezone, self.timezone_offset)
+                            self.__metadata, self.timestamp, self.data_descriptor, self.timezone, self.timezone_offset)
 
     @property
     def data_shape_and_dtype(self) -> typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]]:
@@ -362,7 +364,7 @@ class DataMetadata:
         self.__data_descriptor = copy.deepcopy(data_descriptor)
 
     def _set_metadata(self, metadata: MetadataType) -> None:
-        self.__metadata = copy.deepcopy(dict(metadata))
+        self.__metadata = dict(metadata)
 
     def _set_timestamp(self, timestamp: datetime.datetime) -> None:
         self.__timestamp = timestamp
@@ -898,7 +900,7 @@ class ScalarAndMetadata:
         self.value_fn = value_fn
         self.calibration = calibration
         self.timestamp = timestamp if not timestamp else DateTime.utcnow()
-        self.metadata = copy.deepcopy(dict(metadata)) if metadata is not None else dict()
+        self.metadata = dict(metadata) if metadata is not None else dict()
 
     @classmethod
     def from_value(cls, value: _ScalarDataType, calibration: typing.Optional[Calibration.Calibration] = None) -> ScalarAndMetadata:
@@ -1150,7 +1152,13 @@ def function_data_slice(data_and_metadata_like: _DataAndMetadataLike, key: _Slic
     data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
     # print(f"data descriptor {data_descriptor}")
 
-    return new_data_and_metadata(data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=cropped_dimensional_calibrations, data_descriptor=data_descriptor)
+    return new_data_and_metadata(data,
+                                 intensity_calibration=data_and_metadata.intensity_calibration,
+                                 dimensional_calibrations=cropped_dimensional_calibrations,
+                                 data_descriptor=data_descriptor,
+                                 timestamp=data_and_metadata.timestamp,
+                                 timezone=data_and_metadata.timezone,
+                                 timezone_offset=data_and_metadata.timezone_offset)
 
 
 _DataAndMetadataLike = typing.Union[DataAndMetadata, _ImageDataType]
