@@ -1,11 +1,13 @@
 Changelog (niondata)
 ====================
 
-15.6.2 (UNRELEASED)
+15.6.2 (2024-01-02)
 -------------------
-- Add power function.
-- Add radial profile function.
+- Add power function (xdata.power).
+- Add radial profile function (xdata.radial_profile).
 - Improve handing of invalid inverse coordinates (1/0).
+- Add support for computing the phase of a complex array (thanks Luc J Bourhis).
+- Improve performance (eliminate some unnecessary metadata dict copying)
 
 15.6.1 (2023-10-23)
 -------------------
