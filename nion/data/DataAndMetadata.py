@@ -1032,7 +1032,7 @@ def function_data_slice(data_and_metadata_like: _DataAndMetadataLike, key: _Slic
                 slices.append((False, False, slice(0, shape[index + ellipse_index], 1)))
             return slices
         elif isinstance(s, numbers.Integral):
-            sl = slice(int(s), int(s + 1), 1)
+            sl = slice(int(s), int(s) + 1, 1)
             is_collapsible = True
         elif s is None:
             sl = slice(0, size, 1)
