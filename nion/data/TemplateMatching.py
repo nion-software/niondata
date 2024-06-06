@@ -132,3 +132,9 @@ def match_template(image: _ImageDataType, template: _ImageDataType) -> _ImageDat
     ccorr = normalized_corr(image, template)
     ccorr[ccorr > 1.1] = 0
     return ccorr
+
+
+def match_template_cuda(image: _ImageDataType, template: _ImageDataType) -> _ImageDataType:
+    ccorr = normalized_corr_cuda(image, template)
+    ccorr[ccorr > 1.1] = 0
+    return ccorr
