@@ -3,6 +3,14 @@ import scipy.fft
 import scipy.ndimage
 import typing
 
+_has_cuda = False
+try:
+    import cupy
+except ModuleNotFoundError:
+    pass
+else:
+    _has_cuda = True
+
 from nion.data import Image
 
 _ShapeType = Image.ShapeType
@@ -38,6 +46,37 @@ def normalized_corr(image: _ImageDataType, template: _ImageDataType) -> _ImageDa
     denom = image_variance * template.size * numpy.sum(normalized_template ** 2)
     denom[denom < 0] = numpy.amax(denom)
     return typing.cast(_ImageDataType, corr / numpy.sqrt(denom))
+
+
+def normalized_corr_cuda(image: _ImageDataType, template: _ImageDataType) -> _ImageDataType:
+    """
+    Correctly normalized template matching by cross-correlation. The result should be the same as what you get from
+    openCV's "match_template" function with method set to "ccoeff_normed", except for the output shape, which will
+    be image.shape here (as opposed to openCV, where only the valid portion of the image is returned).
+    Used ideas from here:
+    http://scribblethink.org/Work/nvisionInterface/nip.pdf (which is an extended version of this paper:
+    J. P. Lewis, "FastTemplateMatching", Vision Interface, p. 120-123, 1995)
+    """
+    template = cupy.asarray(template.astype(numpy.float64))
+    image = cupy.asarray(image.astype(numpy.float64))
+    normalized_template = template - cupy.mean(template)
+    # inverting the axis of a real image is the same as taking the conjugate of the fourier transform
+    fft_normalized_template_conj = cupyx.scipy.fft.fft2(normalized_template[::-1, ::-1], s=image.shape)
+    fft_image = cupyx.scipy.fft.fft2(image)
+    fft_image_squared = cupyx.scipy.fft.fft2(image ** 2)
+    fft_image_squared_means = cupyx.scipy.ndimage.fourier_uniform(fft_image_squared, template.shape)
+    image_means_squared = (cupyx.scipy.fft.ifft2(
+        cupyx.scipy.ndimage.fourier_uniform(fft_image, template.shape)).real) ** 2
+    # only normalizing the template is equivalent to normalizing both (see paper in docstring for details)
+    fft_corr = fft_image * fft_normalized_template_conj
+    # we need to shift the result back by half the template size
+    shift = (int(-1 * (template.shape[0] - 1) / 2), int(-1 * (template.shape[1] - 1) / 2))
+    corr = cupy.roll(cupyx.scipy.fft.ifft2(fft_corr).real, shift=shift, axis=(0, 1))
+    # use Var(X) = E(X^2) - E(X)^2 to calculate variance
+    image_variance = cupyx.scipy.fft.ifft2(fft_image_squared_means).real - image_means_squared
+    denom = image_variance * template.size * cupy.sum(normalized_template ** 2)
+    denom[denom < 0] = cupy.amax(denom)
+    return typing.cast(_ImageDataType, cupy.asnumpy(corr / cupy.sqrt(denom)))
 
 
 def parabola_through_three_points(p1: typing.Tuple[int, int], p2: typing.Tuple[int, int], p3: typing.Tuple[int, int]) -> typing.Tuple[float, float, float]:
