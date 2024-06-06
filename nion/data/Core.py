@@ -373,7 +373,17 @@ def function_match_template(image_xdata_in: _DataAndMetadataLike, template_xdata
         assert image is not None
         assert template is not None
         squeeze = True
-    ccorr = TemplateMatching.match_template(image, template)
+    success = False
+    if TemplateMatching._has_cuda:
+        try:
+            ccorr = TemplateMatching.match_template_cuda(image, template)
+        except:
+            pass
+        else:
+            success = True
+    if not success:
+        ccorr = TemplateMatching.match_template(image, template)
+
     if squeeze:
         ccorr = numpy.squeeze(ccorr)
     return DataAndMetadata.new_data_and_metadata(ccorr, dimensional_calibrations=image_xdata.dimensional_calibrations)
