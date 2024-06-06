@@ -6,6 +6,7 @@ import typing
 _has_cuda = False
 try:
     import cupy
+    import cupyx
 except ModuleNotFoundError:
     pass
 else:
