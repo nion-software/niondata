@@ -271,6 +271,10 @@ def function_measure_multi_dimensional_shifts(xdata: DataAndMetadata.DataAndMeta
     else:
         sections = list(range(start_index, navigation_len, max(1, navigation_len//num_threads)))
         sections.append(navigation_len)
+
+    if Core.TemplateMatching._has_cuda:
+        sections = [start_index, navigation_len]
+
     barrier = threading.Barrier(len(sections))
 
     def run_on_thread(range_: range) -> None:
