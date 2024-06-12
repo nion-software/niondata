@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 # standard libraries
+import base64
 import copy
 import datetime
 import gettext
 import logging
 import numbers
+import pickle
+import re
 import threading
 import typing
 import warnings
@@ -15,6 +18,7 @@ import numpy.typing
 
 from nion.data import Calibration
 from nion.data import Image
+from nion.utils import Converter
 from nion.utils import DateTime
 
 _ = gettext.gettext
@@ -890,6 +894,57 @@ class DataAndMetadata:
 
     def __getitem__(self, key: typing.Union[_SliceKeyType, _SliceKeyElementType]) -> DataAndMetadata:
         return function_data_slice(self, key_to_list(key))
+
+    @classmethod
+    def from_rpc_dict(cls, d: typing.Mapping[str, typing.Any]) -> typing.Optional[DataAndMetadata]:
+        if d is None:
+            return None
+        data = pickle.loads(base64.b64decode(d["data"].encode('utf-8')))
+        dimensional_shape = Image.dimensional_shape_from_data(data) or tuple()
+        data_shape_and_dtype = data.shape, data.dtype
+        intensity_calibration_d = d.get("intensity_calibration")
+        intensity_calibration = Calibration.Calibration.from_rpc_dict(intensity_calibration_d) if intensity_calibration_d else None
+        dimensional_calibrations_d = d.get("dimensional_calibrations")
+        if dimensional_calibrations_d:
+            dimensional_calibrations = [Calibration.Calibration.from_rpc_dict(dc) or Calibration.Calibration() for dc in dimensional_calibrations_d]
+        else:
+            dimensional_calibrations = None
+        metadata = d.get("metadata")
+        timestamp = Converter.DatetimeToStringConverter().convert_back(d["timestamp"]) if "timestamp" in d else None
+        timezone = d.get("timezone")
+        timezone_offset = d.get("timezone_offset")
+        is_sequence = d.get("is_sequence", False)
+        collection_dimension_count = d.get("collection_dimension_count")
+        datum_dimension_count = d.get("datum_dimension_count")
+        if collection_dimension_count is None:
+            collection_dimension_count = 2 if len(dimensional_shape) == 3 and not is_sequence else 0
+        if datum_dimension_count is None:
+            datum_dimension_count = len(dimensional_shape) - collection_dimension_count - (1 if is_sequence else 0)
+        data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
+        return DataAndMetadata(data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor, timezone=timezone, timezone_offset=timezone_offset)
+
+    @property
+    def rpc_dict(self) -> typing.Dict[str, typing.Any]:
+        d = dict[str, typing.Any]()
+        data = self.data
+        if data is not None:
+            d["data"] = base64.b64encode(numpy.ndarray.dumps(data)).decode('utf=8')
+        if self.intensity_calibration:
+            d["intensity_calibration"] = self.intensity_calibration.rpc_dict
+        if self.dimensional_calibrations:
+            d["dimensional_calibrations"] = [dimensional_calibration.rpc_dict for dimensional_calibration in self.dimensional_calibrations]
+        if self.timestamp:
+            d["timestamp"] = self.timestamp.isoformat()
+        if self.timezone:
+            d["timezone"] = self.timezone
+        if self.timezone_offset:
+            d["timezone_offset"] = self.timezone_offset
+        if self.metadata:
+            d["metadata"] = copy.deepcopy(self.metadata)
+        d["is_sequence"] = self.is_sequence
+        d["collection_dimension_count"] = self.collection_dimension_count
+        d["datum_dimension_count"] = self.datum_dimension_count
+        return d
 
 
 class ScalarAndMetadata:
