@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+15.6.3 (2024-06-12)
+-------------------
+- Restore RPC (remote procedure calls) support to DataAndMetadata.
+
 15.6.2 (2024-01-02)
 -------------------
 - Add power function (xdata.power).
