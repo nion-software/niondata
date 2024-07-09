@@ -30,8 +30,17 @@ _DataAndMetadataIndeterminateSizeLike = DataAndMetadata._DataAndMetadataIndeterm
 
 
 class DispatchingProcessor(Core.BaseProcessor):
+    """Dispatches operations to a list of processors.
+
+    Add new processors from plug-ins with `add_processor` method for now.
+    """
+
     def __init__(self, processors: typing.Sequence[Core.BaseProcessor]) -> None:
         self.__processors = list(processors)
+
+    def add_processor(self, processor: Core.BaseProcessor) -> None:
+        # processors are dispatched in reverse order, so add new processors at the end.
+        self.__processors.append(processor)
 
     def _dispatch(self, fn: typing.Callable[[Core.BaseProcessor], typing.Any], function_id: str) -> typing.Any:
         for processor in reversed(self.__processors):
@@ -54,7 +63,7 @@ class DispatchingProcessor(Core.BaseProcessor):
         return typing.cast(Core._DataResultLike, self._dispatch(fn, "_fft_2d"))
 
 
-processor = DispatchingProcessor([Core.CoreProcessor()])
+_dispatching_processor = DispatchingProcessor([Core.CoreProcessor()])
 
 
 # functions changing size or type of array
@@ -254,7 +263,7 @@ def rgba(red_data_and_metadata: _DataAndMetadataLike, green_data_and_metadata: _
 # ffts
 
 def fft(data_and_metadata: _DataAndMetadataLike) -> DataAndMetadata.DataAndMetadata:
-    return processor.fft(data_and_metadata).data_and_metadata
+    return _dispatching_processor.fft(data_and_metadata).data_and_metadata
 
 def ifft(data_and_metadata: _DataAndMetadataLike) -> DataAndMetadata.DataAndMetadata:
     return Core.function_ifft(data_and_metadata)
