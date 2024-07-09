@@ -29,6 +29,34 @@ _DataAndMetadataLike = DataAndMetadata._DataAndMetadataLike
 _DataAndMetadataIndeterminateSizeLike = DataAndMetadata._DataAndMetadataIndeterminateSizeLike
 
 
+class DispatchingProcessor(Core.BaseProcessor):
+    def __init__(self, processors: typing.Sequence[Core.BaseProcessor]) -> None:
+        self.__processors = list(processors)
+
+    def _dispatch(self, fn: typing.Callable[[Core.BaseProcessor], typing.Any], function_id: str) -> typing.Any:
+        for processor in reversed(self.__processors):
+            try:
+                return fn(processor)
+            except NotImplementedError as e:
+                pass
+        raise NotImplementedError(f"No processor supports {function_id} operation.")
+
+    def _fft_1d(self, data: Core._DataLike, scaling: float) -> Core._DataResultLike:
+        def fn(processor: Core.BaseProcessor) -> Core._DataResultLike:
+            return processor._fft_1d(data, scaling)
+
+        return typing.cast(Core._DataResultLike, self._dispatch(fn, "_fft_1d"))
+
+    def _fft_2d(self, data: Core._DataLike, scaling: float) -> Core._DataResultLike:
+        def fn(processor: Core.BaseProcessor) -> Core._DataResultLike:
+            return processor._fft_2d(data, scaling)
+
+        return typing.cast(Core._DataResultLike, self._dispatch(fn, "_fft_2d"))
+
+
+processor = DispatchingProcessor([Core.CoreProcessor()])
+
+
 # functions changing size or type of array
 
 def astype(data_and_metadata: _DataAndMetadataLike, type: numpy.typing.DTypeLike) -> DataAndMetadata.DataAndMetadata:
@@ -226,7 +254,7 @@ def rgba(red_data_and_metadata: _DataAndMetadataLike, green_data_and_metadata: _
 # ffts
 
 def fft(data_and_metadata: _DataAndMetadataLike) -> DataAndMetadata.DataAndMetadata:
-    return Core.function_fft(data_and_metadata)
+    return processor.fft(data_and_metadata).data_and_metadata
 
 def ifft(data_and_metadata: _DataAndMetadataLike) -> DataAndMetadata.DataAndMetadata:
     return Core.function_ifft(data_and_metadata)

@@ -36,8 +36,111 @@ _DataAndMetadataLike = DataAndMetadata._DataAndMetadataLike
 _DataAndMetadataIndeterminateSizeLike = DataAndMetadata._DataAndMetadataIndeterminateSizeLike
 _DataAndMetadataOrConstant = DataAndMetadata._DataAndMetadataOrConstant
 _SliceKeyElementType = DataAndMetadata._SliceKeyElementType
-
+_DataLike = numpy.typing.NDArray[typing.Any]
 _ImageDataType = Image._ImageDataType
+
+
+class _DataAndMetadataResultLike(typing.Protocol):
+    @property
+    def data_and_metadata(self) -> DataAndMetadata.DataAndMetadata: ...
+
+
+class _DataResultLike(typing.Protocol):
+    @property
+    def data(self) -> _DataLike: ...
+
+
+class BaseDataAndMetadataResult(_DataAndMetadataResultLike):
+    def __init__(self, data_and_metadata: DataAndMetadata.DataAndMetadata) -> None:
+        self.__data_and_metadata = data_and_metadata
+
+    @property
+    def data_and_metadata(self) -> DataAndMetadata.DataAndMetadata:
+        return self.__data_and_metadata
+
+
+class BaseProcessor(typing.Protocol):
+    """Define abstract processor.
+
+    High level routines (working on DataAndMetadata) do not have leading underscore.
+
+    Low level routines, meant to be used by high level routines, have leading underscore. They can be subclassed
+    as needed.
+
+    Threads and result caching are not addressed in this version.
+    """
+
+    # subclasses should not override these methods
+
+    def fft(self, data_and_metadata_in: _DataAndMetadataLike) -> _DataAndMetadataResultLike:
+        data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
+
+        data_shape = data_and_metadata.data_shape
+        data_dtype = data_and_metadata.data_dtype
+
+        data = data_and_metadata.data
+        assert data is not None
+
+        # scaling: numpy.sqrt(numpy.mean(numpy.absolute(data_copy)**2)) == numpy.sqrt(numpy.mean(numpy.absolute(data_copy_fft)**2))
+        # see https://gist.github.com/endolith/1257010
+        if Image.is_data_1d(data):
+            scaling = 1.0 / numpy.sqrt(data_shape[0])
+            calculated_data = self._fft_1d(data, scaling)
+        elif Image.is_data_2d(data):
+            if Image.is_data_rgb_type(data):
+                if Image.is_data_rgb(data):
+                    data_copy = numpy.sum(data[..., :] * (0.2126, 0.7152, 0.0722), 2)
+                else:
+                    data_copy = numpy.sum(data[..., :] * (0.2126, 0.7152, 0.0722, 0.0), 2)
+            else:
+                data_copy = numpy.copy(data)  # let other threads use data while we're processing
+            scaling = 1.0 / numpy.sqrt(data_shape[1] * data_shape[0])
+            calculated_data = self._fft_2d(data_copy, scaling)
+        else:
+            raise NotImplementedError()
+
+        src_dimensional_calibrations = data_and_metadata.dimensional_calibrations
+
+        if not Image.is_data_valid(data_and_metadata.data):
+            raise ValueError("FFT: invalid data")
+
+        assert len(src_dimensional_calibrations) == len(
+            Image.dimensional_shape_from_shape_and_dtype(data_shape, data_dtype) or ())
+
+        dimensional_calibrations = [
+            Calibration.Calibration((-0.5 - 0.5 * data_shape_n) / (dimensional_calibration.scale * data_shape_n),
+                                    1.0 / (dimensional_calibration.scale * data_shape_n),
+                                    "1/" + dimensional_calibration.units) for dimensional_calibration, data_shape_n in
+            zip(src_dimensional_calibrations, data_shape)]
+
+        result_data_and_metadata = DataAndMetadata.new_data_and_metadata(calculated_data.data,
+                                                                         dimensional_calibrations=dimensional_calibrations,
+                                                                         intensity_calibration=data_and_metadata.intensity_calibration)
+
+        return BaseDataAndMetadataResult(result_data_and_metadata)
+
+    # subclasses can override these methods
+
+    def _fft_1d(self, data: _DataLike, scaling: float) -> _DataResultLike: ...
+    def _fft_2d(self, data: _DataLike, scaling: float) -> _DataResultLike: ...
+
+
+class CoreDataResult(_DataResultLike):
+    def __init__(self, data: _DataLike) -> None:
+        self.__data = data
+
+    @property
+    def data(self) -> _DataLike:
+        return self.__data
+
+
+class CoreProcessor(BaseProcessor):
+    def _fft_1d(self, data: _DataLike, scaling: float) -> _DataResultLike:
+        return CoreDataResult(scipy.fft.fftshift(numpy.multiply(scipy.fft.fft(data), scaling)))  # type: ignore
+
+    def _fft_2d(self, data: _DataLike, scaling: float) -> _DataResultLike:
+        # see https://gist.github.com/cmeyer/d2c9a7636df21d07d91cd73ee06d0ef9
+        return CoreDataResult(scipy.fft.fftshift(numpy.multiply(scipy.fft.fft2(data), scaling)))  # type: ignore
 
 
 def column(data_and_metadata_in: _DataAndMetadataLike, start: int, stop: int) -> DataAndMetadata.DataAndMetadata:
