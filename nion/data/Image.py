@@ -117,7 +117,7 @@ def rebin_1d(src: _ImageDataType, len: int, retained: typing.Optional[typing.Dic
 
 def get_dtype_view(array: numpy.typing.ArrayLike, dtype: numpy.typing.DTypeLike) -> _ImageDataType:
     # this is useful for handling both numpy and h5py arrays
-    return numpy.array(array, copy=False).view(dtype)
+    return numpy.asarray(array).view(dtype)
 
 
 def get_byte_view(rgba_image: _RGBAImageDataType) -> _RGBA8ImageDataType:
