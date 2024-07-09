@@ -136,11 +136,11 @@ class CoreDataResult(_DataResultLike):
 
 class CoreProcessor(BaseProcessor):
     def _fft_1d(self, data: _DataLike, scaling: float) -> _DataResultLike:
-        return CoreDataResult(scipy.fft.fftshift(numpy.multiply(scipy.fft.fft(data), scaling)))  # type: ignore
+        return CoreDataResult(scipy.fft.fftshift(numpy.multiply(scipy.fft.fft(data), scaling)))
 
     def _fft_2d(self, data: _DataLike, scaling: float) -> _DataResultLike:
         # see https://gist.github.com/cmeyer/d2c9a7636df21d07d91cd73ee06d0ef9
-        return CoreDataResult(scipy.fft.fftshift(numpy.multiply(scipy.fft.fft2(data), scaling)))  # type: ignore
+        return CoreDataResult(scipy.fft.fftshift(numpy.multiply(scipy.fft.fft2(data), scaling)))
 
 
 def column(data_and_metadata_in: _DataAndMetadataLike, start: int, stop: int) -> DataAndMetadata.DataAndMetadata:
