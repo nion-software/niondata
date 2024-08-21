@@ -526,6 +526,15 @@ class DataAndMetadata:
                                             metadata, timestamp, data_descriptor=data_descriptor,
                                             timezone=timezone, timezone_offset=timezone_offset)
 
+    def __eq__(self, other: typing.Any) -> bool:
+        if not isinstance(other, self.__class__):
+            return False
+        if self.data is not other.data:
+            return False
+        if self.data_metadata != other.data_metadata:
+            return False
+        return True
+
     def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> DataAndMetadata:
         # use numpy.copy so that it handles h5py arrays too (resulting in ndarray).
         data_copy = numpy.copy(self.data)

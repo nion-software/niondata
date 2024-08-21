@@ -973,7 +973,7 @@ class TestCore(unittest.TestCase):
         image_xdata = DataAndMetadata.new_data_and_metadata(data)
         template_xdata = DataAndMetadata.new_data_and_metadata(scipy.ndimage.shift(data, (-2.3, -3.7), order=1))
         mask: numpy.typing.NDArray[numpy.bool_] = numpy.zeros(data.shape, dtype=bool)
-        y, x = numpy.mgrid[-data.shape[0]/2:data.shape[0]/2:1j*data.shape[0], -data.shape[0]/2:data.shape[0]/2:1j*data.shape[0]] # type: ignore
+        y, x = numpy.mgrid[-data.shape[0]/2:data.shape[0]/2:1j*data.shape[0], -data.shape[0]/2:data.shape[0]/2:1j*data.shape[0]]
         mask[numpy.sqrt(x**2 + y**2) < 7] = True
         # We make a mask that is one lattice site offset in y-direction
         mask = numpy.roll(mask, (10, 0), axis=(0, 1)).astype(bool)
