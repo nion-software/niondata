@@ -1,6 +1,11 @@
 Changelog (niondata)
 ====================
 
+15.6.4 (UNRELEASED)
+-------------------
+- Make Calibration hashable.
+- Require Numpy 2. Drop Python 3.9.
+
 15.6.3 (2024-06-12)
 -------------------
 - Restore RPC (remote procedure calls) support to DataAndMetadata.
