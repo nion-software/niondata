@@ -54,6 +54,11 @@ class TestCalibrationClass(unittest.TestCase):
         self.assertTrue(calibration1 != None)
         self.assertFalse(calibration1 == None)
 
+    def test_calibration_is_hashable(self) -> None:
+        d = {Calibration.Calibration(1.0, 2.0, "c"): 1}
+        self.assertEqual(d[Calibration.Calibration(1.0, 2.0, "c")], 1)
+
+
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
     unittest.main()

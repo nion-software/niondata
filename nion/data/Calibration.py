@@ -42,6 +42,9 @@ class Calibration:
             return self.offset != other.offset or self.scale != other.scale or self.units != other.units
         return True
 
+    def __hash__(self) -> int:
+        return hash((self.offset, self.scale, self.units))
+
     def __str__(self) -> str:
         return "{0:s} offset:{1:g} scale:{2:g} units:\'{3:s}\'".format(self.__repr__(), self.offset, self.scale, self.units)
 
