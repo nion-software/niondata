@@ -18,7 +18,7 @@ requirements:
     - pip
     - setuptools
   run:
-    - python >=3.10
+    - python >=3.11
     - nionutils >=4.11.0,<5.0.0
     - scipy
     - numpy >=2.0,<3.0
