@@ -1,10 +1,10 @@
 Changelog (niondata)
 ====================
 
-15.6.4 (UNRELEASED)
+15.7.0 (2024-10-27)
 -------------------
 - Make Calibration hashable.
-- Require Numpy 2. Drop Python 3.9.
+- Require Numpy 2. Add Python 3.13 support. Drop Python 3.9, 3.10 support.
 
 15.6.3 (2024-06-12)
 -------------------
