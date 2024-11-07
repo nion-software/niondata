@@ -400,6 +400,11 @@ class DataMetadata:
         return Image.is_shape_and_dtype_4d(*data_shape_and_dtype) if data_shape_and_dtype else False
 
     @property
+    def is_data_5d(self) -> bool:
+        data_shape_and_dtype = self.data_shape_and_dtype
+        return Image.is_shape_and_dtype_5d(*data_shape_and_dtype) if data_shape_and_dtype else False
+
+    @property
     def is_data_rgb(self) -> bool:
         data_shape_and_dtype = self.data_shape_and_dtype
         return Image.is_shape_and_dtype_rgb(*data_shape_and_dtype) if data_shape_and_dtype else False
@@ -767,6 +772,10 @@ class DataAndMetadata:
         return self.__data_metadata.is_data_4d
 
     @property
+    def is_data_5d(self) -> bool:
+        return self.__data_metadata.is_data_5d
+
+    @property
     def is_data_rgb(self) -> bool:
         return self.__data_metadata.is_data_rgb
 
@@ -822,6 +831,9 @@ class DataAndMetadata:
         elif self.is_data_4d:
             if data is not None:
                 return data[int(pos[0]), int(pos[1]), int(pos[2]), int(pos[3])]
+        elif self.is_data_5d:
+            if data is not None:
+                return  data[int(pos[2]), int(pos[0]), int(pos[1]), int(pos[3]), int(pos[4])]
         return None
 
     def __unary_op(self, op: typing.Callable[[_ImageDataType], _ImageDataType]) -> DataAndMetadata:
