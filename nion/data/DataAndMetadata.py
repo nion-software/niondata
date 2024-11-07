@@ -833,7 +833,7 @@ class DataAndMetadata:
                 return data[int(pos[0]), int(pos[1]), int(pos[2]), int(pos[3])]
         elif self.is_data_5d:
             if data is not None:
-                return  data[int(pos[2]), int(pos[0]), int(pos[1]), int(pos[3]), int(pos[4])]
+                return  data[int(pos[0]), int(pos[1]), int(pos[2]), int(pos[3]), int(pos[4])]
         return None
 
     def __unary_op(self, op: typing.Callable[[_ImageDataType], _ImageDataType]) -> DataAndMetadata:
