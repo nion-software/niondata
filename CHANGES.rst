@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+15.8.0 (2025-01-06)
+-------------------
+- Add support for 5d (1/2/2) data in data and metadata objects.
+
 15.7.0 (2024-10-27)
 -------------------
 - Make Calibration hashable.
