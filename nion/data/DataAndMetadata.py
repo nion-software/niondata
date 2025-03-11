@@ -8,7 +8,6 @@ import gettext
 import logging
 import numbers
 import pickle
-import re
 import threading
 import typing
 import warnings
@@ -122,14 +121,20 @@ class DataMetadata:
     Values passed to init and set methods are copied before storing. Returned values are return directly and not copied.
     """
 
-    def __init__(self, data_shape_and_dtype: typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]],
-                 intensity_calibration: typing.Optional[Calibration.Calibration] = None,
-                 dimensional_calibrations: typing.Optional[CalibrationListType] = None,
-                 metadata: typing.Optional[MetadataType] = None,
-                 timestamp: typing.Optional[datetime.datetime] = None,
-                 data_descriptor: typing.Optional[DataDescriptor] = None,
-                 timezone: typing.Optional[str] = None,
-                 timezone_offset: typing.Optional[str] = None):
+    def __init__(self,
+                 data_shape_and_dtype: typing.Tuple[ShapeType, numpy.typing.DTypeLike] | None = None,
+                 intensity_calibration: Calibration.Calibration | None = None,
+                 dimensional_calibrations: CalibrationListType | None = None,
+                 metadata: MetadataType | None = None,
+                 timestamp: datetime.datetime | None = None,
+                 data_descriptor: DataDescriptor | None = None,
+                 timezone: str | None = None,
+                 timezone_offset: str | None = None,
+                 data_shape: ShapeType | None = None,
+                 data_dtype: numpy.typing.DTypeLike | None = None):
+        if data_shape_and_dtype is None and data_shape is not None and data_dtype is not None:
+            data_shape_and_dtype = (data_shape, data_dtype)
+
         if data_shape_and_dtype is not None and data_shape_and_dtype[0] is not None and not all([type(data_shape_item) == int for data_shape_item in data_shape_and_dtype[0]]):
             warnings.warn('using a non-integer shape in DataAndMetadata', DeprecationWarning, stacklevel=2)
 
@@ -190,8 +195,16 @@ class DataMetadata:
 
     def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> DataMetadata:
         # do not copy metadata since it will be copied in constructor
-        return DataMetadata(self.data_shape_and_dtype, self.intensity_calibration, self.dimensional_calibrations,
-                            self.__metadata, self.timestamp, self.data_descriptor, self.timezone, self.timezone_offset)
+        return DataMetadata(
+            data_shape=self.data_shape,
+            data_dtype=self.data_dtype,
+            intensity_calibration=self.intensity_calibration,
+            dimensional_calibrations=self.dimensional_calibrations,
+            metadata=self.__metadata,
+            timestamp=self.timestamp,
+            data_descriptor=self.data_descriptor,
+            timezone=self.timezone,
+            timezone_offset=self.timezone_offset)
 
     @property
     def data_shape_and_dtype(self) -> typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]]:
@@ -515,21 +528,32 @@ class DataAndMetadata:
     directly and not copied.
     """
 
-    def __init__(self, data: _ImageDataType,
-                 data_shape_and_dtype: typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]],
-                 intensity_calibration: typing.Optional[Calibration.Calibration] = None,
-                 dimensional_calibrations: typing.Optional[CalibrationListType] = None,
-                 metadata: typing.Optional[MetadataType] = None,
-                 timestamp: typing.Optional[datetime.datetime] = None,
-                 data_descriptor: typing.Optional[DataDescriptor] = None,
-                 timezone: typing.Optional[str] = None,
-                 timezone_offset: typing.Optional[str] = None):
+    def __init__(self,
+                 data: _ImageDataType,
+                 data_shape_and_dtype: typing.Tuple[ShapeType, numpy.typing.DTypeLike] | None = None,
+                 intensity_calibration: Calibration.Calibration | None = None,
+                 dimensional_calibrations: CalibrationListType | None = None,
+                 metadata: MetadataType | None = None,
+                 timestamp: datetime.datetime | None = None,
+                 data_descriptor: DataDescriptor | None = None,
+                 timezone: str | None = None,
+                 timezone_offset: str | None = None,
+                 data_shape: ShapeType | None = None,
+                 data_dtype: numpy.typing.DTypeLike | None = None):
         self.__data_lock = threading.RLock()
         self.__data = data
         assert isinstance(metadata, dict) if metadata is not None else True
-        self.__data_metadata = DataMetadata(data_shape_and_dtype, intensity_calibration, dimensional_calibrations,
-                                            metadata, timestamp, data_descriptor=data_descriptor,
-                                            timezone=timezone, timezone_offset=timezone_offset)
+        self.__data_metadata = DataMetadata(
+            data_shape_and_dtype=data_shape_and_dtype,
+            intensity_calibration=intensity_calibration,
+            dimensional_calibrations=dimensional_calibrations,
+            metadata=metadata,
+            timestamp=timestamp,
+            data_descriptor=data_descriptor,
+            timezone=timezone,
+            timezone_offset=timezone_offset,
+            data_shape=data_shape,
+            data_dtype=data_dtype)
 
     def __eq__(self, other: typing.Any) -> bool:
         if not isinstance(other, self.__class__):
@@ -543,9 +567,15 @@ class DataAndMetadata:
     def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> DataAndMetadata:
         # use numpy.copy so that it handles h5py arrays too (resulting in ndarray).
         data_copy = numpy.copy(self.data)
-        deepcopy = DataAndMetadata.from_data(data_copy, self.intensity_calibration, self.dimensional_calibrations,
-                                             self.metadata, self.timestamp, self.data_descriptor, self.timezone,
-                                             self.timezone_offset)
+        deepcopy = DataAndMetadata.from_data(
+            data=data_copy,
+            intensity_calibration=self.intensity_calibration,
+            dimensional_calibrations=self.dimensional_calibrations,
+            metadata=self.metadata,
+            timestamp=self.timestamp,
+            data_descriptor=self.data_descriptor,
+            timezone=self.timezone,
+            timezone_offset=self.timezone_offset)
         memo[id(self)] = deepcopy
         return deepcopy
 
@@ -566,8 +596,16 @@ class DataAndMetadata:
                   timezone: typing.Optional[str] = None,
                   timezone_offset: typing.Optional[str] = None) -> DataAndMetadata:
         """Return a new data and metadata from an ndarray. Takes ownership of data."""
-        data_shape_and_dtype = (data.shape, data.dtype) if data is not None else None
-        return cls(data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor, timezone=timezone, timezone_offset=timezone_offset)
+        return cls(data=data,
+                   data_shape=data.shape,
+                   data_dtype=data.dtype,
+                   intensity_calibration=intensity_calibration,
+                   dimensional_calibrations=dimensional_calibrations,
+                   metadata=metadata,
+                   timestamp=timestamp,
+                   data_descriptor=data_descriptor,
+                   timezone=timezone,
+                   timezone_offset=timezone_offset)
 
     @property
     def data(self) -> _ImageDataType:
@@ -578,7 +616,11 @@ class DataAndMetadata:
         return self.data
 
     def clone_with_data(self, data: _ImageDataType) -> DataAndMetadata:
-        return new_data_and_metadata(data, intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations, data_descriptor=self.data_descriptor)
+        return new_data_and_metadata(
+            data=data,
+            intensity_calibration=self.intensity_calibration,
+            dimensional_calibrations=self.dimensional_calibrations,
+            data_descriptor=self.data_descriptor)
 
     @property
     def data_shape_and_dtype(self) -> typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]]:
@@ -837,13 +879,22 @@ class DataAndMetadata:
         return None
 
     def __unary_op(self, op: typing.Callable[[_ImageDataType], _ImageDataType]) -> DataAndMetadata:
-        return new_data_and_metadata(op(self._data_ex), intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations)
+        return new_data_and_metadata(
+            data=op(self._data_ex),
+            intensity_calibration=self.intensity_calibration,
+            dimensional_calibrations=self.dimensional_calibrations)
 
     def __binary_op(self, op: typing.Callable[[_ImageDataType, _ImageDataType], _ImageDataType], other: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata:
-        return new_data_and_metadata(op(self._data_ex, extract_data(other)), intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations)
+        return new_data_and_metadata(
+            data=op(self._data_ex, extract_data(other)),
+            intensity_calibration=self.intensity_calibration,
+            dimensional_calibrations=self.dimensional_calibrations)
 
     def __rbinary_op(self, op: typing.Callable[[_ImageDataType, _ImageDataType], _ImageDataType], other: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata:
-        return new_data_and_metadata(op(extract_data(other), self._data_ex), intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations)
+        return new_data_and_metadata(
+            data=op(extract_data(other), self._data_ex),
+            intensity_calibration=self.intensity_calibration,
+            dimensional_calibrations=self.dimensional_calibrations)
 
     def __abs__(self) -> DataAndMetadata:
         return self.__unary_op(numpy.abs)
@@ -943,7 +994,17 @@ class DataAndMetadata:
         if datum_dimension_count is None:
             datum_dimension_count = len(dimensional_shape) - collection_dimension_count - (1 if is_sequence else 0)
         data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
-        return DataAndMetadata(data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor, timezone=timezone, timezone_offset=timezone_offset)
+        return DataAndMetadata(
+            data=data,
+            data_shape=data.shape,
+            data_dtype=data.dtype,
+            intensity_calibration=intensity_calibration,
+            dimensional_calibrations=dimensional_calibrations,
+            metadata=metadata,
+            timestamp=timestamp,
+            data_descriptor=data_descriptor,
+            timezone=timezone,
+            timezone_offset=timezone_offset)
 
     @property
     def rpc_dict(self) -> typing.Dict[str, typing.Any]:
@@ -1229,7 +1290,7 @@ def function_data_slice(data_and_metadata_like: _DataAndMetadataLike, key: _Slic
     data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
     # print(f"data descriptor {data_descriptor}")
 
-    return new_data_and_metadata(data,
+    return new_data_and_metadata(data=data,
                                  intensity_calibration=data_and_metadata.intensity_calibration,
                                  dimensional_calibrations=cropped_dimensional_calibrations,
                                  data_descriptor=data_descriptor,
@@ -1248,9 +1309,9 @@ def promote_indeterminate_array(data: _DataAndMetadataIndeterminateSizeLike) -> 
     if isinstance(data, DataAndMetadata):
         return data
     if isinstance(data, numpy.ndarray):
-        return new_data_and_metadata(data)
+        return new_data_and_metadata(data=data)
     if hasattr(data, "__array__"):
-        return new_data_and_metadata(typing.cast(_ImageDataType, data))
+        return new_data_and_metadata(data=typing.cast(_ImageDataType, data))
     return data
 
 
@@ -1260,7 +1321,7 @@ def promote_ndarray(data: _DataAndMetadataLike) -> DataAndMetadata:
     if isinstance(data, DataAndMetadata):
         return data
     if hasattr(data, "__array__"):
-        return new_data_and_metadata(data)
+        return new_data_and_metadata(data=data)
     raise Exception(f"Unable to convert {data} to DataAndMetadata.")
 
 
@@ -1279,7 +1340,7 @@ def promote_constant(data: _DataAndMetadataOrConstant, shape: ShapeType) -> Data
     # return data and metadata or constant with shape in form of data and metadata
     if isinstance(data, DataAndMetadata):
         return data
-    return new_data_and_metadata(numpy.full(shape, data))
+    return new_data_and_metadata(data=numpy.full(shape, data))
 
 
 def new_data_and_metadata(data: _ImageDataType,
@@ -1291,4 +1352,12 @@ def new_data_and_metadata(data: _ImageDataType,
                           timezone: typing.Optional[str] = None,
                           timezone_offset: typing.Optional[str] = None) -> DataAndMetadata:
     """Return a new data and metadata from an ndarray. Takes ownership of data."""
-    return DataAndMetadata.from_data(data, intensity_calibration, dimensional_calibrations, metadata, timestamp=timestamp, timezone=timezone, timezone_offset=timezone_offset, data_descriptor=data_descriptor)
+    return DataAndMetadata.from_data(
+        data=data,
+        intensity_calibration=intensity_calibration,
+        dimensional_calibrations=dimensional_calibrations,
+        metadata=metadata,
+        timestamp=timestamp,
+        timezone=timezone,
+        timezone_offset=timezone_offset,
+        data_descriptor=data_descriptor)
