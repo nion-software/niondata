@@ -96,7 +96,7 @@ def function_integrate_along_axis(input_xdata: DataAndMetadata.DataAndMetadata,
 
     result_data_descriptor = DataAndMetadata.DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
 
-    return DataAndMetadata.new_data_and_metadata(result_data,
+    return DataAndMetadata.new_data_and_metadata(data=result_data,
                                                  intensity_calibration=input_xdata.intensity_calibration,
                                                  dimensional_calibrations=result_dimensional_calibrations,
                                                  data_descriptor=result_data_descriptor)
@@ -332,7 +332,7 @@ def function_measure_multi_dimensional_shifts(xdata: DataAndMetadata.DataAndMeta
             shifts = numpy.cumsum(shifts, axis=1)
         shifts = numpy.cumsum(shifts, axis=0)
 
-    return DataAndMetadata.new_data_and_metadata(shifts,
+    return DataAndMetadata.new_data_and_metadata(data=shifts,
                                                  intensity_calibration=intensity_calibration,
                                                  dimensional_calibrations=dimensional_calibrations)
 
@@ -424,7 +424,7 @@ def function_apply_multi_dimensional_shifts(xdata: DataAndMetadata.DataAndMetada
     # run_on_thread(range(0, navigation_len))
 
     if out is None:
-        return DataAndMetadata.new_data_and_metadata(result,
+        return DataAndMetadata.new_data_and_metadata(data=result,
                                                      intensity_calibration=xdata.intensity_calibration,
                                                      dimensional_calibrations=xdata.dimensional_calibrations,
                                                      metadata=xdata.metadata,
@@ -476,7 +476,7 @@ def function_make_tableau_image(xdata: DataAndMetadata.DataAndMetadata,
 
     dimensional_calibrations = list(copy.deepcopy(xdata.dimensional_calibrations))
     [dimensional_calibrations.pop(iteration_start_index) for _ in range(len(iteration_shape))]
-    return DataAndMetadata.new_data_and_metadata(result,
+    return DataAndMetadata.new_data_and_metadata(data=result,
                                                  intensity_calibration=xdata.intensity_calibration,
                                                  dimensional_calibrations=dimensional_calibrations,
                                                  metadata=xdata.metadata,

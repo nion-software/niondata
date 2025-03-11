@@ -115,7 +115,7 @@ def column(shape: DataAndMetadata.Shape2dType, start: typing.Optional[int]=None,
     start_1 = start if start is not None else 0
     stop_1 = stop if stop is not None else shape[1]
     data: _ImageDataType = numpy.meshgrid(numpy.linspace(start_1, stop_1, shape[1]), numpy.linspace(start_0, stop_0, shape[0]))[0]
-    return DataAndMetadata.new_data_and_metadata(data)
+    return DataAndMetadata.new_data_and_metadata(data=data)
 
 def row(shape: DataAndMetadata.Shape2dType, start: typing.Optional[int]=None, stop: typing.Optional[int]=None) -> DataAndMetadata.DataAndMetadata:
     start_0 = start if start is not None else 0
@@ -123,7 +123,7 @@ def row(shape: DataAndMetadata.Shape2dType, start: typing.Optional[int]=None, st
     start_1 = start if start is not None else 0
     stop_1 = stop if stop is not None else shape[1]
     data: _ImageDataType = numpy.meshgrid(numpy.linspace(start_1, stop_1, shape[1]), numpy.linspace(start_0, stop_0, shape[0]))[1]
-    return DataAndMetadata.new_data_and_metadata(data)
+    return DataAndMetadata.new_data_and_metadata(data=data)
 
 def radius(shape: DataAndMetadata.Shape2dType, normalize: bool=True) -> DataAndMetadata.DataAndMetadata:
     start_0 = -1 if normalize else -shape[0] * 0.5
@@ -134,14 +134,14 @@ def radius(shape: DataAndMetadata.Shape2dType, normalize: bool=True) -> DataAndM
     irow: _ImageDataType
     icol, irow = numpy.meshgrid(numpy.linspace(start_1, stop_1, shape[1]), numpy.linspace(start_0, stop_0, shape[0]), sparse=True)
     data: _ImageDataType = numpy.sqrt(icol * icol + irow * irow)
-    return DataAndMetadata.new_data_and_metadata(data)
+    return DataAndMetadata.new_data_and_metadata(data=data)
 
 def axis_coordinates(data_and_metadata_in: _DataAndMetadataLike, axis: int) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
     calibration = data_and_metadata.dimensional_calibrations[axis]
     data_shape = data_and_metadata.data_shape
     data = numpy.linspace(0, data_shape[axis], data_shape[axis]) * calibration.scale + calibration.offset
-    return DataAndMetadata.new_data_and_metadata(data, intensity_calibration=Calibration.Calibration(None, None, calibration.units))
+    return DataAndMetadata.new_data_and_metadata(data=data, intensity_calibration=Calibration.Calibration(None, None, calibration.units))
 
 def gammapdf(data_and_metadata: _DataAndMetadataLike, a: float, mean: float, stddev: float) -> DataAndMetadata.DataAndMetadata:
     # pdf: probability density function
@@ -354,7 +354,7 @@ def new_with_data(data: _ImageDataType, *,
                   metadata: typing.Optional[DataAndMetadata.MetadataType] = None,
                   timestamp: typing.Optional[datetime.datetime] = None,
                   data_descriptor: typing.Optional[DataAndMetadata.DataDescriptor] = None) -> DataAndMetadata.DataAndMetadata:
-    return DataAndMetadata.new_data_and_metadata(data,
+    return DataAndMetadata.new_data_and_metadata(data=data,
                                                  intensity_calibration=intensity_calibration,
                                                  dimensional_calibrations=dimensional_calibrations,
                                                  metadata=metadata,

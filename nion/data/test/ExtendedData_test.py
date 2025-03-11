@@ -32,12 +32,12 @@ class TestExtendedData(unittest.TestCase):
 
     def test_rgb_data_constructs_with_default_calibrations(self) -> None:
         data: numpy.typing.NDArray[numpy.uint8] = numpy.zeros((8, 8, 3), dtype=numpy.uint8)
-        xdata = DataAndMetadata.new_data_and_metadata(data)
+        xdata = DataAndMetadata.new_data_and_metadata(data=data)
         self.assertEqual(len(xdata.dimensional_shape), len(xdata.dimensional_calibrations))
 
     def test_rgb_data_slice_works_correctly(self) -> None:
         data: numpy.typing.NDArray[numpy.uint8] = numpy.zeros((8, 8, 3), dtype=numpy.uint8)
-        xdata = DataAndMetadata.new_data_and_metadata(data)
+        xdata = DataAndMetadata.new_data_and_metadata(data=data)
         self.assertTrue(xdata.is_data_rgb_type)
         xdata_slice = xdata[2:6, 2:6]
         self.assertTrue(xdata_slice.is_data_rgb_type)
@@ -45,7 +45,7 @@ class TestExtendedData(unittest.TestCase):
 
     def test_data_slice_calibrates_correctly(self) -> None:
         data: numpy.typing.NDArray[numpy.float32] = numpy.zeros((100, 100), dtype=numpy.float32)
-        xdata = DataAndMetadata.new_data_and_metadata(data)
+        xdata = DataAndMetadata.new_data_and_metadata(data=data)
         calibrations = xdata[40:60, 40:60].dimensional_calibrations
         self.assertAlmostEqual(calibrations[0].offset, 40)
         self.assertAlmostEqual(calibrations[0].scale, 1)
@@ -56,7 +56,7 @@ class TestExtendedData(unittest.TestCase):
         data: numpy.typing.NDArray[numpy.float32] = numpy.zeros((10, 100, 100), dtype=numpy.float32)
         intensity_calibration = Calibration.Calibration(0.1, 0.2, "I")
         dimensional_calibrations = [Calibration.Calibration(0.11, 0.22, "S"), Calibration.Calibration(0.11, 0.22, "A"), Calibration.Calibration(0.111, 0.222, "B")]
-        xdata = DataAndMetadata.new_data_and_metadata(data, intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
+        xdata = DataAndMetadata.new_data_and_metadata(data=data, intensity_calibration=intensity_calibration, dimensional_calibrations=dimensional_calibrations, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
         self.assertFalse(xdata[3].is_sequence)
         self.assertTrue(xdata[3:4].is_sequence)
         self.assertAlmostEqual(xdata[3].intensity_calibration.offset, xdata.intensity_calibration.offset)
@@ -70,7 +70,7 @@ class TestExtendedData(unittest.TestCase):
         self.assertEqual(xdata[3].dimensional_calibrations[1].units, xdata.dimensional_calibrations[2].units)
 
     def test_xdata_backed_by_ndarray_works_with_all_operators(self) -> None:
-        xdata = DataAndMetadata.new_data_and_metadata(numpy.ones((4, 4)))
+        xdata = DataAndMetadata.new_data_and_metadata(data=numpy.ones((4, 4)))
         results = list()
         results.append(abs(xdata))
         results.append(-xdata)
@@ -97,7 +97,7 @@ class TestExtendedData(unittest.TestCase):
         try:
             with h5py.File(os.path.join(workspace_dir, "file.h5"), "w") as f:
                 dataset = f.create_dataset("data", data=numpy.ones((4, 4)))
-                xdata = DataAndMetadata.new_data_and_metadata(dataset)
+                xdata = DataAndMetadata.new_data_and_metadata(data=dataset)
                 results = list()
                 results.append(abs(xdata))
                 results.append(-xdata)
@@ -123,14 +123,14 @@ class TestExtendedData(unittest.TestCase):
     def test_numpy_functions_work_directly_with_xdata(self) -> None:
         data: numpy.typing.NDArray[numpy.int32] = numpy.ones((100, 100), dtype=numpy.int32)
         data[50, 50] = 2
-        xdata = DataAndMetadata.new_data_and_metadata(data)
+        xdata = DataAndMetadata.new_data_and_metadata(data=data)
         self.assertEqual(1, numpy.amin(xdata))
         self.assertEqual(2, numpy.amax(xdata))
 
     def test_data_descriptor_is_a_copy(self) -> None:
         data: numpy.typing.NDArray[numpy.int32] = numpy.ones((100, 100), dtype=numpy.int32)
         data[50, 50] = 2
-        xdata = DataAndMetadata.new_data_and_metadata(data)
+        xdata = DataAndMetadata.new_data_and_metadata(data=data)
         xdata.data_descriptor.is_sequence = True
         self.assertFalse(xdata.data_descriptor.is_sequence)
 
@@ -138,7 +138,7 @@ class TestExtendedData(unittest.TestCase):
         # should not print a deprecation warning, fixed with numpy 2.0 updates
         data: numpy.typing.NDArray[numpy.int32] = numpy.ones((100, 100), dtype=numpy.int32)
         data[50, 50] = 2
-        xdata = DataAndMetadata.new_data_and_metadata(data)
+        xdata = DataAndMetadata.new_data_and_metadata(data=data)
         data2 = numpy.empty(data.shape, data.dtype)
         data2[:] = xdata[:]
         self.assertTrue(numpy.array_equal(data2, xdata.data))
