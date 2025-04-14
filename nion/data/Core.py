@@ -2024,6 +2024,8 @@ def function_element_data_no_copy(data_and_metadata: DataAndMetadata._DataAndMet
                                   flag16: bool = True) -> typing.Tuple[typing.Optional[DataAndMetadata.DataAndMetadata], bool]:
     # extract an element (2d or 1d data element) from data and metadata using the indexes and slices.
     # flag16 is for backwards compatibility with 0.15.2 and earlier. new callers should set it to False.
+    # always return an ndarray, never a slice into another type of array (h5py). this helps ensure the display pipeline
+    # works correctly by ensuring the data is always a numpy array and allow downstream operations will work.
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata)
     result: typing.Optional[DataAndMetadata.DataAndMetadata] = data_and_metadata
     dimensional_shape = data_and_metadata.dimensional_shape
@@ -2065,6 +2067,8 @@ def function_element_data_no_copy(data_and_metadata: DataAndMetadata._DataAndMet
             next_dimension += collection_dimension_count + datum_dimension_count
     if result and functools.reduce(operator.mul, result.dimensional_shape) == 0:
         result = None
+    # ensure element data is a ndarray and not a slice into another array type (h5py)
+    result = DataAndMetadata.promote_ndarray_actual(result) if result else None
     return result, modified
 
 
