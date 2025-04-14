@@ -1042,6 +1042,19 @@ class TestCore(unittest.TestCase):
             Core.function_rebin_2d(d, (2, 2))
             Core.function_resample_2d(d, (3, 3))
 
+    def test_element_data_returns_ndarray(self) -> None:
+        bio = io.BytesIO()
+        with h5py.File(bio, "w") as f:
+            dataset = f.create_dataset("data", data=numpy.ones((5, 6), dtype=numpy.float32))
+            xdata = DataAndMetadata.new_data_and_metadata(data=dataset)
+            element, _ = Core.function_element_data_no_copy(xdata, 0, (0, 0))
+            assert element
+            # test whether inline math works, implying it is a numpy array
+            elementp1 = element.data + 4
+            # test directly its type
+            self.assertIsInstance(element.data, numpy.ndarray)
+
+
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
     unittest.main()

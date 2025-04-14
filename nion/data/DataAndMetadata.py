@@ -1329,6 +1329,13 @@ def promote_ndarray(data: _DataAndMetadataLike) -> DataAndMetadata:
     raise Exception(f"Unable to convert {data} to DataAndMetadata.")
 
 
+def promote_ndarray_actual(data: _DataAndMetadataLike) -> DataAndMetadata:
+    maybe_array = promote_ndarray(data)
+    if not isinstance(maybe_array.data, numpy.ndarray) and hasattr(maybe_array.data, "__array__"):
+        return maybe_array.clone_with_data(numpy.array(maybe_array.data))
+    return maybe_array
+
+
 def determine_shape(*datas: _DataAndMetadataOrConstant) -> typing.Optional[ShapeType]:
     # return the common shape between datas or None if they don't match, ignore constants
     shape: typing.Optional[ShapeType] = None
