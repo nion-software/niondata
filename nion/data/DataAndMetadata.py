@@ -620,7 +620,11 @@ class DataAndMetadata:
             data=data,
             intensity_calibration=self.intensity_calibration,
             dimensional_calibrations=self.dimensional_calibrations,
-            data_descriptor=self.data_descriptor)
+            metadata=self.metadata,
+            timestamp=self.timestamp,
+            data_descriptor=self.data_descriptor,
+            timezone=self.timezone,
+            timezone_offset=self.timezone_offset)
 
     @property
     def data_shape_and_dtype(self) -> typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]]:

@@ -1,4 +1,5 @@
 # standard libraries
+import datetime
 import h5py
 import logging
 import os
@@ -142,6 +143,26 @@ class TestExtendedData(unittest.TestCase):
         data2 = numpy.empty(data.shape, data.dtype)
         data2[:] = xdata[:]
         self.assertTrue(numpy.array_equal(data2, xdata.data))
+
+    def test_clone_with_data(self) -> None:
+        xdata = DataAndMetadata.new_data_and_metadata(
+            data=numpy.ones((10, 11, 12)),
+            intensity_calibration=Calibration.Calibration(0.1, 0.2, "I"),
+            dimensional_calibrations=[Calibration.Calibration(0.11, 0.22, "S"), Calibration.Calibration(0.11, 0.22, "A"), Calibration.Calibration(0.111, 0.222, "B")],
+            data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2),
+            metadata={"test": "test"},
+            timestamp=datetime.datetime(2013, 11, 18, 14, 5, 4, 0),
+            timezone="America/Los_Angeles",
+            timezone_offset="-0700"
+        )
+        xdata_clone = xdata.clone_with_data(numpy.ones((12, 11, 10)))
+        self.assertEqual(Calibration.Calibration(0.1, 0.2, "I"), xdata_clone.intensity_calibration)
+        self.assertEqual([Calibration.Calibration(0.11, 0.22, "S"), Calibration.Calibration(0.11, 0.22, "A"), Calibration.Calibration(0.111, 0.222, "B")], xdata_clone.dimensional_calibrations)
+        self.assertEqual(DataAndMetadata.DataDescriptor(True, 0, 2), xdata_clone.data_descriptor)
+        self.assertEqual({"test": "test"}, xdata_clone.metadata)
+        self.assertEqual(datetime.datetime(2013, 11, 18, 14, 5, 4, 0), xdata_clone.timestamp)
+        self.assertEqual("America/Los_Angeles", xdata_clone.timezone)
+        self.assertEqual("-0700", xdata_clone.timezone_offset)
 
 
 if __name__ == '__main__':
