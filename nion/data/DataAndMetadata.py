@@ -1344,7 +1344,9 @@ def promote_constant(data: _DataAndMetadataOrConstant, shape: ShapeType) -> Data
     # return data and metadata or constant with shape in form of data and metadata
     if isinstance(data, DataAndMetadata):
         return data
-    return new_data_and_metadata(data=numpy.full(shape, data))
+    elif isinstance(data, numbers.Complex):
+        return new_data_and_metadata(data=numpy.full(shape, data))
+    raise Exception(f"Unable to convert {data} to DataAndMetadata or constant.")
 
 
 def new_data_and_metadata(data: _ImageDataType,

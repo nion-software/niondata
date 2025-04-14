@@ -4,6 +4,7 @@ import h5py
 import logging
 import os
 import shutil
+import typing
 import unittest
 
 # third party libraries
@@ -163,6 +164,19 @@ class TestExtendedData(unittest.TestCase):
         self.assertEqual(datetime.datetime(2013, 11, 18, 14, 5, 4, 0), xdata_clone.timestamp)
         self.assertEqual("America/Los_Angeles", xdata_clone.timezone)
         self.assertEqual("-0700", xdata_clone.timezone_offset)
+
+    def test_promote_constant(self) -> None:
+        xdata = DataAndMetadata.new_data_and_metadata(numpy.random.randn(5,4))
+        p1 = DataAndMetadata.promote_constant(xdata, xdata.data_shape)
+        p2 = DataAndMetadata.promote_constant(5.6, (5,4))
+        self.assertTrue(numpy.array_equal(xdata.data, p1.data))
+        self.assertTrue(numpy.array_equal(numpy.full((5, 4), 5.6), p2.data))
+        failed = False
+        try:
+            DataAndMetadata.promote_constant(typing.cast(float, numpy.zeros((3,3))), (5,4))
+        except Exception as e:
+            failed = True
+        self.assertTrue(failed)
 
 
 if __name__ == '__main__':
