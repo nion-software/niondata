@@ -40,8 +40,8 @@ _SliceDictKeyType = typing.Sequence[typing.Dict[str, typing.Any]]
 class DataDescriptor:
     """A class describing the layout of data."""
     def __init__(self, is_sequence: bool, collection_dimension_count: int, datum_dimension_count: int):
-        assert datum_dimension_count in (0, 1, 2)
-        assert collection_dimension_count in (0, 1, 2)
+        assert datum_dimension_count in (0, 1, 2), f"datum_dimension_count ({datum_dimension_count}) must be 0, 1 or 2"
+        assert collection_dimension_count in (0, 1, 2), f"collection_dimension_count ({collection_dimension_count}) must be 0, 1 or 2"
         self.is_sequence = is_sequence
         self.collection_dimension_count = collection_dimension_count
         self.datum_dimension_count = datum_dimension_count
@@ -153,7 +153,7 @@ class DataMetadata:
             datum_dimension_count = dimension_count - collection_dimension_count
             data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
 
-        assert data_descriptor.expected_dimension_count == dimension_count
+        assert data_descriptor.expected_dimension_count == dimension_count, f"Expected {data_descriptor.expected_dimension_count}, got {dimension_count}"
         assert timezone is None or timezone
         assert timezone_offset is None or timezone_offset
 
@@ -172,7 +172,7 @@ class DataMetadata:
         self.__metadata = dict(metadata) if metadata is not None else dict()
         # assert isinstance(self.metadata, dict)  # disable for performance. it is enforced above.
 
-        assert len(dimensional_calibrations) == len(dimensional_shape)
+        assert len(dimensional_calibrations) == len(dimensional_shape), f"dimensional_calibrations ({len(dimensional_calibrations)}) must match dimensional_shape ({len(dimensional_shape)})"
 
     def __eq__(self, other: typing.Any) -> bool:
         if not isinstance(other, self.__class__):
@@ -374,7 +374,7 @@ class DataMetadata:
         self.__intensity_calibration = copy.deepcopy(intensity_calibration)
 
     def _set_dimensional_calibrations(self, dimensional_calibrations: CalibrationListType) -> None:
-        assert len(dimensional_calibrations) == len(self.dimensional_shape)
+        assert len(dimensional_calibrations) == len(self.dimensional_shape), f"dimensional_calibrations ({len(dimensional_calibrations)}) must match dimensional_shape ({len(self.dimensional_shape)})"
         self.__dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
 
     def _set_data_descriptor(self, data_descriptor: DataDescriptor) -> None:
@@ -759,7 +759,7 @@ class DataAndMetadata:
         return self.__data_metadata.metadata
 
     def _set_data(self, data: _ImageDataType) -> None:
-        assert len(data.shape) == len(self.data_shape)
+        assert len(data.shape) == len(self.data_shape), f"data shape ({len(data.shape)}) must match data shape ({len(self.data_shape)})"
         self.__data = data
 
     def _set_intensity_calibration(self, intensity_calibration: Calibration.Calibration) -> None:
