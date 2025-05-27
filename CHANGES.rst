@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+15.8.2 (2025-05-27)
+-------------------
+- Maintenance release to fix a build issue.
+
 15.8.1 (2025-04-23)
 -------------------
 - Ensure element data always returns actual ndarray.
