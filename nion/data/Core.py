@@ -931,11 +931,11 @@ def function_invert(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetada
             if Image.is_data_rgba(data):
                 inverted = 255 - data[:]
                 inverted[..., 3] = data[..., 3]
-                return typing.cast(_ImageDataType, inverted)
+                return inverted
             else:
-                return typing.cast(_ImageDataType, 255 - data[:])
+                return 255 - data[:]
         else:
-            return typing.cast(_ImageDataType, -data[:])
+            return -data[:]
 
     if not Image.is_data_valid(data_and_metadata.data):
         raise ValueError("Invert: invalid data")
@@ -1043,8 +1043,8 @@ def function_crop_rotated(data_and_metadata_in: _DataAndMetadataLike, bounds: No
 
     # this ugly casting is necessary to work around incomplete numpy typing
     coords = [
-        typing.cast(_ImageDataType, top + height // 2 + (typing.cast(_ImageDataType, x * angle_cos) - typing.cast(_ImageDataType, y * angle_sin))),
-        typing.cast(_ImageDataType, left + width // 2 + (typing.cast(_ImageDataType, y * angle_cos) + typing.cast(_ImageDataType, x * angle_sin)))]
+        (top + height // 2 + ((x * angle_cos) - (y * angle_sin))),
+        (left + width // 2 + ((y * angle_cos) + (x * angle_sin)))]
 
     new_data: numpy.typing.NDArray[numpy.uint8]
     if data_and_metadata.is_data_rgb:
@@ -1080,7 +1080,7 @@ def function_crop_interval(data_and_metadata_in: _DataAndMetadataLike, interval:
         data = data_and_metadata._data_ex
         data_shape = data_and_metadata.data_shape
         interval_int = int(data_shape[0] * interval[0]), int(data_shape[0] * interval[1])
-        return typing.cast(_ImageDataType, data[interval_int[0]:interval_int[1]].copy())
+        return data[interval_int[0]:interval_int[1]].copy()
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
@@ -1149,7 +1149,7 @@ def function_pick(data_and_metadata_in: _DataAndMetadataLike, position: PickPosi
         if data_and_metadata.is_sequence:
             position_i.insert(0, slice(None))
         position_i.append(...)
-        return typing.cast(_ImageDataType, data[tuple(position_i)].copy())
+        return data[tuple(position_i)].copy()
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
     data_descriptor = DataAndMetadata.DataDescriptor(data_and_metadata.is_sequence, 0, data_and_metadata.datum_dimension_count)
@@ -1610,7 +1610,7 @@ def function_resize(data_and_metadata_in: _DataAndMetadataLike, shape: DataAndMe
                 pads.append((left, new_size - left - data_size))
             else:
                 pads.append((0, 0))
-        return typing.cast(_ImageDataType, numpy.pad(data, pads, 'constant', constant_values=c))
+        return numpy.pad(data, pads, 'constant', constant_values=c)
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 

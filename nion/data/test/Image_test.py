@@ -53,10 +53,10 @@ class TestImageClass(unittest.TestCase):
         src2 = numpy.zeros((9, 9))
         src1[3:5, 3:5] = 1
         src2[3:6, 3:6] = 1
-        src1s: _ImageDataType = typing.cast(_ImageDataType, Image.scaled(src1, (12, 12), 'cubic')*1000).astype(numpy.int32)
-        src2s: _ImageDataType = typing.cast(_ImageDataType, Image.scaled(src1, (12, 12), 'cubic')*1000).astype(numpy.int32)
-        src1t: _ImageDataType = typing.cast(_ImageDataType, Image.scaled(src1, (13, 13), 'cubic')*1000).astype(numpy.int32)
-        src2t: _ImageDataType = typing.cast(_ImageDataType, Image.scaled(src1, (13, 13), 'cubic')*1000).astype(numpy.int32)
+        src1s: _ImageDataType = (Image.scaled(src1, (12, 12), 'cubic')*1000).astype(numpy.int32)
+        src2s: _ImageDataType = (Image.scaled(src1, (12, 12), 'cubic')*1000).astype(numpy.int32)
+        src1t: _ImageDataType = (Image.scaled(src1, (13, 13), 'cubic')*1000).astype(numpy.int32)
+        src2t: _ImageDataType = (Image.scaled(src1, (13, 13), 'cubic')*1000).astype(numpy.int32)
         self.assertTrue(numpy.array_equal(src1s[0:6, 0:6], src1s[0:6, 12:5:-1]))
         self.assertTrue(numpy.array_equal(src1s[0:6, 0:6], src1s[12:5:-1, 12:5:-1]))
         self.assertTrue(numpy.array_equal(src1s[0:6, 0:6], src1s[12:5:-1, 0:6]))
@@ -75,10 +75,10 @@ class TestImageClass(unittest.TestCase):
         src2 = numpy.zeros((9, 9))
         src1[3:5, 3:5] = 1
         src2[3:6, 3:6] = 1
-        src1s: _ImageDataType = typing.cast(_ImageDataType, Image.scaled(src1, (12, 12), 'linear')*1000).astype(numpy.int32)
-        src2s: _ImageDataType = typing.cast(_ImageDataType, Image.scaled(src1, (12, 12), 'linear')*1000).astype(numpy.int32)
-        src1t: _ImageDataType = typing.cast(_ImageDataType, Image.scaled(src1, (13, 13), 'linear')*1000).astype(numpy.int32)
-        src2t: _ImageDataType = typing.cast(_ImageDataType, Image.scaled(src1, (13, 13), 'linear')*1000).astype(numpy.int32)
+        src1s: _ImageDataType = (Image.scaled(src1, (12, 12), 'linear')*1000).astype(numpy.int32)
+        src2s: _ImageDataType = (Image.scaled(src1, (12, 12), 'linear')*1000).astype(numpy.int32)
+        src1t: _ImageDataType = (Image.scaled(src1, (13, 13), 'linear')*1000).astype(numpy.int32)
+        src2t: _ImageDataType = (Image.scaled(src1, (13, 13), 'linear')*1000).astype(numpy.int32)
         self.assertTrue(numpy.array_equal(src1s[0:6, 0:6], src1s[0:6, 12:5:-1]))
         self.assertTrue(numpy.array_equal(src1s[0:6, 0:6], src1s[12:5:-1, 12:5:-1]))
         self.assertTrue(numpy.array_equal(src1s[0:6, 0:6], src1s[12:5:-1, 0:6]))

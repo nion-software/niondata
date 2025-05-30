@@ -130,9 +130,9 @@ def get_rgb_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str]
     bytes = get_byte_view(rgba_image)
     assert bytes.shape[2] == 4
     if byteorder == 'little':
-        return typing.cast(_RGBImageDataType, bytes[..., :3])  # strip A off BGRA
+        return bytes[..., :3]  # strip A off BGRA
     else:
-        return typing.cast(_RGBImageDataType, bytes[..., 1:])  # strip A off ARGB
+        return bytes[..., 1:]  # strip A off ARGB
 
 
 def get_red_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str] = None) -> _U8ImageDataType:
@@ -141,9 +141,9 @@ def get_red_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str]
     bytes = get_byte_view(rgba_image)
     assert bytes.shape[2] == 4
     if byteorder == 'little':
-        return typing.cast(_U8ImageDataType, bytes[..., 2])
+        return bytes[..., 2]
     else:
-        return typing.cast(_U8ImageDataType, bytes[..., 1])
+        return bytes[..., 1]
 
 
 def get_green_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str] = None) -> _U8ImageDataType:
@@ -152,9 +152,9 @@ def get_green_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[st
     bytes = get_byte_view(rgba_image)
     assert bytes.shape[2] == 4
     if byteorder == 'little':
-        return typing.cast(_U8ImageDataType, bytes[..., 1])
+        return bytes[..., 1]
     else:
-        return typing.cast(_U8ImageDataType, bytes[..., 2])
+        return bytes[..., 2]
 
 
 def get_blue_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str] = None) -> _U8ImageDataType:
@@ -163,9 +163,9 @@ def get_blue_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str
     bytes = get_byte_view(rgba_image)
     assert bytes.shape[2] == 4
     if byteorder == 'little':
-        return typing.cast(_U8ImageDataType, bytes[..., 0])
+        return bytes[..., 0]
     else:
-        return typing.cast(_U8ImageDataType, bytes[..., 3])
+        return bytes[..., 3]
 
 
 def get_alpha_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str] = None) -> _U8ImageDataType:
@@ -174,9 +174,9 @@ def get_alpha_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[st
     bytes = get_byte_view(rgba_image)
     assert bytes.shape[2] == 4
     if byteorder == 'little':
-        return typing.cast(_U8ImageDataType, bytes[..., 3])
+        return bytes[..., 3]
     else:
-        return typing.cast(_U8ImageDataType, bytes[..., 0])
+        return bytes[..., 0]
 
 
 def get_rgba_view_from_rgba_data(rgba_data: _RGBAImageDataType) -> _RGBA8ImageDataType:
