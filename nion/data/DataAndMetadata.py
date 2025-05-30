@@ -786,19 +786,19 @@ class DataAndMetadata:
         self.__data_metadata._set_timestamp(value)
 
     @property
-    def timezone(self) -> typing.Optional[str]:
+    def timezone(self) -> str | None:
         return self.__data_metadata.timezone
 
     @timezone.setter
-    def timezone(self, value: str) -> None:
+    def timezone(self, value: str | None) -> None:
         self.__data_metadata._set_timezone(value)
 
     @property
-    def timezone_offset(self) -> typing.Optional[str]:
+    def timezone_offset(self) -> str | None:
         return self.__data_metadata.timezone_offset
 
     @timezone_offset.setter
-    def timezone_offset(self, value: str) -> None:
+    def timezone_offset(self, value: str | None) -> None:
         self.__data_metadata._set_timezone_offset(value)
 
     @property
