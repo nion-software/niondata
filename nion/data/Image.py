@@ -37,7 +37,7 @@ def scale_multidimensional(image: _ImageDataType, scaled_size: ShapeType) -> _Im
     coords = [numpy.rint(x).astype(int) for x in numpy.ogrid[slices]]
     # coords is now, for an array image of dimension n, a list of n 1d arrays we the
     # coords we want to take from image:
-    return typing.cast(_ImageDataType, image[coords])
+    return image[coords]
 
 
 # size is c-indexed (height, width)

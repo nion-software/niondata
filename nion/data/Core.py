@@ -80,7 +80,7 @@ def radius(data_and_metadata_in: _DataAndMetadataLike, normalize: bool = True) -
         start_1 = -1 if normalize else -data_shape(data_and_metadata)[1] * 0.5
         stop_1 = -start_1
         icol, irow = numpy.meshgrid(numpy.linspace(start_1, stop_1, data_shape(data_and_metadata)[1]), numpy.linspace(start_0, stop_0, data_shape(data_and_metadata)[0]), sparse=True)
-        return numpy.sqrt(icol * icol + irow * irow)  # type: ignore
+        return numpy.sqrt(icol * icol + irow * irow)
 
     return DataAndMetadata.new_data_and_metadata(data=calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
