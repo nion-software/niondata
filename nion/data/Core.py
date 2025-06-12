@@ -677,7 +677,7 @@ def function_make_elliptical_mask(data_shape: DataAndMetadata.ShapeType, center:
     bounds = Geometry.FloatRect.from_center_and_size(center_point, size_size)
     if bounds.height <= 0 or bounds.width <= 0:
         return DataAndMetadata.new_data_and_metadata(data=mask)
-    a, b = bounds.center.y, bounds.center.x
+    a, b = bounds.center.y - 0.5, bounds.center.x - 0.5
     # work around incomplete numpy typing
     y: _ImageDataType
     x: _ImageDataType
