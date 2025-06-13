@@ -18,6 +18,7 @@ from nion.data import Calibration
 from nion.data import Core
 from nion.data import DataAndMetadata
 from nion.data.DataAndMetadata import _ImageDataType
+from nion.utils import Geometry
 
 
 class TestCore(unittest.TestCase):
@@ -1053,6 +1054,45 @@ class TestCore(unittest.TestCase):
             elementp1 = element.data + 4
             # test directly its type
             self.assertIsInstance(element.data, numpy.ndarray)
+
+    def test_elliptical_mask_generation(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.2, 0.2), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[200, 200], 0)  # top left
+        self.assertEqual(mask.data[200, 299], 0)  # bottom left
+        self.assertEqual(mask.data[299, 299], 0)  # bottom right
+        self.assertEqual(mask.data[299, 200], 0)  # bottom left
+
+        self.assertEqual(mask.data[249, 200], 1)  # center top
+        self.assertEqual(mask.data[249, 199], 0)  # center top
+        self.assertEqual(mask.data[299, 249], 1)  # center right
+        self.assertEqual(mask.data[300, 249], 0)  # center right
+        self.assertEqual(mask.data[249, 299], 1)  # center bottom
+        self.assertEqual(mask.data[249, 300], 0)  # center bottom
+        self.assertEqual(mask.data[200, 249], 1)  # center left
+        self.assertEqual(mask.data[199, 249], 0)  # center left
+
+    def test_rectangular_mask_generation(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.2, 0.2), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size,0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[200, 200], 1)  # top left
+        self.assertEqual(mask.data[199, 199], 0)  # top left
+        self.assertEqual(mask.data[200, 299], 1)  # bottom left
+        self.assertEqual(mask.data[199, 300], 0)  # bottom left
+        self.assertEqual(mask.data[299, 299], 1)  # bottom right
+        self.assertEqual(mask.data[300, 300], 0)  # bottom right
+        self.assertEqual(mask.data[299, 200], 1)  # bottom left
+        self.assertEqual(mask.data[300, 199], 0)  # bottom left
+        self.assertEqual(mask.data[249, 200], 1)  # center top
+        self.assertEqual(mask.data[249, 199], 0)  # center top
+        self.assertEqual(mask.data[299, 249], 1)  # center right
+        self.assertEqual(mask.data[300, 249], 0)  # center right
+        self.assertEqual(mask.data[249, 299], 1)  # center bottom
+        self.assertEqual(mask.data[249, 300], 0)  # center bottom
+        self.assertEqual(mask.data[200, 249], 1)  # center left
+        self.assertEqual(mask.data[199, 249], 0)  # center left
 
 
 if __name__ == '__main__':
