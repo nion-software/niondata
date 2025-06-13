@@ -696,6 +696,23 @@ def function_make_elliptical_mask(data_shape: DataAndMetadata.ShapeType, center:
     mask[mask_eq] = 1
     return DataAndMetadata.new_data_and_metadata(data=mask)
 
+def function_make_rectangular_mask(data_shape: DataAndMetadata.ShapeType, center: Geometry.FloatPoint, size: Geometry.FloatSize, rotation: float) -> DataAndMetadata.DataAndMetadata:
+    data_size = Geometry.IntSize.make(typing.cast(Geometry.SizeIntTuple, data_shape))
+    data_rect = Geometry.FloatRect(origin=Geometry.FloatPoint(), size=Geometry.FloatSize.make(typing.cast(Geometry.SizeFloatTuple, data_size)))
+    center_point = Geometry.map_point(center, Geometry.FloatRect.unit_rect(), data_rect)
+    size_size = Geometry.map_size(size, Geometry.FloatRect.unit_rect(), data_rect)
+    mask = numpy.zeros(data_shape)
+    bounds = Geometry.FloatRect.from_center_and_size(center_point, size_size)
+    a, b = bounds.top + bounds.height * 0.5 - 0.5, bounds.left + bounds.width * 0.5 - 0.5
+    y, x = numpy.ogrid[-a:data_shape[0] - a, -b:data_shape[1] - b]  # type: ignore
+    if rotation == 0.0:
+        mask_eq = (numpy.fabs(x) / (bounds.width / 2) <= 1) & (numpy.fabs(y) / (bounds.height / 2) <= 1)
+    else:
+        angle_sin = math.sin(rotation)
+        angle_cos = math.cos(rotation)
+        mask_eq = (numpy.fabs(x*angle_cos - y*angle_sin) / (bounds.width / 2) <= 1) & (numpy.fabs(y*angle_cos + x*angle_sin) / (bounds.height / 2) <= 1)
+    mask[mask_eq] = 1
+    return DataAndMetadata.new_data_and_metadata(data=mask)
 
 def function_fourier_mask(data_and_metadata_in: _DataAndMetadataIndeterminateSizeLike, mask_data_and_metadata_in: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata_c = DataAndMetadata.promote_indeterminate_array(data_and_metadata_in)
