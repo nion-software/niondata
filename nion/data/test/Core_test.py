@@ -1062,7 +1062,7 @@ class TestCore(unittest.TestCase):
         self.assertEqual(mask.data[200, 200], 0)  # top left
         self.assertEqual(mask.data[200, 299], 0)  # bottom left
         self.assertEqual(mask.data[299, 299], 0)  # bottom right
-        self.assertEqual(mask.data[299, 200], 0)  # bottom left
+        self.assertEqual(mask.data[299, 200], 0)  # top right
 
         self.assertEqual(mask.data[249, 200], 1)  # center top
         self.assertEqual(mask.data[249, 199], 0)  # center top
@@ -1072,6 +1072,112 @@ class TestCore(unittest.TestCase):
         self.assertEqual(mask.data[249, 300], 0)  # center bottom
         self.assertEqual(mask.data[200, 249], 1)  # center left
         self.assertEqual(mask.data[199, 249], 0)  # center left
+
+    def test_elliptical_mask_generation_out_of_bounds_top_left(self) -> None:
+        bounds = Geometry.FloatRect.make(((-0.05, -0.05), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[49, 49], 0)  # bottom right
+
+        self.assertEqual(mask.data[49, 0], 1)  # center right
+        self.assertEqual(mask.data[50, 0], 0)  # center right
+        self.assertEqual(mask.data[0, 49], 1)  # center bottom
+        self.assertEqual(mask.data[0, 50], 0)  # center bottom
+
+    def test_elliptical_mask_generation_out_of_bounds_center_top(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.45, -0.05), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[450, 49], 0)  # bottom left
+        self.assertEqual(mask.data[549, 49], 0)  # bottom right
+
+        self.assertEqual(mask.data[549, 0], 1)  # center right
+        self.assertEqual(mask.data[550, 0], 0)  # center right
+        self.assertEqual(mask.data[500, 49], 1)  # center bottom
+        self.assertEqual(mask.data[500, 50], 0)  # center bottom
+        self.assertEqual(mask.data[450, 0], 1)  # center left
+        self.assertEqual(mask.data[449, 0], 0)  # center left
+
+    def test_elliptical_mask_generation_out_of_bounds_top_right(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.95, -0.05), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[950, 49], 0)  # bottom left
+
+        self.assertEqual(mask.data[999, 49], 1)  # center bottom
+        self.assertEqual(mask.data[999, 50], 0)  # center bottom
+        self.assertEqual(mask.data[950, 0], 1)  # center left
+        self.assertEqual(mask.data[949, 0], 0)  # center left
+
+    def test_elliptical_mask_generation_out_of_bounds_center_right(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.95, 0.45), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[950, 450], 0)  # top left
+        self.assertEqual(mask.data[950, 549], 0)  # bottom left
+
+        self.assertEqual(mask.data[999, 450], 1)  # center top
+        self.assertEqual(mask.data[999, 449], 0)  # center top
+        self.assertEqual(mask.data[999, 549], 1)  # center bottom
+        self.assertEqual(mask.data[999, 550], 0)  # center bottom
+        self.assertEqual(mask.data[950, 500], 1)  # center left
+        self.assertEqual(mask.data[949, 550], 0)  # center left
+
+    def test_elliptical_mask_generation_out_of_bounds_bottom_right(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.95, 0.95), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[950, 950], 0)  # top left
+
+        self.assertEqual(mask.data[999, 950], 1)  # center top
+        self.assertEqual(mask.data[999, 949], 0)  # center top
+        self.assertEqual(mask.data[950, 999], 1)  # center left
+        self.assertEqual(mask.data[949, 999], 0)  # center left
+
+    def test_elliptical_mask_generation_out_of_bound_center_bottom(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.45, 0.95), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[450, 950], 0)  # top left
+        self.assertEqual(mask.data[549, 950], 0)  # top right
+
+        self.assertEqual(mask.data[500, 950], 1)  # center top
+        self.assertEqual(mask.data[500, 949], 0)  # center top
+        self.assertEqual(mask.data[549, 999], 1)  # center right
+        self.assertEqual(mask.data[550, 999], 0)  # center right
+        self.assertEqual(mask.data[450, 999], 1)  # center left
+        self.assertEqual(mask.data[449, 999], 0)  # center left
+
+    def test_elliptical_mask_generation_out_of_bounds_bottom_left(self) -> None:
+        bounds = Geometry.FloatRect.make(((-0.05, 0.95), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[49, 950], 0)  # top right
+
+        self.assertEqual(mask.data[0, 950], 1)  # center top
+        self.assertEqual(mask.data[0, 949], 0)  # center top
+        self.assertEqual(mask.data[49, 999], 1)  # center right
+        self.assertEqual(mask.data[50, 999], 0)  # center right
+
+    def test_elliptical_mask_generation_out_of_bounds_center_left(self) -> None:
+        bounds = Geometry.FloatRect.make(((-0.05, 0.45), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[49, 549], 0)  # bottom right
+        self.assertEqual(mask.data[49, 450], 0)  # top right
+
+        self.assertEqual(mask.data[0, 450], 1)  # center top
+        self.assertEqual(mask.data[0, 449], 0)  # center top
+        self.assertEqual(mask.data[49, 500], 1)  # center right
+        self.assertEqual(mask.data[50, 500], 0)  # center right
+        self.assertEqual(mask.data[0, 549], 1)  # center bottom
+        self.assertEqual(mask.data[0, 550], 0)  # center bottom
+
+    def test_elliptical_mask_generation_out_of_bounds_completely(self) -> None:
+        bounds = Geometry.FloatRect.make(((1.1, 1.1), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertTrue(numpy.all(mask == 0))
 
     def test_rectangular_mask_generation(self) -> None:
         bounds = Geometry.FloatRect.make(((0.2, 0.2), (0.1, 0.1)))
@@ -1083,8 +1189,9 @@ class TestCore(unittest.TestCase):
         self.assertEqual(mask.data[199, 300], 0)  # bottom left
         self.assertEqual(mask.data[299, 299], 1)  # bottom right
         self.assertEqual(mask.data[300, 300], 0)  # bottom right
-        self.assertEqual(mask.data[299, 200], 1)  # bottom left
-        self.assertEqual(mask.data[300, 199], 0)  # bottom left
+        self.assertEqual(mask.data[299, 200], 1)  # top right
+        self.assertEqual(mask.data[300, 199], 0)  # top right
+
         self.assertEqual(mask.data[249, 200], 1)  # center top
         self.assertEqual(mask.data[249, 199], 0)  # center top
         self.assertEqual(mask.data[299, 249], 1)  # center right
@@ -1093,6 +1200,124 @@ class TestCore(unittest.TestCase):
         self.assertEqual(mask.data[249, 300], 0)  # center bottom
         self.assertEqual(mask.data[200, 249], 1)  # center left
         self.assertEqual(mask.data[199, 249], 0)  # center left
+
+    def test_rectangular_mask_generation_out_of_bounds_top_left(self) -> None:
+        bounds = Geometry.FloatRect.make(((-0.05, -0.05), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size, 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[49, 49], 1)  # bottom right
+        self.assertEqual(mask.data[50, 50], 0)  # bottom right
+
+        self.assertEqual(mask.data[49, 0], 1)  # center right
+        self.assertEqual(mask.data[50, 0], 0)  # center right
+        self.assertEqual(mask.data[0, 49], 1)  # center bottom
+        self.assertEqual(mask.data[0, 50], 0)  # center bottom
+
+    def test_rectangular_mask_generation_out_of_bounds_center_top(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.45, -0.05), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size, 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[450, 49], 1)  # bottom left
+        self.assertEqual(mask.data[449, 50], 0)  # bottom left
+        self.assertEqual(mask.data[549, 49], 1)  # bottom right
+        self.assertEqual(mask.data[550, 50], 0)  # bottom right
+
+        self.assertEqual(mask.data[549, 0], 1)  # center right
+        self.assertEqual(mask.data[550, 0], 0)  # center right
+        self.assertEqual(mask.data[500, 49], 1)  # center bottom
+        self.assertEqual(mask.data[500, 50], 0)  # center bottom
+        self.assertEqual(mask.data[450, 0], 1)  # center left
+        self.assertEqual(mask.data[449, 0], 0)  # center left
+
+    def test_rectangular_mask_generation_out_of_bounds_top_right(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.95, -0.05), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size,0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[950, 49], 1)  # bottom left
+        self.assertEqual(mask.data[949, 50], 0)  # bottom left
+
+        self.assertEqual(mask.data[999, 49], 1)  # center bottom
+        self.assertEqual(mask.data[999, 50], 0)  # center bottom
+        self.assertEqual(mask.data[950, 0], 1)  # center left
+        self.assertEqual(mask.data[949, 0], 0)  # center left
+
+    def test_rectangular_mask_generation_out_of_bounds_center_right(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.95, 0.45), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size, 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[950, 450], 1)  # top left
+        self.assertEqual(mask.data[949, 449], 0)  # top left
+        self.assertEqual(mask.data[950, 549], 1)  # bottom left
+        self.assertEqual(mask.data[950, 550], 0)  # bottom left
+
+        self.assertEqual(mask.data[999, 450], 1)  # center top
+        self.assertEqual(mask.data[999, 449], 0)  # center top
+        self.assertEqual(mask.data[999, 549], 1)  # center bottom
+        self.assertEqual(mask.data[999, 550], 0)  # center bottom
+        self.assertEqual(mask.data[950, 500], 1)  # center left
+        self.assertEqual(mask.data[949, 500], 0)  # center left
+
+    def test_rectangular_mask_generation_out_of_bounds_bottom_right(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.95, 0.95), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size,0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[950, 950], 1)  # top left
+        self.assertEqual(mask.data[949, 949], 0)  # top left
+
+        self.assertEqual(mask.data[999, 950], 1)  # center top
+        self.assertEqual(mask.data[999, 949], 0)  # center top
+        self.assertEqual(mask.data[950, 999], 1)  # center left
+        self.assertEqual(mask.data[949, 999], 0)  # center left
+
+    def test_rectangular_mask_generation_out_of_bound_center_bottom(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.45, 0.95), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size,0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[450, 950], 1)  # top left
+        self.assertEqual(mask.data[449, 949], 0)  # top left
+        self.assertEqual(mask.data[549, 950], 1)  # top right
+        self.assertEqual(mask.data[550, 949], 0)  # top right
+
+        self.assertEqual(mask.data[500, 950], 1)  # center top
+        self.assertEqual(mask.data[500, 949], 0)  # center top
+        self.assertEqual(mask.data[549, 999], 1)  # center right
+        self.assertEqual(mask.data[550, 999], 0)  # center right
+        self.assertEqual(mask.data[450, 999], 1)  # center left
+        self.assertEqual(mask.data[449, 999], 0)  # center left
+
+    def test_rectangular_mask_generation_out_of_bounds_bottom_left(self) -> None:
+        bounds = Geometry.FloatRect.make(((-0.05, 0.95), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size,0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[49, 950], 1)  # top right
+        self.assertEqual(mask.data[50, 949], 0)  # top right
+
+        self.assertEqual(mask.data[0, 950], 1)  # center top
+        self.assertEqual(mask.data[0, 949], 0)  # center top
+        self.assertEqual(mask.data[49, 999], 1)  # center right
+        self.assertEqual(mask.data[50, 999], 0)  # center right
+
+    def test_rectangular_mask_generation_out_of_bounds_center_left(self) -> None:
+        bounds = Geometry.FloatRect.make(((-0.05, 0.45), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size,0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[49, 549], 1)  # bottom right
+        self.assertEqual(mask.data[50, 550], 0)  # bottom right
+        self.assertEqual(mask.data[49, 450], 1)  # top right
+        self.assertEqual(mask.data[50, 449], 0)  # top right
+
+        self.assertEqual(mask.data[0, 450], 1)  # center top
+        self.assertEqual(mask.data[0, 449], 0)  # center top
+        self.assertEqual(mask.data[49, 500], 1)  # center right
+        self.assertEqual(mask.data[50, 500], 0)  # center right
+        self.assertEqual(mask.data[0, 549], 1)  # center bottom
+        self.assertEqual(mask.data[0, 550], 0)  # center bottom
+
+    def test_rectangular_mask_generation_out_of_bounds_completely(self) -> None:
+        bounds = Geometry.FloatRect.make(((1.1, 1.1), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size,0)
+        mask = mask_xdata.data
+        self.assertTrue(numpy.all(mask == 0))
 
 
 if __name__ == '__main__':
