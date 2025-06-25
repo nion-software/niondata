@@ -579,9 +579,8 @@ class DataAndMetadata:
         memo[id(self)] = deepcopy
         return deepcopy
 
-    def __array__(self, dtype: typing.Optional[numpy.typing.DTypeLike] = None, *, copy: typing.Optional[numpy.bool] = None) -> _ImageDataType:
+    def __array__(self, dtype: typing.Optional[numpy.typing.DTypeLike] = None, *, copy: bool | None = None) -> _ImageDataType:
         if self.data is not None:
-            # return self.data.__array__(numpy.dtype(dtype), copy=copy)
             return self.data.__array__(numpy.dtype(dtype), copy=copy)
         raise Exception("Cannot convert to NumPy array.")
 
