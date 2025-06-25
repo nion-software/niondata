@@ -1,6 +1,11 @@
 Changelog (niondata)
 ====================
 
+15.9.0 (2025-06-25)
+-------------------
+- Add rectangle mask generation functions.
+- Change behavior to use center of pixel to determine if a pixel is within a mask.
+
 15.8.2 (2025-05-27)
 -------------------
 - Maintenance release to fix a build issue.
