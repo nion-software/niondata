@@ -181,8 +181,10 @@ def function_fft(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata.
 
     assert len(src_dimensional_calibrations) == len(Image.dimensional_shape_from_shape_and_dtype(data_shape, data_dtype) or ())
 
+    # zero_frequency_position = numpy.array((numpy.array(data_shape) // 2)) + 0.5
+
     dimensional_calibrations = [
-        Calibration.Calibration((-0.5 - 0.5 * data_shape_n) / (dimensional_calibration.scale * data_shape_n),
+        Calibration.Calibration((-0.5 - data_shape_n // 2) / (dimensional_calibration.scale * data_shape_n),
                                 1.0 / (dimensional_calibration.scale * data_shape_n),
                                 "1/" + dimensional_calibration.units) for dimensional_calibration, data_shape_n in
         zip(src_dimensional_calibrations, data_shape)]

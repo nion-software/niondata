@@ -1319,6 +1319,23 @@ class TestCore(unittest.TestCase):
         mask = mask_xdata.data
         self.assertTrue(numpy.all(mask == 0))
 
+    def test_fft_zero_component_calibration(self) -> None:
+        dimensional_calibrations = (Calibration.Calibration(0, 1, "S"), Calibration.Calibration(0, 1, "S"))
+        xdata = DataAndMetadata.new_data_and_metadata(data=numpy.ones((16, 8)), dimensional_calibrations=dimensional_calibrations)
+        result = Core.function_fft(xdata)
+        self.assertAlmostEqual(0.0, result.dimensional_calibrations[0].convert_to_calibrated_value(8.5))
+        self.assertAlmostEqual(0.0, result.dimensional_calibrations[1].convert_to_calibrated_value(4.5))
+        xdata2 = DataAndMetadata.new_data_and_metadata(data=numpy.ones((15, 9)), dimensional_calibrations=dimensional_calibrations)
+        result2 = Core.function_fft(xdata2)
+        self.assertAlmostEqual(0.0, result2.dimensional_calibrations[0].convert_to_calibrated_value(7.5))
+        self.assertAlmostEqual(0.0, result2.dimensional_calibrations[1].convert_to_calibrated_value(4.5))
+        xdata3 = DataAndMetadata.new_data_and_metadata(data=numpy.ones((16,)), dimensional_calibrations=dimensional_calibrations[0:1])
+        result3 = Core.function_fft(xdata3)
+        self.assertAlmostEqual(0.0, result3.dimensional_calibrations[0].convert_to_calibrated_value(8.5))
+        xdata4 = DataAndMetadata.new_data_and_metadata(data=numpy.ones((15,)), dimensional_calibrations=dimensional_calibrations[0:1])
+        result4 = Core.function_fft(xdata4)
+        self.assertAlmostEqual(0.0, result4.dimensional_calibrations[0].convert_to_calibrated_value(7.5))
+
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

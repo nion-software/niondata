@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+UNRELEASED
+----------
+- Fix FFT calibration for odd dimensions.
+
 15.9.0 (2025-06-25)
 -------------------
 - Add rectangle mask generation functions.
