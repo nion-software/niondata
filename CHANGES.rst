@@ -1,8 +1,8 @@
 Changelog (niondata)
 ====================
 
-UNRELEASED
-----------
+15.9.1 (2025-09-25)
+-------------------
 - Fix FFT calibration for odd dimensions.
 
 15.9.0 (2025-06-25)
