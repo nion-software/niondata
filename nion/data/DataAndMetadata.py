@@ -2,6 +2,7 @@ from __future__ import annotations
 
 # standard libraries
 import base64
+import collections.abc
 import copy
 import datetime
 import gettext
@@ -9,6 +10,7 @@ import logging
 import numbers
 import pickle
 import threading
+import types
 import typing
 import warnings
 
@@ -31,10 +33,9 @@ MetadataType = typing.Mapping[str, typing.Any]
 _ImageDataType = numpy.typing.NDArray[typing.Any]
 _ScalarDataType = typing.Union[int, float, complex]
 _InternalCalibrationListType = typing.Tuple[Calibration.Calibration, ...]
-# NOTE: typing.Any is only required when numpy < 1.21. once that requirement is removed (anaconda), switch this back.
-_SliceKeyElementType = typing.Any  # typing.Union[slice, int, ellipsis, None]
-_SliceKeyType = typing.Tuple[_SliceKeyElementType, ...]
-_SliceDictKeyType = typing.Sequence[typing.Dict[str, typing.Any]]
+_SliceKeyElementType = slice | int | numpy.int32 | numpy.int64 | types.EllipsisType | None
+_SliceKeyType = tuple[_SliceKeyElementType, ...]
+_SliceDictKeyType = typing.Sequence[typing.Dict[str, typing.Any] | _SliceKeyElementType]
 
 
 class DataDescriptor:
@@ -1086,8 +1087,8 @@ def extract_data(evaluated_input: typing.Any) -> typing.Any:
     return evaluated_input
 
 
-def key_to_list(key: typing.Union[_SliceKeyType, _SliceKeyElementType]) -> typing.List[typing.Dict[str, typing.Any]]:
-    if not isinstance(key, tuple):
+def key_to_list(key: _SliceKeyType | _SliceKeyElementType) -> typing.List[typing.Dict[str, typing.Any]]:
+    if not isinstance(key, collections.abc.Sequence):
         key = (key,)
     l = list()
     for k in key:
@@ -1113,7 +1114,7 @@ def key_to_list(key: typing.Union[_SliceKeyType, _SliceKeyElementType]) -> typin
 
 
 def list_to_key(l: _SliceDictKeyType) -> _SliceKeyType:
-    key: typing.List[_SliceKeyElementType] = list()
+    key = list[_SliceKeyElementType]()
     for d in l:
         if isinstance(d, (slice, type(Ellipsis))):
             key.append(d)
@@ -1121,14 +1122,16 @@ def list_to_key(l: _SliceDictKeyType) -> _SliceKeyType:
             key.append(None)
         elif isinstance(d, numbers.Integral):
             key.append(int(d))
-        elif "index" in d:
-            key.append(int(d.get("index", 0)))
-        elif d.get("ellipses", False):
-            key.append(typing.cast(None, Ellipsis))  # some confusion about ellipsis https://bugs.python.org/issue41810
-        elif d.get("newaxis", False):
-            key.append(None)
         else:
-            key.append(slice(d.get("start"), d.get("stop"), d.get("step")))
+            assert isinstance(d, dict)
+            if "index" in d:
+                key.append(int(d.get("index", 0)))
+            elif d.get("ellipses", False):
+                key.append(Ellipsis)
+            elif d.get("newaxis", False):
+                key.append(None)
+            else:
+                key.append(slice(d.get("start"), d.get("stop"), d.get("step")))
     if len(key) == 1:
         return (key[0],)
     return tuple(key)

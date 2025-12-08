@@ -2067,7 +2067,7 @@ def function_element_data_no_copy(data_and_metadata: DataAndMetadata._DataAndMet
         if data_and_metadata.is_sequence:
             # next dimension is treated as a sequence index, which may be time or just a sequence index
             sequence_index = min(max(sequence_index, 0), dimensional_shape[next_dimension])
-            data_slice = typing.cast(DataAndMetadata._SliceKeyType, (sequence_index, ...))
+            data_slice = (sequence_index, ...)
             result = DataAndMetadata.function_data_slice(data_and_metadata, DataAndMetadata.key_to_list(data_slice))
             modified = True
             next_dimension += 1
