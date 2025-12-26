@@ -79,10 +79,10 @@ def slice_sum(data_and_metadata: _DataAndMetadataLike, slice_center: int, slice_
 def pick(data_and_metadata: _DataAndMetadataLike, position: Core.PickPositionType) -> DataAndMetadata.DataAndMetadata:
     return Core.function_pick(data_and_metadata, position)
 
-def sum(data_and_metadata: _DataAndMetadataLike, axis: typing.Optional[typing.Union[int, typing.Sequence[int]]]=None, keepdims: bool=False) -> DataAndMetadata.DataAndMetadata:
+def sum(data_and_metadata: _DataAndMetadataLike, axis: int | tuple[int, ...] | None=None, keepdims: bool=False) -> DataAndMetadata.DataAndMetadata:
     return Core.function_sum(data_and_metadata, axis, keepdims=keepdims)
 
-def mean(data_and_metadata: _DataAndMetadataLike, axis: typing.Optional[typing.Union[int, typing.Sequence[int]]]=None, keepdims: bool=False) -> DataAndMetadata.DataAndMetadata:
+def mean(data_and_metadata: _DataAndMetadataLike, axis: int | tuple[int, ...] | None=None, keepdims: bool=False) -> DataAndMetadata.DataAndMetadata:
     return Core.function_mean(data_and_metadata, axis, keepdims=keepdims)
 
 def sum_region(data_and_metadata: _DataAndMetadataLike, mask_data_and_metadata: _DataAndMetadataLike) -> DataAndMetadata.DataAndMetadata:

@@ -1311,7 +1311,7 @@ def function_moveaxis(data_and_metadata_in: _DataAndMetadataLike, src_axis: int,
     return DataAndMetadata.new_data_and_metadata(data=data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
-def function_sum(data_and_metadata_in: _DataAndMetadataLike, axis: typing.Optional[typing.Union[int, typing.Sequence[int]]] = None, keepdims: bool = False) -> DataAndMetadata.DataAndMetadata:
+def function_sum(data_and_metadata_in: _DataAndMetadataLike, axis: int | tuple[int, ...] | None = None, keepdims: bool = False) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
 
     data_shape = data_and_metadata.data_shape
@@ -1359,7 +1359,7 @@ def function_sum(data_and_metadata_in: _DataAndMetadataLike, axis: typing.Option
     return DataAndMetadata.new_data_and_metadata(data=calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=dimensional_calibrations)
 
 
-def function_mean(data_and_metadata_in: _DataAndMetadataLike, axis: typing.Optional[typing.Union[int, typing.Sequence[int]]] = None, keepdims: bool = False) -> DataAndMetadata.DataAndMetadata:
+def function_mean(data_and_metadata_in: _DataAndMetadataLike, axis: int | tuple[int, ...] | None = None, keepdims: bool = False) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
 
     data_shape = data_and_metadata.data_shape
