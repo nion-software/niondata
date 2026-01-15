@@ -1336,6 +1336,99 @@ class TestCore(unittest.TestCase):
         result4 = Core.function_fft(xdata4)
         self.assertAlmostEqual(0.0, result4.dimensional_calibrations[0].convert_to_calibrated_value(7.5))
 
+    def _create_warp_test_data(self,
+                               input_shape: tuple[int,...],
+                               output_shape: tuple[int, ...] | None = None,
+                               identity: bool = False,
+                               mode: str = "greyscale") -> tuple[DataAndMetadata.DataAndMetadata, list[numpy.ndarray]]:
+        # Determine data type and channels based on mode
+        dtype: numpy.typing.DTypeLike
+        if mode == "greyscale":
+            dtype = float
+            channels = None
+        elif mode == "rgb":
+            dtype = numpy.uint8
+            channels = 3
+        elif mode == "rgba":
+            dtype = numpy.uint8
+            channels = 4
+        else:
+            raise ValueError(f"Invalid mode: {mode}. Choose 'greyscale', 'rgb', or 'rgba'.")
+
+        # Prepare input shape for data array
+        if channels is None:
+            full_shape = input_shape
+        else:
+            full_shape = input_shape + (channels,)
+
+        # Input data: sequential numbers for easy validation
+        data = numpy.arange(numpy.prod(full_shape), dtype=dtype).reshape(full_shape)
+        src = DataAndMetadata.new_data_and_metadata(data=data)
+
+        # Determine output grid shape
+        if output_shape is None:
+            height, width = input_shape[-2:]
+        else:
+            height, width = output_shape[-2:]
+
+        # Create warp coordinates
+        if identity:
+            # Identity warp: map output coordinates to same as input indices
+            warp_y, warp_x = numpy.meshgrid(
+                numpy.arange(input_shape[-2]),
+                numpy.arange(input_shape[-1]),
+                indexing="ij"
+            )
+        else:
+            # Resampling / scaling: map output grid into input index space
+            input_height, input_width = input_shape[-2:]
+            y = numpy.arange(0, input_height, input_height / height)
+            x = numpy.arange(0, input_width, input_width / width)
+            warp_y, warp_x = numpy.meshgrid(y, x, indexing="ij")
+
+        return src, [warp_y, warp_x]
+
+    def _validate_warp_shape(self, src: DataAndMetadata.DataAndMetadata, dst: DataAndMetadata.DataAndMetadata, coords: list[numpy.ndarray], is_channel_data: bool = False) -> None:
+        n_dims = len(coords)  # number of warped dimensions
+        output_shape = coords[0].shape  # shape of warp grid
+        expected_shape = src.data_shape[:-n_dims] + output_shape
+
+        if is_channel_data:
+            expected_shape = src.data_shape[:-n_dims-1] + output_shape + (src.data_shape[-1],)
+
+        assert dst.data_shape == expected_shape, f"Output shape mismatch: {dst.data_shape} != {expected_shape}"
+
+    def test_warp_identity(self) -> None:
+        src, coords = self._create_warp_test_data(input_shape=(4, 4), identity=True)
+        dst = Core.function_warp(src, coords)
+        self._validate_warp_shape(src, dst, coords)
+
+    def test_warp_sequence(self) -> None:
+        src, coords = self._create_warp_test_data(input_shape=(6, 4, 4), output_shape=(4, 4))
+        dst = Core.function_warp(src, coords)
+        self._validate_warp_shape(src, dst, coords)
+
+    def test_warp_upscale(self) -> None:
+        # Input 4x4, warp to 8x8
+        src, coords = self._create_warp_test_data(input_shape=(4, 4), output_shape=(8, 8))
+        dst = Core.function_warp(src, coords)
+        self._validate_warp_shape(src, dst, coords)
+
+    def test_warp_sequence_upscale(self) -> None:
+        src, coords = self._create_warp_test_data(input_shape=(6, 4, 4), output_shape=(6, 8, 8))
+        dst = Core.function_warp(src, coords)
+        self._validate_warp_shape(src, dst, coords)
+
+    def test_warp_rgb(self) -> None:
+        src, coords = self._create_warp_test_data(input_shape=(6, 4, 4), output_shape=(4, 4), mode="rgb")
+        dst = Core.function_warp(src, coords)
+        self._validate_warp_shape(src, dst, coords, is_channel_data=True)
+
+    def test_warp_rgba(self) -> None:
+        src, coords = self._create_warp_test_data(input_shape=(6, 4, 4), output_shape=(4, 4), mode="rgba")
+        dst = Core.function_warp(src, coords)
+        self._validate_warp_shape(src, dst, coords, is_channel_data=True)
+
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

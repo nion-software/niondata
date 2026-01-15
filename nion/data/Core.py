@@ -1801,30 +1801,48 @@ def function_resample_2d(data_and_metadata_in: _DataAndMetadataLike, shape: Data
 
 
 def function_warp(data_and_metadata_in: _DataAndMetadataLike, coordinates_in: typing.Sequence[_DataAndMetadataLike], order: int = 1) -> DataAndMetadata.DataAndMetadata:
+    """Warp or unwarp input data using an N-dimensional warp map.
+
+    The warp map is applied along N axes and broadcast over any additional
+    dimensions in the input, allowing a single warp map to be used for
+    higher-dimensional data (e.g., image sequences). For multichannel data
+    such as RGB/RGBA, the warp is applied uniformly to all channels.
+    """
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
     coordinates = [DataAndMetadata.promote_ndarray(c) for c in coordinates_in]
-    coords = numpy.moveaxis(numpy.dstack([coordinate.data for coordinate in coordinates]), -1, 0)
+    coords = numpy.stack([c.data.astype(float) for c in coordinates], axis=0)
     data = data_and_metadata._data_ex
-    if data_and_metadata.is_data_rgb:
-        rgb: numpy.typing.NDArray[numpy.uint8] = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (3,), numpy.uint8)
-        rgb[..., 0] = scipy.ndimage.map_coordinates(data[..., 0], coords, order=order)
-        rgb[..., 1] = scipy.ndimage.map_coordinates(data[..., 1], coords, order=order)
-        rgb[..., 2] = scipy.ndimage.map_coordinates(data[..., 2], coords, order=order)
-        return DataAndMetadata.new_data_and_metadata(data=rgb,
-                                                     dimensional_calibrations=data_and_metadata.dimensional_calibrations,
-                                                     intensity_calibration=data_and_metadata.intensity_calibration)
-    elif data_and_metadata.is_data_rgba:
-        rgba: numpy.typing.NDArray[numpy.uint8] = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (4,), numpy.uint8)
-        rgba[..., 0] = scipy.ndimage.map_coordinates(data[..., 0], coords, order=order)
-        rgba[..., 1] = scipy.ndimage.map_coordinates(data[..., 1], coords, order=order)
-        rgba[..., 2] = scipy.ndimage.map_coordinates(data[..., 2], coords, order=order)
-        rgba[..., 3] = scipy.ndimage.map_coordinates(data[..., 3], coords, order=order)
-        return DataAndMetadata.new_data_and_metadata(data=rgba,
+    num_frame_dims = coords.shape[0]
+
+    if data_and_metadata.is_data_rgb_type:
+        # Last dimension is channels
+        leading_shape = data.shape[:-num_frame_dims - 1]
+        output_shape = leading_shape + coords.shape[1:]
+        channels = 3 if data_and_metadata.is_data_rgb else 4
+        output = numpy.zeros(tuple(output_shape) + (channels,), numpy.uint8)
+
+        # scipy map_coordinates does not broadcast by default, so need to loop
+        for index in numpy.ndindex(leading_shape):
+            for chan in range(channels):
+                output[index + (..., chan)] = scipy.ndimage.map_coordinates(
+                    data[index + (..., chan)],
+                    coords,
+                    order=order)
+
+        return DataAndMetadata.new_data_and_metadata(data=output,
                                                      dimensional_calibrations=data_and_metadata.dimensional_calibrations,
                                                      intensity_calibration=data_and_metadata.intensity_calibration)
     else:
+        leading_shape = data.shape[:-num_frame_dims]
+        output_shape = leading_shape + coords.shape[1:]
+        output = numpy.zeros(output_shape, dtype=data.dtype)
+
+        # scipy map_coordinates does not broadcast by default, so need to loop
+        for index in numpy.ndindex(leading_shape):
+            output[index] = scipy.ndimage.map_coordinates(data[index], coords, order=order)
+
         return DataAndMetadata.new_data_and_metadata(
-            data=scipy.ndimage.map_coordinates(data, coords, order=order),
+            data=output,
             dimensional_calibrations=data_and_metadata.dimensional_calibrations,
             intensity_calibration=data_and_metadata.intensity_calibration)
 
