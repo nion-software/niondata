@@ -1781,31 +1781,41 @@ def function_resample_2d(data_and_metadata_in: _DataAndMetadataLike, shape: Data
     return DataAndMetadata.new_data_and_metadata(calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=resampled_dimensional_calibrations)
 
 
-def function_warp(data_and_metadata_in: _DataAndMetadataLike, coordinates_in: typing.Sequence[_DataAndMetadataLike], order: int = 1) -> DataAndMetadata.DataAndMetadata:
+def function_warp(data_and_metadata_in: _DataAndMetadataLike, coordinates_in: typing.Sequence[
+    _DataAndMetadataLike], order: int = 1) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
     coordinates = [DataAndMetadata.promote_ndarray(c) for c in coordinates_in]
-    coords = numpy.moveaxis(numpy.dstack([coordinate.data for coordinate in coordinates]), -1, 0)
+    coords = numpy.stack([c.data.astype(float) for c in coordinates], axis=0)
     data = data_and_metadata._data_ex
-    if data_and_metadata.is_data_rgb:
-        rgb: numpy.typing.NDArray[numpy.uint8] = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (3,), numpy.uint8)
-        rgb[..., 0] = scipy.ndimage.map_coordinates(data[..., 0], coords, order=order)
-        rgb[..., 1] = scipy.ndimage.map_coordinates(data[..., 1], coords, order=order)
-        rgb[..., 2] = scipy.ndimage.map_coordinates(data[..., 2], coords, order=order)
-        return DataAndMetadata.new_data_and_metadata(rgb,
-                                                     dimensional_calibrations=data_and_metadata.dimensional_calibrations,
-                                                     intensity_calibration=data_and_metadata.intensity_calibration)
-    elif data_and_metadata.is_data_rgba:
-        rgba: numpy.typing.NDArray[numpy.uint8] = numpy.zeros(tuple(data_and_metadata.dimensional_shape) + (4,), numpy.uint8)
-        rgba[..., 0] = scipy.ndimage.map_coordinates(data[..., 0], coords, order=order)
-        rgba[..., 1] = scipy.ndimage.map_coordinates(data[..., 1], coords, order=order)
-        rgba[..., 2] = scipy.ndimage.map_coordinates(data[..., 2], coords, order=order)
-        rgba[..., 3] = scipy.ndimage.map_coordinates(data[..., 3], coords, order=order)
-        return DataAndMetadata.new_data_and_metadata(rgba,
+    num_frame_dims = coords.shape[0]
+
+    if data_and_metadata.is_data_rgb or data_and_metadata.is_data_rgba:
+        # Last dimension is channels
+        leading_shape = data.shape[:-num_frame_dims - 1]
+        output_shape = leading_shape + coords.shape[1:]
+        channels = 3 if data_and_metadata.is_data_rgb else 4
+        output = numpy.zeros(tuple(output_shape) + (channels,), numpy.uint8)
+
+        for idx in numpy.ndindex(leading_shape):
+            for chan in range(channels):
+                output[idx + (..., chan)] = scipy.ndimage.map_coordinates(
+                    data[idx + (..., chan)],
+                    coords,
+                    order=order)
+
+        return DataAndMetadata.new_data_and_metadata(data=output,
                                                      dimensional_calibrations=data_and_metadata.dimensional_calibrations,
                                                      intensity_calibration=data_and_metadata.intensity_calibration)
     else:
+        leading_shape = data.shape[:-num_frame_dims]
+        output_shape = leading_shape + coords.shape[1:]
+        output = numpy.zeros(output_shape, dtype=data.dtype)
+
+        for idx in numpy.ndindex(leading_shape):
+            output[idx] = scipy.ndimage.map_coordinates(data[idx], coords, order=order)
+
         return DataAndMetadata.new_data_and_metadata(
-            scipy.ndimage.map_coordinates(data, coords, order=order),
+            data=output,
             dimensional_calibrations=data_and_metadata.dimensional_calibrations,
             intensity_calibration=data_and_metadata.intensity_calibration)
 

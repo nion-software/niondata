@@ -1042,6 +1042,434 @@ class TestCore(unittest.TestCase):
             Core.function_rebin_2d(d, (2, 2))
             Core.function_resample_2d(d, (3, 3))
 
+    def test_element_data_returns_ndarray(self) -> None:
+        bio = io.BytesIO()
+        with h5py.File(bio, "w") as f:
+            dataset = f.create_dataset("data", data=numpy.ones((5, 6), dtype=numpy.float32))
+            xdata = DataAndMetadata.new_data_and_metadata(data=dataset)
+            element, _ = Core.function_element_data_no_copy(xdata, 0, (0, 0))
+            assert element
+            # test whether inline math works, implying it is a numpy array
+            elementp1 = element.data + 4
+            # test directly its type
+            self.assertIsInstance(element.data, numpy.ndarray)
+
+    def test_elliptical_mask_generation(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.2, 0.2), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[200, 200], 0)  # top left
+        self.assertEqual(mask.data[200, 299], 0)  # bottom left
+        self.assertEqual(mask.data[299, 299], 0)  # bottom right
+        self.assertEqual(mask.data[299, 200], 0)  # top right
+
+        self.assertEqual(mask.data[249, 200], 1)  # center top
+        self.assertEqual(mask.data[249, 199], 0)  # center top
+        self.assertEqual(mask.data[299, 249], 1)  # center right
+        self.assertEqual(mask.data[300, 249], 0)  # center right
+        self.assertEqual(mask.data[249, 299], 1)  # center bottom
+        self.assertEqual(mask.data[249, 300], 0)  # center bottom
+        self.assertEqual(mask.data[200, 249], 1)  # center left
+        self.assertEqual(mask.data[199, 249], 0)  # center left
+
+    def test_elliptical_mask_generation_out_of_bounds_top_left(self) -> None:
+        bounds = Geometry.FloatRect.make(((-0.05, -0.05), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[49, 49], 0)  # bottom right
+
+        self.assertEqual(mask.data[49, 0], 1)  # center right
+        self.assertEqual(mask.data[50, 0], 0)  # center right
+        self.assertEqual(mask.data[0, 49], 1)  # center bottom
+        self.assertEqual(mask.data[0, 50], 0)  # center bottom
+
+    def test_elliptical_mask_generation_out_of_bounds_center_top(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.45, -0.05), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[450, 49], 0)  # bottom left
+        self.assertEqual(mask.data[549, 49], 0)  # bottom right
+
+        self.assertEqual(mask.data[549, 0], 1)  # center right
+        self.assertEqual(mask.data[550, 0], 0)  # center right
+        self.assertEqual(mask.data[500, 49], 1)  # center bottom
+        self.assertEqual(mask.data[500, 50], 0)  # center bottom
+        self.assertEqual(mask.data[450, 0], 1)  # center left
+        self.assertEqual(mask.data[449, 0], 0)  # center left
+
+    def test_elliptical_mask_generation_out_of_bounds_top_right(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.95, -0.05), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[950, 49], 0)  # bottom left
+
+        self.assertEqual(mask.data[999, 49], 1)  # center bottom
+        self.assertEqual(mask.data[999, 50], 0)  # center bottom
+        self.assertEqual(mask.data[950, 0], 1)  # center left
+        self.assertEqual(mask.data[949, 0], 0)  # center left
+
+    def test_elliptical_mask_generation_out_of_bounds_center_right(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.95, 0.45), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[950, 450], 0)  # top left
+        self.assertEqual(mask.data[950, 549], 0)  # bottom left
+
+        self.assertEqual(mask.data[999, 450], 1)  # center top
+        self.assertEqual(mask.data[999, 449], 0)  # center top
+        self.assertEqual(mask.data[999, 549], 1)  # center bottom
+        self.assertEqual(mask.data[999, 550], 0)  # center bottom
+        self.assertEqual(mask.data[950, 500], 1)  # center left
+        self.assertEqual(mask.data[949, 550], 0)  # center left
+
+    def test_elliptical_mask_generation_out_of_bounds_bottom_right(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.95, 0.95), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[950, 950], 0)  # top left
+
+        self.assertEqual(mask.data[999, 950], 1)  # center top
+        self.assertEqual(mask.data[999, 949], 0)  # center top
+        self.assertEqual(mask.data[950, 999], 1)  # center left
+        self.assertEqual(mask.data[949, 999], 0)  # center left
+
+    def test_elliptical_mask_generation_out_of_bound_center_bottom(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.45, 0.95), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[450, 950], 0)  # top left
+        self.assertEqual(mask.data[549, 950], 0)  # top right
+
+        self.assertEqual(mask.data[500, 950], 1)  # center top
+        self.assertEqual(mask.data[500, 949], 0)  # center top
+        self.assertEqual(mask.data[549, 999], 1)  # center right
+        self.assertEqual(mask.data[550, 999], 0)  # center right
+        self.assertEqual(mask.data[450, 999], 1)  # center left
+        self.assertEqual(mask.data[449, 999], 0)  # center left
+
+    def test_elliptical_mask_generation_out_of_bounds_bottom_left(self) -> None:
+        bounds = Geometry.FloatRect.make(((-0.05, 0.95), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[49, 950], 0)  # top right
+
+        self.assertEqual(mask.data[0, 950], 1)  # center top
+        self.assertEqual(mask.data[0, 949], 0)  # center top
+        self.assertEqual(mask.data[49, 999], 1)  # center right
+        self.assertEqual(mask.data[50, 999], 0)  # center right
+
+    def test_elliptical_mask_generation_out_of_bounds_center_left(self) -> None:
+        bounds = Geometry.FloatRect.make(((-0.05, 0.45), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[49, 549], 0)  # bottom right
+        self.assertEqual(mask.data[49, 450], 0)  # top right
+
+        self.assertEqual(mask.data[0, 450], 1)  # center top
+        self.assertEqual(mask.data[0, 449], 0)  # center top
+        self.assertEqual(mask.data[49, 500], 1)  # center right
+        self.assertEqual(mask.data[50, 500], 0)  # center right
+        self.assertEqual(mask.data[0, 549], 1)  # center bottom
+        self.assertEqual(mask.data[0, 550], 0)  # center bottom
+
+    def test_elliptical_mask_generation_out_of_bounds_completely(self) -> None:
+        bounds = Geometry.FloatRect.make(((1.1, 1.1), (0.1, 0.1)))
+        mask_xdata = Core.function_make_elliptical_mask((1000, 1000), bounds.center.as_tuple(), bounds.size.as_tuple(), 0)
+        mask = mask_xdata.data
+        self.assertTrue(numpy.all(mask == 0))
+
+    def test_rectangular_mask_generation(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.2, 0.2), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size,0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[200, 200], 1)  # top left
+        self.assertEqual(mask.data[199, 199], 0)  # top left
+        self.assertEqual(mask.data[200, 299], 1)  # bottom left
+        self.assertEqual(mask.data[199, 300], 0)  # bottom left
+        self.assertEqual(mask.data[299, 299], 1)  # bottom right
+        self.assertEqual(mask.data[300, 300], 0)  # bottom right
+        self.assertEqual(mask.data[299, 200], 1)  # top right
+        self.assertEqual(mask.data[300, 199], 0)  # top right
+
+        self.assertEqual(mask.data[249, 200], 1)  # center top
+        self.assertEqual(mask.data[249, 199], 0)  # center top
+        self.assertEqual(mask.data[299, 249], 1)  # center right
+        self.assertEqual(mask.data[300, 249], 0)  # center right
+        self.assertEqual(mask.data[249, 299], 1)  # center bottom
+        self.assertEqual(mask.data[249, 300], 0)  # center bottom
+        self.assertEqual(mask.data[200, 249], 1)  # center left
+        self.assertEqual(mask.data[199, 249], 0)  # center left
+
+    def test_rectangular_mask_generation_out_of_bounds_top_left(self) -> None:
+        bounds = Geometry.FloatRect.make(((-0.05, -0.05), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size, 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[49, 49], 1)  # bottom right
+        self.assertEqual(mask.data[50, 50], 0)  # bottom right
+
+        self.assertEqual(mask.data[49, 0], 1)  # center right
+        self.assertEqual(mask.data[50, 0], 0)  # center right
+        self.assertEqual(mask.data[0, 49], 1)  # center bottom
+        self.assertEqual(mask.data[0, 50], 0)  # center bottom
+
+    def test_rectangular_mask_generation_out_of_bounds_center_top(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.45, -0.05), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size, 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[450, 49], 1)  # bottom left
+        self.assertEqual(mask.data[449, 50], 0)  # bottom left
+        self.assertEqual(mask.data[549, 49], 1)  # bottom right
+        self.assertEqual(mask.data[550, 50], 0)  # bottom right
+
+        self.assertEqual(mask.data[549, 0], 1)  # center right
+        self.assertEqual(mask.data[550, 0], 0)  # center right
+        self.assertEqual(mask.data[500, 49], 1)  # center bottom
+        self.assertEqual(mask.data[500, 50], 0)  # center bottom
+        self.assertEqual(mask.data[450, 0], 1)  # center left
+        self.assertEqual(mask.data[449, 0], 0)  # center left
+
+    def test_rectangular_mask_generation_out_of_bounds_top_right(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.95, -0.05), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size,0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[950, 49], 1)  # bottom left
+        self.assertEqual(mask.data[949, 50], 0)  # bottom left
+
+        self.assertEqual(mask.data[999, 49], 1)  # center bottom
+        self.assertEqual(mask.data[999, 50], 0)  # center bottom
+        self.assertEqual(mask.data[950, 0], 1)  # center left
+        self.assertEqual(mask.data[949, 0], 0)  # center left
+
+    def test_rectangular_mask_generation_out_of_bounds_center_right(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.95, 0.45), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size, 0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[950, 450], 1)  # top left
+        self.assertEqual(mask.data[949, 449], 0)  # top left
+        self.assertEqual(mask.data[950, 549], 1)  # bottom left
+        self.assertEqual(mask.data[950, 550], 0)  # bottom left
+
+        self.assertEqual(mask.data[999, 450], 1)  # center top
+        self.assertEqual(mask.data[999, 449], 0)  # center top
+        self.assertEqual(mask.data[999, 549], 1)  # center bottom
+        self.assertEqual(mask.data[999, 550], 0)  # center bottom
+        self.assertEqual(mask.data[950, 500], 1)  # center left
+        self.assertEqual(mask.data[949, 500], 0)  # center left
+
+    def test_rectangular_mask_generation_out_of_bounds_bottom_right(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.95, 0.95), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size,0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[950, 950], 1)  # top left
+        self.assertEqual(mask.data[949, 949], 0)  # top left
+
+        self.assertEqual(mask.data[999, 950], 1)  # center top
+        self.assertEqual(mask.data[999, 949], 0)  # center top
+        self.assertEqual(mask.data[950, 999], 1)  # center left
+        self.assertEqual(mask.data[949, 999], 0)  # center left
+
+    def test_rectangular_mask_generation_out_of_bound_center_bottom(self) -> None:
+        bounds = Geometry.FloatRect.make(((0.45, 0.95), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size,0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[450, 950], 1)  # top left
+        self.assertEqual(mask.data[449, 949], 0)  # top left
+        self.assertEqual(mask.data[549, 950], 1)  # top right
+        self.assertEqual(mask.data[550, 949], 0)  # top right
+
+        self.assertEqual(mask.data[500, 950], 1)  # center top
+        self.assertEqual(mask.data[500, 949], 0)  # center top
+        self.assertEqual(mask.data[549, 999], 1)  # center right
+        self.assertEqual(mask.data[550, 999], 0)  # center right
+        self.assertEqual(mask.data[450, 999], 1)  # center left
+        self.assertEqual(mask.data[449, 999], 0)  # center left
+
+    def test_rectangular_mask_generation_out_of_bounds_bottom_left(self) -> None:
+        bounds = Geometry.FloatRect.make(((-0.05, 0.95), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size,0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[49, 950], 1)  # top right
+        self.assertEqual(mask.data[50, 949], 0)  # top right
+
+        self.assertEqual(mask.data[0, 950], 1)  # center top
+        self.assertEqual(mask.data[0, 949], 0)  # center top
+        self.assertEqual(mask.data[49, 999], 1)  # center right
+        self.assertEqual(mask.data[50, 999], 0)  # center right
+
+    def test_rectangular_mask_generation_out_of_bounds_center_left(self) -> None:
+        bounds = Geometry.FloatRect.make(((-0.05, 0.45), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size,0)
+        mask = mask_xdata.data
+        self.assertEqual(mask.data[49, 549], 1)  # bottom right
+        self.assertEqual(mask.data[50, 550], 0)  # bottom right
+        self.assertEqual(mask.data[49, 450], 1)  # top right
+        self.assertEqual(mask.data[50, 449], 0)  # top right
+
+        self.assertEqual(mask.data[0, 450], 1)  # center top
+        self.assertEqual(mask.data[0, 449], 0)  # center top
+        self.assertEqual(mask.data[49, 500], 1)  # center right
+        self.assertEqual(mask.data[50, 500], 0)  # center right
+        self.assertEqual(mask.data[0, 549], 1)  # center bottom
+        self.assertEqual(mask.data[0, 550], 0)  # center bottom
+
+    def test_rectangular_mask_generation_out_of_bounds_completely(self) -> None:
+        bounds = Geometry.FloatRect.make(((1.1, 1.1), (0.1, 0.1)))
+        mask_xdata = Core.function_make_rectangular_mask((1000, 1000), bounds.center, bounds.size,0)
+        mask = mask_xdata.data
+        self.assertTrue(numpy.all(mask == 0))
+
+    def test_fft_zero_component_calibration(self) -> None:
+        dimensional_calibrations = (Calibration.Calibration(0, 1, "S"), Calibration.Calibration(0, 1, "S"))
+        xdata = DataAndMetadata.new_data_and_metadata(data=numpy.ones((16, 8)), dimensional_calibrations=dimensional_calibrations)
+        result = Core.function_fft(xdata)
+        self.assertAlmostEqual(0.0, result.dimensional_calibrations[0].convert_to_calibrated_value(8.5))
+        self.assertAlmostEqual(0.0, result.dimensional_calibrations[1].convert_to_calibrated_value(4.5))
+        xdata2 = DataAndMetadata.new_data_and_metadata(data=numpy.ones((15, 9)), dimensional_calibrations=dimensional_calibrations)
+        result2 = Core.function_fft(xdata2)
+        self.assertAlmostEqual(0.0, result2.dimensional_calibrations[0].convert_to_calibrated_value(7.5))
+        self.assertAlmostEqual(0.0, result2.dimensional_calibrations[1].convert_to_calibrated_value(4.5))
+        xdata3 = DataAndMetadata.new_data_and_metadata(data=numpy.ones((16,)), dimensional_calibrations=dimensional_calibrations[0:1])
+        result3 = Core.function_fft(xdata3)
+        self.assertAlmostEqual(0.0, result3.dimensional_calibrations[0].convert_to_calibrated_value(8.5))
+        xdata4 = DataAndMetadata.new_data_and_metadata(data=numpy.ones((15,)), dimensional_calibrations=dimensional_calibrations[0:1])
+        result4 = Core.function_fft(xdata4)
+        self.assertAlmostEqual(0.0, result4.dimensional_calibrations[0].convert_to_calibrated_value(7.5))
+
+    ## WARP TESTS
+    # Helper func
+    def _create_warp_test_data(self,
+                               input_shape: tuple[int,...],
+                               output_shape: tuple[int, ...] | None = None,
+                               identity: bool = False,
+                               mode: str = "greyscale") -> tuple[DataAndMetadata.DataAndMetadata, list[numpy.ndarray]]:
+        # Determine data type and channels based on mode
+        if mode == "greyscale":
+            dtype = float
+            channels = None
+        elif mode == "rgb":
+            dtype = numpy.uint8
+            channels = 3
+        elif mode == "rgba":
+            dtype = numpy.uint8
+            channels = 4
+        else:
+            raise ValueError(f"Invalid mode: {mode}. Choose 'greyscale', 'rgb', or 'rgba'.")
+
+        # Prepare input shape for data array
+        if channels is None:
+            full_shape = input_shape
+        else:
+            full_shape = input_shape + (channels,)
+
+        # Input data: sequential numbers for easy validation
+        data = numpy.arange(numpy.prod(full_shape), dtype=dtype).reshape(full_shape)
+        src = DataAndMetadata.new_data_and_metadata(data=data)
+
+        # Determine output grid shape
+        if output_shape is None:
+            H, W = input_shape[-2:]
+        else:
+            H, W = output_shape[-2:]
+
+        # Create warp coordinates
+        if identity:
+            # Identity warp: map output coordinates to same as input indices
+            warp_y, warp_x = numpy.meshgrid(
+                numpy.arange(input_shape[-2]),
+                numpy.arange(input_shape[-1]),
+                indexing="ij"
+            )
+        else:
+            # Resampling / scaling: map output grid into input index space
+            in_H, in_W = input_shape[-2:]
+            y = numpy.arange(0, in_H, in_H / H)
+            x = numpy.arange(0, in_W, in_W / W)
+            warp_y, warp_x = numpy.meshgrid(y, x, indexing="ij")
+
+        return src, [warp_y, warp_x]
+
+    def _validate_warp(self, src, dst, coords):
+
+        # ---- shape validation ----
+        n_dims = len(coords)  # number of warped dimensions
+        output_shape = coords[0].shape  # shape of warp grid
+
+        expected_shape = dst.data_shape[:-n_dims] + output_shape
+        assert dst.data_shape == expected_shape, (
+            f"Output shape mismatch: {dst.data_shape} != {expected_shape}"
+        )
+
+        # ---- extract warped subspace ----
+        # Take the first element of all leading dimensions
+        warped = dst._data_ex
+        for _ in range(warped.ndim - n_dims):
+            warped = warped[0]
+
+        # warped now has shape == output_shape
+
+        # ---- monotonicity checks for each warped axis ----
+        for axis in range(n_dims):
+            # Build a slice that varies only along this axis
+            slicer = [0] * n_dims
+            slicer[axis] = slice(None)
+
+            axis_values = warped[tuple(slicer)]
+
+            # Remove out-of-range zeros (leading or trailing)
+            nonzero = axis_values != 0
+            if numpy.count_nonzero(nonzero) < 2:
+                # Not enough valid data to validate this axis
+                continue
+
+            valid_values = axis_values[nonzero]
+
+            diffs = numpy.diff(valid_values)
+
+            assert numpy.all(diffs > 0), (
+                f"Warped axis {axis} is not strictly increasing: {axis_values}"
+            )
+
+    def test_warp_identity(self) -> None:
+        src, coords = self._create_warp_test_data(input_shape=(4, 4), identity=True)
+        dst = Core.function_warp(src, coords)
+        self._validate_warp(src, dst, coords)
+
+    def test_warp_sequence(self) -> None:
+        src, coords = self._create_warp_test_data(input_shape=(6, 4, 4), output_shape=(4, 4))
+        dst = Core.function_warp(src, coords)
+        self._validate_warp(src, dst, coords)
+
+    def test_warp_upscale(self) -> None:
+        # Input 4x4, warp to 8x8
+        src, coords = self._create_warp_test_data(input_shape=(4, 4), output_shape=(8, 8))
+        dst = Core.function_warp(src, coords)
+        self._validate_warp(src, dst, coords)
+
+    def test_warp_sequence_upscale(self) -> None:
+        src, coords = self._create_warp_test_data(input_shape=(6, 4, 4), output_shape=(6, 8, 8))
+        dst = Core.function_warp(src, coords)
+        self._validate_warp(src, dst, coords)
+
+    def test_warp_rgb(self):
+        src, coords = self._create_warp_test_data(input_shape=(6, 4, 4), output_shape=(4, 4), mode="rgb")
+        dst = Core.function_warp(src, coords)
+        self._validate_warp(src, dst, coords)
+
+    def test_warp_rgba(self):
+        src, coords = self._create_warp_test_data(input_shape=(6, 4, 4), output_shape=(4, 4), mode="rgba")
+        print(coords)
+        dst = Core.function_warp(src, coords)
+        self._validate_warp(src, dst, coords)
+
+    # def validate_test_warp_upscale(self) -> None:
+    #     # Test to validate the validate_warp detects non-increasing values. Do not include in automated tests.
+    #     # Input 4x4, warp to 8x8
+    #     src, coords = self._create_warp_test_data(input_shape=(4, 4), output_shape=(8, 8))
+    #     dst = Core.function_warp(src, coords)
+    #     dst.data[0, 2] = 0.1
+    #     self._validate_warp(src, dst, coords)
+
+
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
     unittest.main()
