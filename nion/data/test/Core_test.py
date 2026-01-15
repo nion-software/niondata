@@ -1344,6 +1344,7 @@ class TestCore(unittest.TestCase):
                                identity: bool = False,
                                mode: str = "greyscale") -> tuple[DataAndMetadata.DataAndMetadata, list[numpy.ndarray]]:
         # Determine data type and channels based on mode
+        dtype: numpy.typing.DTypeLike
         if mode == "greyscale":
             dtype = float
             channels = None
@@ -1389,13 +1390,17 @@ class TestCore(unittest.TestCase):
 
         return src, [warp_y, warp_x]
 
-    def _validate_warp(self, src, dst, coords):
+    def _validate_warp(self, src: DataAndMetadata.DataAndMetadata, dst: DataAndMetadata.DataAndMetadata, coords: list[numpy.ndarray], is_channel_data: bool = False) -> None:
 
         # ---- shape validation ----
         n_dims = len(coords)  # number of warped dimensions
         output_shape = coords[0].shape  # shape of warp grid
 
         expected_shape = dst.data_shape[:-n_dims] + output_shape
+
+        if is_channel_data:
+            expected_shape = dst.data_shape[:-n_dims-1] + output_shape + (dst.data_shape[-1],)
+
         assert dst.data_shape == expected_shape, (
             f"Output shape mismatch: {dst.data_shape} != {expected_shape}"
         )
@@ -1411,7 +1416,7 @@ class TestCore(unittest.TestCase):
         # ---- monotonicity checks for each warped axis ----
         for axis in range(n_dims):
             # Build a slice that varies only along this axis
-            slicer = [0] * n_dims
+            slicer: list[typing.Union[int, slice]] = [0] * n_dims
             slicer[axis] = slice(None)
 
             axis_values = warped[tuple(slicer)]
@@ -1451,16 +1456,15 @@ class TestCore(unittest.TestCase):
         dst = Core.function_warp(src, coords)
         self._validate_warp(src, dst, coords)
 
-    def test_warp_rgb(self):
+    def test_warp_rgb(self) -> None:
         src, coords = self._create_warp_test_data(input_shape=(6, 4, 4), output_shape=(4, 4), mode="rgb")
         dst = Core.function_warp(src, coords)
-        self._validate_warp(src, dst, coords)
+        self._validate_warp(src, dst, coords, is_channel_data=True)
 
-    def test_warp_rgba(self):
+    def test_warp_rgba(self) -> None:
         src, coords = self._create_warp_test_data(input_shape=(6, 4, 4), output_shape=(4, 4), mode="rgba")
-        print(coords)
         dst = Core.function_warp(src, coords)
-        self._validate_warp(src, dst, coords)
+        self._validate_warp(src, dst, coords, is_channel_data=True)
 
     # def validate_test_warp_upscale(self) -> None:
     #     # Test to validate the validate_warp detects non-increasing values. Do not include in automated tests.
