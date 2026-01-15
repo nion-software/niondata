@@ -2,6 +2,36 @@
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "niondata"
+version = "15.9.1"
+authors = [
+    { name = "Nion Software", email = "swift@nion.com" }
+]
+description = "A data processing library for Nion Swift."
+readme = "README.rst"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14"
+]
+urls = { "Homepage" = "https://github.com/nion-software/niondata" }
+dependencies = [
+  "nionutils >=4.14.0,<5.0.0",
+  "numpy >=2.0,<3.0",
+  "scipy"
+]
+
+[tool.setuptools.packages.find]
+include = ["nion", "nion.data", "nion.data.test"]
+
+[tool.setuptools.package-data]
+"nion.data" = ["py.typed"]
+
 [tool.pytest.ini_options]
 testpaths = [
     "nion/data"

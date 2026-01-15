@@ -2,14 +2,15 @@ from __future__ import annotations
 
 # standard libraries
 import base64
+import collections.abc
 import copy
 import datetime
 import gettext
 import logging
 import numbers
 import pickle
-import re
 import threading
+import types
 import typing
 import warnings
 
@@ -32,17 +33,16 @@ MetadataType = typing.Mapping[str, typing.Any]
 _ImageDataType = numpy.typing.NDArray[typing.Any]
 _ScalarDataType = typing.Union[int, float, complex]
 _InternalCalibrationListType = typing.Tuple[Calibration.Calibration, ...]
-# NOTE: typing.Any is only required when numpy < 1.21. once that requirement is removed (anaconda), switch this back.
-_SliceKeyElementType = typing.Any  # typing.Union[slice, int, ellipsis, None]
-_SliceKeyType = typing.Tuple[_SliceKeyElementType, ...]
-_SliceDictKeyType = typing.Sequence[typing.Dict[str, typing.Any]]
+_SliceKeyElementType = slice | int | numpy.int32 | numpy.int64 | types.EllipsisType | None
+_SliceKeyType = tuple[_SliceKeyElementType, ...]
+_SliceDictKeyType = typing.Sequence[typing.Dict[str, typing.Any] | _SliceKeyElementType]
 
 
 class DataDescriptor:
     """A class describing the layout of data."""
     def __init__(self, is_sequence: bool, collection_dimension_count: int, datum_dimension_count: int):
-        assert datum_dimension_count in (0, 1, 2)
-        assert collection_dimension_count in (0, 1, 2)
+        assert datum_dimension_count in (0, 1, 2), f"datum_dimension_count ({datum_dimension_count}) must be 0, 1 or 2"
+        assert collection_dimension_count in (0, 1, 2), f"collection_dimension_count ({collection_dimension_count}) must be 0, 1 or 2"
         self.is_sequence = is_sequence
         self.collection_dimension_count = collection_dimension_count
         self.datum_dimension_count = datum_dimension_count
@@ -122,14 +122,20 @@ class DataMetadata:
     Values passed to init and set methods are copied before storing. Returned values are return directly and not copied.
     """
 
-    def __init__(self, data_shape_and_dtype: typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]],
-                 intensity_calibration: typing.Optional[Calibration.Calibration] = None,
-                 dimensional_calibrations: typing.Optional[CalibrationListType] = None,
-                 metadata: typing.Optional[MetadataType] = None,
-                 timestamp: typing.Optional[datetime.datetime] = None,
-                 data_descriptor: typing.Optional[DataDescriptor] = None,
-                 timezone: typing.Optional[str] = None,
-                 timezone_offset: typing.Optional[str] = None):
+    def __init__(self,
+                 data_shape_and_dtype: typing.Tuple[ShapeType, numpy.typing.DTypeLike] | None = None,
+                 intensity_calibration: Calibration.Calibration | None = None,
+                 dimensional_calibrations: CalibrationListType | None = None,
+                 metadata: MetadataType | None = None,
+                 timestamp: datetime.datetime | None = None,
+                 data_descriptor: DataDescriptor | None = None,
+                 timezone: str | None = None,
+                 timezone_offset: str | None = None,
+                 data_shape: ShapeType | None = None,
+                 data_dtype: numpy.typing.DTypeLike | None = None):
+        if data_shape_and_dtype is None and data_shape is not None and data_dtype is not None:
+            data_shape_and_dtype = (data_shape, data_dtype)
+
         if data_shape_and_dtype is not None and data_shape_and_dtype[0] is not None and not all([type(data_shape_item) == int for data_shape_item in data_shape_and_dtype[0]]):
             warnings.warn('using a non-integer shape in DataAndMetadata', DeprecationWarning, stacklevel=2)
 
@@ -148,7 +154,7 @@ class DataMetadata:
             datum_dimension_count = dimension_count - collection_dimension_count
             data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
 
-        assert data_descriptor.expected_dimension_count == dimension_count
+        assert data_descriptor.expected_dimension_count == dimension_count, f"Expected {data_descriptor.expected_dimension_count}, got {dimension_count}"
         assert timezone is None or timezone
         assert timezone_offset is None or timezone_offset
 
@@ -167,7 +173,7 @@ class DataMetadata:
         self.__metadata = dict(metadata) if metadata is not None else dict()
         # assert isinstance(self.metadata, dict)  # disable for performance. it is enforced above.
 
-        assert len(dimensional_calibrations) == len(dimensional_shape)
+        assert len(dimensional_calibrations) == len(dimensional_shape), f"dimensional_calibrations ({len(dimensional_calibrations)}) must match dimensional_shape ({len(dimensional_shape)})"
 
     def __eq__(self, other: typing.Any) -> bool:
         if not isinstance(other, self.__class__):
@@ -190,8 +196,16 @@ class DataMetadata:
 
     def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> DataMetadata:
         # do not copy metadata since it will be copied in constructor
-        return DataMetadata(self.data_shape_and_dtype, self.intensity_calibration, self.dimensional_calibrations,
-                            self.__metadata, self.timestamp, self.data_descriptor, self.timezone, self.timezone_offset)
+        return DataMetadata(
+            data_shape=self.data_shape,
+            data_dtype=self.data_dtype,
+            intensity_calibration=self.intensity_calibration,
+            dimensional_calibrations=self.dimensional_calibrations,
+            metadata=self.__metadata,
+            timestamp=self.timestamp,
+            data_descriptor=self.data_descriptor,
+            timezone=self.timezone,
+            timezone_offset=self.timezone_offset)
 
     @property
     def data_shape_and_dtype(self) -> typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]]:
@@ -361,7 +375,7 @@ class DataMetadata:
         self.__intensity_calibration = copy.deepcopy(intensity_calibration)
 
     def _set_dimensional_calibrations(self, dimensional_calibrations: CalibrationListType) -> None:
-        assert len(dimensional_calibrations) == len(self.dimensional_shape)
+        assert len(dimensional_calibrations) == len(self.dimensional_shape), f"dimensional_calibrations ({len(dimensional_calibrations)}) must match dimensional_shape ({len(self.dimensional_shape)})"
         self.__dimensional_calibrations = copy.deepcopy(dimensional_calibrations)
 
     def _set_data_descriptor(self, data_descriptor: DataDescriptor) -> None:
@@ -515,21 +529,32 @@ class DataAndMetadata:
     directly and not copied.
     """
 
-    def __init__(self, data: _ImageDataType,
-                 data_shape_and_dtype: typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]],
-                 intensity_calibration: typing.Optional[Calibration.Calibration] = None,
-                 dimensional_calibrations: typing.Optional[CalibrationListType] = None,
-                 metadata: typing.Optional[MetadataType] = None,
-                 timestamp: typing.Optional[datetime.datetime] = None,
-                 data_descriptor: typing.Optional[DataDescriptor] = None,
-                 timezone: typing.Optional[str] = None,
-                 timezone_offset: typing.Optional[str] = None):
+    def __init__(self,
+                 data: _ImageDataType,
+                 data_shape_and_dtype: typing.Tuple[ShapeType, numpy.typing.DTypeLike] | None = None,
+                 intensity_calibration: Calibration.Calibration | None = None,
+                 dimensional_calibrations: CalibrationListType | None = None,
+                 metadata: MetadataType | None = None,
+                 timestamp: datetime.datetime | None = None,
+                 data_descriptor: DataDescriptor | None = None,
+                 timezone: str | None = None,
+                 timezone_offset: str | None = None,
+                 data_shape: ShapeType | None = None,
+                 data_dtype: numpy.typing.DTypeLike | None = None):
         self.__data_lock = threading.RLock()
         self.__data = data
         assert isinstance(metadata, dict) if metadata is not None else True
-        self.__data_metadata = DataMetadata(data_shape_and_dtype, intensity_calibration, dimensional_calibrations,
-                                            metadata, timestamp, data_descriptor=data_descriptor,
-                                            timezone=timezone, timezone_offset=timezone_offset)
+        self.__data_metadata = DataMetadata(
+            data_shape_and_dtype=data_shape_and_dtype,
+            intensity_calibration=intensity_calibration,
+            dimensional_calibrations=dimensional_calibrations,
+            metadata=metadata,
+            timestamp=timestamp,
+            data_descriptor=data_descriptor,
+            timezone=timezone,
+            timezone_offset=timezone_offset,
+            data_shape=data_shape,
+            data_dtype=data_dtype)
 
     def __eq__(self, other: typing.Any) -> bool:
         if not isinstance(other, self.__class__):
@@ -543,15 +568,20 @@ class DataAndMetadata:
     def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> DataAndMetadata:
         # use numpy.copy so that it handles h5py arrays too (resulting in ndarray).
         data_copy = numpy.copy(self.data)
-        deepcopy = DataAndMetadata.from_data(data_copy, self.intensity_calibration, self.dimensional_calibrations,
-                                             self.metadata, self.timestamp, self.data_descriptor, self.timezone,
-                                             self.timezone_offset)
+        deepcopy = DataAndMetadata.from_data(
+            data=data_copy,
+            intensity_calibration=self.intensity_calibration,
+            dimensional_calibrations=self.dimensional_calibrations,
+            metadata=self.metadata,
+            timestamp=self.timestamp,
+            data_descriptor=self.data_descriptor,
+            timezone=self.timezone,
+            timezone_offset=self.timezone_offset)
         memo[id(self)] = deepcopy
         return deepcopy
 
-    def __array__(self, dtype: typing.Optional[numpy.typing.DTypeLike] = None, *, copy: typing.Optional[numpy.bool] = None) -> _ImageDataType:
+    def __array__(self, dtype: typing.Optional[numpy.typing.DTypeLike] = None, *, copy: bool | None = None) -> _ImageDataType:
         if self.data is not None:
-            # return self.data.__array__(numpy.dtype(dtype), copy=copy)
             return self.data.__array__(numpy.dtype(dtype), copy=copy)
         raise Exception("Cannot convert to NumPy array.")
 
@@ -566,8 +596,16 @@ class DataAndMetadata:
                   timezone: typing.Optional[str] = None,
                   timezone_offset: typing.Optional[str] = None) -> DataAndMetadata:
         """Return a new data and metadata from an ndarray. Takes ownership of data."""
-        data_shape_and_dtype = (data.shape, data.dtype) if data is not None else None
-        return cls(data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor, timezone=timezone, timezone_offset=timezone_offset)
+        return cls(data=data,
+                   data_shape=data.shape,
+                   data_dtype=data.dtype,
+                   intensity_calibration=intensity_calibration,
+                   dimensional_calibrations=dimensional_calibrations,
+                   metadata=metadata,
+                   timestamp=timestamp,
+                   data_descriptor=data_descriptor,
+                   timezone=timezone,
+                   timezone_offset=timezone_offset)
 
     @property
     def data(self) -> _ImageDataType:
@@ -578,7 +616,15 @@ class DataAndMetadata:
         return self.data
 
     def clone_with_data(self, data: _ImageDataType) -> DataAndMetadata:
-        return new_data_and_metadata(data, intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations, data_descriptor=self.data_descriptor)
+        return new_data_and_metadata(
+            data=data,
+            intensity_calibration=self.intensity_calibration,
+            dimensional_calibrations=self.dimensional_calibrations,
+            metadata=self.metadata,
+            timestamp=self.timestamp,
+            data_descriptor=self.data_descriptor,
+            timezone=self.timezone,
+            timezone_offset=self.timezone_offset)
 
     @property
     def data_shape_and_dtype(self) -> typing.Optional[typing.Tuple[ShapeType, numpy.typing.DTypeLike]]:
@@ -713,7 +759,7 @@ class DataAndMetadata:
         return self.__data_metadata.metadata
 
     def _set_data(self, data: _ImageDataType) -> None:
-        assert len(data.shape) == len(self.data_shape)
+        assert len(data.shape) == len(self.data_shape), f"data shape ({len(data.shape)}) must match data shape ({len(self.data_shape)})"
         self.__data = data
 
     def _set_intensity_calibration(self, intensity_calibration: Calibration.Calibration) -> None:
@@ -740,19 +786,19 @@ class DataAndMetadata:
         self.__data_metadata._set_timestamp(value)
 
     @property
-    def timezone(self) -> typing.Optional[str]:
+    def timezone(self) -> str | None:
         return self.__data_metadata.timezone
 
     @timezone.setter
-    def timezone(self, value: str) -> None:
+    def timezone(self, value: str | None) -> None:
         self.__data_metadata._set_timezone(value)
 
     @property
-    def timezone_offset(self) -> typing.Optional[str]:
+    def timezone_offset(self) -> str | None:
         return self.__data_metadata.timezone_offset
 
     @timezone_offset.setter
-    def timezone_offset(self, value: str) -> None:
+    def timezone_offset(self, value: str | None) -> None:
         self.__data_metadata._set_timezone_offset(value)
 
     @property
@@ -837,13 +883,22 @@ class DataAndMetadata:
         return None
 
     def __unary_op(self, op: typing.Callable[[_ImageDataType], _ImageDataType]) -> DataAndMetadata:
-        return new_data_and_metadata(op(self._data_ex), intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations)
+        return new_data_and_metadata(
+            data=op(self._data_ex),
+            intensity_calibration=self.intensity_calibration,
+            dimensional_calibrations=self.dimensional_calibrations)
 
     def __binary_op(self, op: typing.Callable[[_ImageDataType, _ImageDataType], _ImageDataType], other: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata:
-        return new_data_and_metadata(op(self._data_ex, extract_data(other)), intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations)
+        return new_data_and_metadata(
+            data=op(self._data_ex, extract_data(other)),
+            intensity_calibration=self.intensity_calibration,
+            dimensional_calibrations=self.dimensional_calibrations)
 
     def __rbinary_op(self, op: typing.Callable[[_ImageDataType, _ImageDataType], _ImageDataType], other: _DataAndMetadataIndeterminateSizeLike) -> DataAndMetadata:
-        return new_data_and_metadata(op(extract_data(other), self._data_ex), intensity_calibration=self.intensity_calibration, dimensional_calibrations=self.dimensional_calibrations)
+        return new_data_and_metadata(
+            data=op(extract_data(other), self._data_ex),
+            intensity_calibration=self.intensity_calibration,
+            dimensional_calibrations=self.dimensional_calibrations)
 
     def __abs__(self) -> DataAndMetadata:
         return self.__unary_op(numpy.abs)
@@ -943,7 +998,17 @@ class DataAndMetadata:
         if datum_dimension_count is None:
             datum_dimension_count = len(dimensional_shape) - collection_dimension_count - (1 if is_sequence else 0)
         data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
-        return DataAndMetadata(data, data_shape_and_dtype, intensity_calibration, dimensional_calibrations, metadata, timestamp, data_descriptor=data_descriptor, timezone=timezone, timezone_offset=timezone_offset)
+        return DataAndMetadata(
+            data=data,
+            data_shape=data.shape,
+            data_dtype=data.dtype,
+            intensity_calibration=intensity_calibration,
+            dimensional_calibrations=dimensional_calibrations,
+            metadata=metadata,
+            timestamp=timestamp,
+            data_descriptor=data_descriptor,
+            timezone=timezone,
+            timezone_offset=timezone_offset)
 
     @property
     def rpc_dict(self) -> typing.Dict[str, typing.Any]:
@@ -1022,8 +1087,8 @@ def extract_data(evaluated_input: typing.Any) -> typing.Any:
     return evaluated_input
 
 
-def key_to_list(key: typing.Union[_SliceKeyType, _SliceKeyElementType]) -> typing.List[typing.Dict[str, typing.Any]]:
-    if not isinstance(key, tuple):
+def key_to_list(key: _SliceKeyType | _SliceKeyElementType) -> typing.List[typing.Dict[str, typing.Any]]:
+    if not isinstance(key, collections.abc.Sequence):
         key = (key,)
     l = list()
     for k in key:
@@ -1049,7 +1114,7 @@ def key_to_list(key: typing.Union[_SliceKeyType, _SliceKeyElementType]) -> typin
 
 
 def list_to_key(l: _SliceDictKeyType) -> _SliceKeyType:
-    key: typing.List[_SliceKeyElementType] = list()
+    key = list[_SliceKeyElementType]()
     for d in l:
         if isinstance(d, (slice, type(Ellipsis))):
             key.append(d)
@@ -1057,14 +1122,16 @@ def list_to_key(l: _SliceDictKeyType) -> _SliceKeyType:
             key.append(None)
         elif isinstance(d, numbers.Integral):
             key.append(int(d))
-        elif "index" in d:
-            key.append(int(d.get("index", 0)))
-        elif d.get("ellipses", False):
-            key.append(typing.cast(None, Ellipsis))  # some confusion about ellipsis https://bugs.python.org/issue41810
-        elif d.get("newaxis", False):
-            key.append(None)
         else:
-            key.append(slice(d.get("start"), d.get("stop"), d.get("step")))
+            assert isinstance(d, dict)
+            if "index" in d:
+                key.append(int(d.get("index", 0)))
+            elif d.get("ellipses", False):
+                key.append(Ellipsis)
+            elif d.get("newaxis", False):
+                key.append(None)
+            else:
+                key.append(slice(d.get("start"), d.get("stop"), d.get("step")))
     if len(key) == 1:
         return (key[0],)
     return tuple(key)
@@ -1229,7 +1296,7 @@ def function_data_slice(data_and_metadata_like: _DataAndMetadataLike, key: _Slic
     data_descriptor = DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count)
     # print(f"data descriptor {data_descriptor}")
 
-    return new_data_and_metadata(data,
+    return new_data_and_metadata(data=data,
                                  intensity_calibration=data_and_metadata.intensity_calibration,
                                  dimensional_calibrations=cropped_dimensional_calibrations,
                                  data_descriptor=data_descriptor,
@@ -1248,9 +1315,9 @@ def promote_indeterminate_array(data: _DataAndMetadataIndeterminateSizeLike) -> 
     if isinstance(data, DataAndMetadata):
         return data
     if isinstance(data, numpy.ndarray):
-        return new_data_and_metadata(data)
+        return new_data_and_metadata(data=data)
     if hasattr(data, "__array__"):
-        return new_data_and_metadata(typing.cast(_ImageDataType, data))
+        return new_data_and_metadata(data=typing.cast(_ImageDataType, data))
     return data
 
 
@@ -1260,8 +1327,15 @@ def promote_ndarray(data: _DataAndMetadataLike) -> DataAndMetadata:
     if isinstance(data, DataAndMetadata):
         return data
     if hasattr(data, "__array__"):
-        return new_data_and_metadata(data)
+        return new_data_and_metadata(data=data)
     raise Exception(f"Unable to convert {data} to DataAndMetadata.")
+
+
+def promote_ndarray_actual(data: _DataAndMetadataLike) -> DataAndMetadata:
+    maybe_array = promote_ndarray(data)
+    if not isinstance(maybe_array.data, numpy.ndarray) and hasattr(maybe_array.data, "__array__"):
+        return maybe_array.clone_with_data(numpy.array(maybe_array.data))
+    return maybe_array
 
 
 def determine_shape(*datas: _DataAndMetadataOrConstant) -> typing.Optional[ShapeType]:
@@ -1279,7 +1353,9 @@ def promote_constant(data: _DataAndMetadataOrConstant, shape: ShapeType) -> Data
     # return data and metadata or constant with shape in form of data and metadata
     if isinstance(data, DataAndMetadata):
         return data
-    return new_data_and_metadata(numpy.full(shape, data))
+    elif isinstance(data, numbers.Complex):
+        return new_data_and_metadata(data=numpy.full(shape, data))
+    raise Exception(f"Unable to convert {data} to DataAndMetadata or constant.")
 
 
 def new_data_and_metadata(data: _ImageDataType,
@@ -1291,4 +1367,12 @@ def new_data_and_metadata(data: _ImageDataType,
                           timezone: typing.Optional[str] = None,
                           timezone_offset: typing.Optional[str] = None) -> DataAndMetadata:
     """Return a new data and metadata from an ndarray. Takes ownership of data."""
-    return DataAndMetadata.from_data(data, intensity_calibration, dimensional_calibrations, metadata, timestamp=timestamp, timezone=timezone, timezone_offset=timezone_offset, data_descriptor=data_descriptor)
+    return DataAndMetadata.from_data(
+        data=data,
+        intensity_calibration=intensity_calibration,
+        dimensional_calibrations=dimensional_calibrations,
+        metadata=metadata,
+        timestamp=timestamp,
+        timezone=timezone,
+        timezone_offset=timezone_offset,
+        data_descriptor=data_descriptor)

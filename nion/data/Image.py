@@ -37,7 +37,7 @@ def scale_multidimensional(image: _ImageDataType, scaled_size: ShapeType) -> _Im
     coords = [numpy.rint(x).astype(int) for x in numpy.ogrid[slices]]
     # coords is now, for an array image of dimension n, a list of n 1d arrays we the
     # coords we want to take from image:
-    return typing.cast(_ImageDataType, image[coords])
+    return image[coords]
 
 
 # size is c-indexed (height, width)
@@ -130,9 +130,9 @@ def get_rgb_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str]
     bytes = get_byte_view(rgba_image)
     assert bytes.shape[2] == 4
     if byteorder == 'little':
-        return typing.cast(_RGBImageDataType, bytes[..., :3])  # strip A off BGRA
+        return bytes[..., :3]  # strip A off BGRA
     else:
-        return typing.cast(_RGBImageDataType, bytes[..., 1:])  # strip A off ARGB
+        return bytes[..., 1:]  # strip A off ARGB
 
 
 def get_red_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str] = None) -> _U8ImageDataType:
@@ -141,9 +141,9 @@ def get_red_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str]
     bytes = get_byte_view(rgba_image)
     assert bytes.shape[2] == 4
     if byteorder == 'little':
-        return typing.cast(_U8ImageDataType, bytes[..., 2])
+        return bytes[..., 2]
     else:
-        return typing.cast(_U8ImageDataType, bytes[..., 1])
+        return bytes[..., 1]
 
 
 def get_green_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str] = None) -> _U8ImageDataType:
@@ -152,9 +152,9 @@ def get_green_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[st
     bytes = get_byte_view(rgba_image)
     assert bytes.shape[2] == 4
     if byteorder == 'little':
-        return typing.cast(_U8ImageDataType, bytes[..., 1])
+        return bytes[..., 1]
     else:
-        return typing.cast(_U8ImageDataType, bytes[..., 2])
+        return bytes[..., 2]
 
 
 def get_blue_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str] = None) -> _U8ImageDataType:
@@ -163,9 +163,9 @@ def get_blue_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str
     bytes = get_byte_view(rgba_image)
     assert bytes.shape[2] == 4
     if byteorder == 'little':
-        return typing.cast(_U8ImageDataType, bytes[..., 0])
+        return bytes[..., 0]
     else:
-        return typing.cast(_U8ImageDataType, bytes[..., 3])
+        return bytes[..., 3]
 
 
 def get_alpha_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[str] = None) -> _U8ImageDataType:
@@ -174,9 +174,9 @@ def get_alpha_view(rgba_image: _RGBAImageDataType, byteorder: typing.Optional[st
     bytes = get_byte_view(rgba_image)
     assert bytes.shape[2] == 4
     if byteorder == 'little':
-        return typing.cast(_U8ImageDataType, bytes[..., 3])
+        return bytes[..., 3]
     else:
-        return typing.cast(_U8ImageDataType, bytes[..., 0])
+        return bytes[..., 0]
 
 
 def get_rgba_view_from_rgba_data(rgba_data: _RGBAImageDataType) -> _RGBA8ImageDataType:
@@ -187,7 +187,7 @@ def get_rgba_data_from_rgba(rgba_image: _RGBA8ImageDataType) -> _RGBImageDataTyp
     return get_dtype_view(rgba_image, numpy.uint32).reshape(rgba_image.shape[:-1])
 
 
-def dimensional_shape_from_shape_and_dtype(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> typing.Optional[ShapeType]:
+def dimensional_shape_from_shape_and_dtype(shape: ShapeType | None, dtype: numpy.typing.DTypeLike | None) -> typing.Optional[ShapeType]:
     if shape is None or dtype is None:
         return None
     return shape[:-1] if dtype == numpy.uint8 and shape[-1] in (3,4) and len(shape) > 1 else shape
@@ -197,7 +197,7 @@ def dimensional_shape_from_data(data: _ImageDataType) -> typing.Optional[ShapeTy
     return dimensional_shape_from_shape_and_dtype(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_rgb(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
+def is_shape_and_dtype_rgb(shape: ShapeType | None, dtype: numpy.typing.DTypeLike | None) -> bool:
     if shape is None or dtype is None:
         return False
     return dtype == numpy.uint8 and shape[-1] == 3 and len(shape) > 1
@@ -207,7 +207,7 @@ def is_data_rgb(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_rgb(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_rgba(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
+def is_shape_and_dtype_rgba(shape: ShapeType | None, dtype: numpy.typing.DTypeLike | None) -> bool:
     if shape is None or dtype is None:
         return False
     return dtype == numpy.uint8 and shape[-1] == 4 and len(shape) > 1
@@ -217,7 +217,7 @@ def is_data_rgba(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_rgba(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_rgb_type(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
+def is_shape_and_dtype_rgb_type(shape: ShapeType | None, dtype: numpy.typing.DTypeLike | None) -> bool:
     return is_shape_and_dtype_rgb(shape, dtype) or is_shape_and_dtype_rgba(shape, dtype)
 
 
@@ -225,7 +225,7 @@ def is_data_rgb_type(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_rgb_type(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_complex64(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
+def is_shape_and_dtype_complex64(shape: ShapeType | None, dtype: numpy.typing.DTypeLike | None) -> bool:
     if shape is None or dtype is None:
         return False
     return dtype == numpy.complex64
@@ -235,7 +235,7 @@ def is_data_complex64(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_complex64(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_complex128(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
+def is_shape_and_dtype_complex128(shape: ShapeType | None, dtype: numpy.typing.DTypeLike | None) -> bool:
     if shape is None or dtype is None:
         return False
     return dtype == numpy.complex128
@@ -245,7 +245,7 @@ def is_data_complex128(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_complex128(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_complex_type(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
+def is_shape_and_dtype_complex_type(shape: ShapeType | None, dtype: numpy.typing.DTypeLike | None) -> bool:
     if shape is None or dtype is None:
         return False
     return dtype == numpy.complex64 or dtype == numpy.complex128
@@ -255,7 +255,7 @@ def is_data_complex_type(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_complex_type(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_scalar_type(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
+def is_shape_and_dtype_scalar_type(shape: ShapeType | None, dtype: numpy.typing.DTypeLike | None) -> bool:
     if shape is None or dtype is None:
         return False
     return not is_shape_and_dtype_rgb_type(shape, dtype) and not is_shape_and_dtype_complex_type(shape, dtype)
@@ -265,7 +265,7 @@ def is_data_scalar_type(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_scalar_type(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_bool(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
+def is_shape_and_dtype_bool(shape: ShapeType | None, dtype: numpy.typing.DTypeLike | None) -> bool:
     if shape is None or dtype is None:
         return False
     return dtype == bool and len(shape) > 1
@@ -275,7 +275,7 @@ def is_data_bool(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_bool(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_valid(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
+def is_shape_and_dtype_valid(shape: ShapeType | None, dtype: numpy.typing.DTypeLike | None) -> bool:
     if shape is None or dtype is None:
         return False
     if is_shape_and_dtype_rgb_type(shape, dtype):
@@ -287,7 +287,7 @@ def is_data_valid(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_valid(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_1d(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
+def is_shape_and_dtype_1d(shape: ShapeType | None, dtype: numpy.typing.DTypeLike | None) -> bool:
     if shape is None or dtype is None or not is_shape_and_dtype_valid(shape, dtype):
         return False
     if is_shape_and_dtype_rgb(shape, dtype) or is_shape_and_dtype_rgba(shape, dtype):
@@ -299,7 +299,7 @@ def is_data_1d(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_1d(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_2d(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
+def is_shape_and_dtype_2d(shape: ShapeType | None, dtype: numpy.typing.DTypeLike | None) -> bool:
     if shape is None or dtype is None or not is_shape_and_dtype_valid(shape, dtype):
         return False
     if is_shape_and_dtype_rgb(shape, dtype) or is_shape_and_dtype_rgba(shape, dtype):
@@ -311,7 +311,7 @@ def is_data_2d(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_2d(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_3d(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
+def is_shape_and_dtype_3d(shape: ShapeType | None, dtype: numpy.typing.DTypeLike | None) -> bool:
     if shape is None or dtype is None or not is_shape_and_dtype_valid(shape, dtype):
         return False
     if is_shape_and_dtype_rgb(shape, dtype) or is_shape_and_dtype_rgba(shape, dtype):
@@ -323,14 +323,14 @@ def is_data_3d(data: typing.Optional[_ImageDataType]) -> bool:
     return data is not None and is_shape_and_dtype_3d(data.shape, data.dtype)
 
 
-def is_shape_and_dtype_4d(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
+def is_shape_and_dtype_4d(shape: ShapeType | None, dtype: numpy.typing.DTypeLike | None) -> bool:
     if shape is None or dtype is None or not is_shape_and_dtype_valid(shape, dtype):
         return False
     if is_shape_and_dtype_rgb(shape, dtype) or is_shape_and_dtype_rgba(shape, dtype):
         return len(shape) == 5  # one extra dimension for rgb(a) values
     return len(shape) == 4
 
-def is_shape_and_dtype_5d(shape: typing.Optional[ShapeType], dtype: numpy.typing.DTypeLike) -> bool:
+def is_shape_and_dtype_5d(shape: ShapeType | None, dtype: numpy.typing.DTypeLike | None) -> bool:
     if shape is None or dtype is None or not is_shape_and_dtype_valid(shape, dtype):
         return False
     if is_shape_and_dtype_rgb(shape, dtype) or is_shape_and_dtype_rgba(shape, dtype):

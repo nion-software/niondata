@@ -24,7 +24,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
         with self.subTest("Test for a sequence of SIs, shift collection dimensions along sequence axis"):
             shape = (5, 2, 3, 4)
             data = numpy.arange(numpy.prod(shape)).reshape(shape)
-            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=DataAndMetadata.DataDescriptor(True, 2, 1))
+            xdata = DataAndMetadata.new_data_and_metadata(data=data, data_descriptor=DataAndMetadata.DataDescriptor(True, 2, 1))
 
             shifts = numpy.array([(0., 1.), (0., 2.), (0., 3.), (0., 4.), (0., 5.)])
 
@@ -41,7 +41,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
         with self.subTest("Test for a sequence of 1D collections of 2D data, shift data dimensions along sequence axis"):
             shape = (5, 2, 3, 4)
             data = numpy.arange(numpy.prod(shape)).reshape(shape)
-            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=DataAndMetadata.DataDescriptor(True, 1, 2))
+            xdata = DataAndMetadata.new_data_and_metadata(data=data, data_descriptor=DataAndMetadata.DataDescriptor(True, 1, 2))
 
             shifts = numpy.array([(0., 1.), (0., 2.), (0., 3.), (0., 4.), (0., 5.)])
 
@@ -58,7 +58,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
         with self.subTest("Test for a sequence of SIs, shift data dimensions along collection and sequence axis"):
             shape = (5, 2, 3, 4)
             data = numpy.arange(numpy.prod(shape)).reshape(shape)
-            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=DataAndMetadata.DataDescriptor(True, 2, 1))
+            xdata = DataAndMetadata.new_data_and_metadata(data=data, data_descriptor=DataAndMetadata.DataDescriptor(True, 2, 1))
 
             shifts = numpy.linspace(0, 3, num=int(numpy.prod(shape[:-1]))).reshape(shape[:-1])
 
@@ -77,7 +77,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
         with self.subTest("Test for a sequence of 1D collections of 2D data, shift collection dimension along sequence axis"):
             shape = (5, 2, 3, 4)
             data = numpy.arange(numpy.prod(shape)).reshape(shape)
-            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=DataAndMetadata.DataDescriptor(True, 1, 2))
+            xdata = DataAndMetadata.new_data_and_metadata(data=data, data_descriptor=DataAndMetadata.DataDescriptor(True, 1, 2))
 
             shifts = numpy.linspace(0, 1, num=5)
 
@@ -95,7 +95,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
         with self.subTest("Test for a sequence of 4D images, shift collection dimensions along sequence axis"):
             shape = (5, 2, 3, 4, 6)
             data = numpy.arange(numpy.prod(shape)).reshape(shape)
-            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=DataAndMetadata.DataDescriptor(True, 2, 2))
+            xdata = DataAndMetadata.new_data_and_metadata(data=data, data_descriptor=DataAndMetadata.DataDescriptor(True, 2, 2))
 
             shifts = numpy.array([(0., 1.), (0., 2.), (0., 3.), (0., 4.), (0., 5.)])
 
@@ -112,7 +112,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
         with self.subTest("Test for a sequence of 4D images, shift data dimensions along sequence axis"):
             shape = (5, 2, 3, 4, 6)
             data = numpy.arange(numpy.prod(shape)).reshape(shape)
-            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=DataAndMetadata.DataDescriptor(True, 2, 2))
+            xdata = DataAndMetadata.new_data_and_metadata(data=data, data_descriptor=DataAndMetadata.DataDescriptor(True, 2, 2))
 
             shifts = numpy.array([(0., 1.), (0., 2.), (0., 3.), (0., 4.), (0., 5.)])
 
@@ -129,7 +129,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
         with self.subTest("Test for a sequence of 4D images, shift sequence dimension along collection axis"):
             shape = (5, 2, 3, 4, 6)
             data = numpy.arange(numpy.prod(shape)).reshape(shape)
-            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=DataAndMetadata.DataDescriptor(True, 2, 2))
+            xdata = DataAndMetadata.new_data_and_metadata(data=data, data_descriptor=DataAndMetadata.DataDescriptor(True, 2, 2))
 
             shifts = numpy.array([(1., 1.5, 2.),
                                   (2.5, 3., 3.5)])
@@ -161,7 +161,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
             for i in range(shape[0]):
                 shifted[i] = scipy.ndimage.shift(data[i], [shifts[i, 0], shifts[i, 1]], order=1, cval=numpy.mean(data))
 
-            shifted_xdata = DataAndMetadata.new_data_and_metadata(shifted, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
+            shifted_xdata = DataAndMetadata.new_data_and_metadata(data=shifted, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
 
             result = MultiDimensionalProcessing.function_measure_multi_dimensional_shifts(shifted_xdata,
                                                                                           tuple(shifted_xdata.datum_dimension_indexes),
@@ -184,7 +184,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
                 for j in range(shape[1]):
                     shifted[i, j] = scipy.ndimage.shift(data[i, j], [shifts[i, j]], order=1, cval=numpy.mean(data))
 
-            shifted_xdata = DataAndMetadata.new_data_and_metadata(shifted, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 1))
+            shifted_xdata = DataAndMetadata.new_data_and_metadata(data=shifted, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 1))
 
             result = MultiDimensionalProcessing.function_measure_multi_dimensional_shifts(shifted_xdata,
                                                                                           tuple(shifted_xdata.datum_dimension_indexes),
@@ -204,7 +204,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
             for i in range(shape[0]):
                 shifted[i] = scipy.ndimage.shift(data[i], [shifts[i, 0], shifts[i, 1]], order=1, cval=numpy.mean(data))
 
-            shifted_xdata = DataAndMetadata.new_data_and_metadata(shifted, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
+            shifted_xdata = DataAndMetadata.new_data_and_metadata(data=shifted, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
 
             result = MultiDimensionalProcessing.function_measure_multi_dimensional_shifts(shifted_xdata,
                                                                                           tuple(shifted_xdata.datum_dimension_indexes),
@@ -232,7 +232,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
             for i in range(shape[0]):
                 shifted[i] = scipy.ndimage.shift(data[i], [shifts[i, 0], shifts[i, 1]], order=5, cval=numpy.mean(data))
 
-            shifted_xdata = DataAndMetadata.new_data_and_metadata(shifted, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
+            shifted_xdata = DataAndMetadata.new_data_and_metadata(data=shifted, data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 2))
 
             result = MultiDimensionalProcessing.function_measure_multi_dimensional_shifts(shifted_xdata,
                                                                                           tuple(shifted_xdata.datum_dimension_indexes),
@@ -256,7 +256,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
                 for j in range(shape[1]):
                     shifted[i, j] = scipy.ndimage.shift(data[i, j], [shifts[i, j, 0], shifts[i, j, 1]], order=1, cval=numpy.mean(data))
 
-            shifted_xdata = DataAndMetadata.new_data_and_metadata(shifted, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 2))
+            shifted_xdata = DataAndMetadata.new_data_and_metadata(data=shifted, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 2))
 
             result = MultiDimensionalProcessing.function_measure_multi_dimensional_shifts(shifted_xdata,
                                                                                           tuple(shifted_xdata.datum_dimension_indexes),
@@ -281,7 +281,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
 
             shifted = numpy.moveaxis(shifted, (2, 3), (0, 1))
 
-            shifted_xdata = DataAndMetadata.new_data_and_metadata(shifted, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 2))
+            shifted_xdata = DataAndMetadata.new_data_and_metadata(data=shifted, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 2))
 
             result = MultiDimensionalProcessing.function_measure_multi_dimensional_shifts(shifted_xdata,
                                                                                           tuple(shifted_xdata.collection_dimension_indexes),
@@ -294,7 +294,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
             data = numpy.ones((5, 3))
 
             data_descriptor = DataAndMetadata.DataDescriptor(False, 0, 2)
-            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=data_descriptor)
+            xdata = DataAndMetadata.new_data_and_metadata(data=data, data_descriptor=data_descriptor)
 
             integrated = MultiDimensionalProcessing.function_integrate_along_axis(xdata, (0, 1))
 
@@ -307,7 +307,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
             data = numpy.ones((5, 3, 4))
 
             data_descriptor = DataAndMetadata.DataDescriptor(True, 0, 2)
-            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=data_descriptor)
+            xdata = DataAndMetadata.new_data_and_metadata(data=data, data_descriptor=data_descriptor)
 
             integrated = MultiDimensionalProcessing.function_integrate_along_axis(xdata, (0,))
 
@@ -318,7 +318,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
             data = numpy.ones((5, 3, 4))
 
             data_descriptor = DataAndMetadata.DataDescriptor(False, 2, 1)
-            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=data_descriptor)
+            xdata = DataAndMetadata.new_data_and_metadata(data=data, data_descriptor=data_descriptor)
 
             integrated = MultiDimensionalProcessing.function_integrate_along_axis(xdata, (0, 1))
 
@@ -329,7 +329,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
             data = numpy.ones((5, 3, 4))
 
             data_descriptor = DataAndMetadata.DataDescriptor(True, 0, 2)
-            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=data_descriptor)
+            xdata = DataAndMetadata.new_data_and_metadata(data=data, data_descriptor=data_descriptor)
 
             integrated = MultiDimensionalProcessing.function_integrate_along_axis(xdata, (1,))
 
@@ -340,7 +340,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
             data = numpy.ones((5, 7, 8))
 
             data_descriptor = DataAndMetadata.DataDescriptor(True, 0, 2)
-            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=data_descriptor)
+            xdata = DataAndMetadata.new_data_and_metadata(data=data, data_descriptor=data_descriptor)
 
             mask = numpy.zeros((7, 8))
             mask[1:4, 2:6] = 1.0
@@ -354,7 +354,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
             data = numpy.ones((5, 3, 4, 2))
 
             data_descriptor = DataAndMetadata.DataDescriptor(False, 2, 2)
-            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=data_descriptor)
+            xdata = DataAndMetadata.new_data_and_metadata(data=data, data_descriptor=data_descriptor)
 
             integrated = MultiDimensionalProcessing.function_integrate_along_axis(xdata, (2, 3))
 
@@ -366,7 +366,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
             data = numpy.ones((5, 3, 4, 2, 6))
 
             data_descriptor = DataAndMetadata.DataDescriptor(True, 2, 2)
-            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=data_descriptor)
+            xdata = DataAndMetadata.new_data_and_metadata(data=data, data_descriptor=data_descriptor)
 
             integrated = MultiDimensionalProcessing.function_integrate_along_axis(xdata, (0,))
 
@@ -377,7 +377,7 @@ class TestMultiDimensionalProcessing(unittest.TestCase):
             data = numpy.ones((5, 3, 4, 2, 6))
 
             data_descriptor = DataAndMetadata.DataDescriptor(True, 2, 2)
-            xdata = DataAndMetadata.new_data_and_metadata(data, data_descriptor=data_descriptor)
+            xdata = DataAndMetadata.new_data_and_metadata(data=data, data_descriptor=data_descriptor)
 
             integrated = MultiDimensionalProcessing.function_integrate_along_axis(xdata, (2,))
 

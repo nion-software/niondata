@@ -41,7 +41,7 @@ def function_rgb_channel(data_and_metadata_in: _DataAndMetadataLike, channel: in
     else:
         raise ValueError("RGB channel: unable to extract channel.")
 
-    return DataAndMetadata.new_data_and_metadata(channel_data,
+    return DataAndMetadata.new_data_and_metadata(data=channel_data,
                                                  intensity_calibration=data_and_metadata.intensity_calibration,
                                                  dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
@@ -69,7 +69,7 @@ def function_rgb_linear_combine(data_and_metadata_in: _DataAndMetadataLike, red_
     else:
         raise ValueError("RGB channel: unable to extract channel.")
 
-    return DataAndMetadata.new_data_and_metadata(combined_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
+    return DataAndMetadata.new_data_and_metadata(data=combined_data, intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
 def function_rgb(red_data_and_metadata_in: _DataAndMetadataIndeterminateSizeLike,
@@ -102,7 +102,7 @@ def function_rgb(red_data_and_metadata_in: _DataAndMetadataIndeterminateSizeLike
         elif data.dtype.kind in 'f':
             rgb_image[..., channel_index] = numpy.clip(numpy.multiply(data, 255), 0, 255)
 
-    return DataAndMetadata.new_data_and_metadata(rgb_image,
+    return DataAndMetadata.new_data_and_metadata(data=rgb_image,
                                                  intensity_calibration=red_data_and_metadata.intensity_calibration,
                                                  dimensional_calibrations=red_data_and_metadata.dimensional_calibrations)
 
@@ -140,6 +140,6 @@ def function_rgba(red_data_and_metadata_in: _DataAndMetadataIndeterminateSizeLik
         elif data.dtype.kind in 'f':
             rgba_image[..., channel_index] = numpy.clip(numpy.multiply(data, 255), 0, 255)
 
-    return DataAndMetadata.new_data_and_metadata(rgba_image,
+    return DataAndMetadata.new_data_and_metadata(data=rgba_image,
                                                  intensity_calibration=red_data_and_metadata.intensity_calibration,
                                                  dimensional_calibrations=red_data_and_metadata.dimensional_calibrations)

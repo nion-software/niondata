@@ -1,6 +1,27 @@
 Changelog (niondata)
 ====================
 
+15.9.1 (2025-09-25)
+-------------------
+- Fix FFT calibration for odd dimensions.
+
+15.9.0 (2025-06-25)
+-------------------
+- Add rectangle mask generation functions.
+- Change behavior to use center of pixel to determine if a pixel is within a mask.
+
+15.8.2 (2025-05-27)
+-------------------
+- Maintenance release to fix a build issue.
+
+15.8.1 (2025-04-23)
+-------------------
+- Ensure element data always returns actual ndarray.
+
+15.8.0 (2025-01-06)
+-------------------
+- Add support for 5d (1/2/2) data in data and metadata objects.
+
 15.7.0 (2024-10-27)
 -------------------
 - Make Calibration hashable.
