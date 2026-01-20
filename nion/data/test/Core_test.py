@@ -1466,14 +1466,6 @@ class TestCore(unittest.TestCase):
         dst = Core.function_warp(src, coords)
         self._validate_warp(src, dst, coords, is_channel_data=True)
 
-    # def validate_test_warp_upscale(self) -> None:
-    #     # Test to validate the validate_warp detects non-increasing values. Do not include in automated tests.
-    #     # Input 4x4, warp to 8x8
-    #     src, coords = self._create_warp_test_data(input_shape=(4, 4), output_shape=(8, 8))
-    #     dst = Core.function_warp(src, coords)
-    #     dst.data[0, 2] = 0.1
-    #     self._validate_warp(src, dst, coords)
-
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

@@ -1800,15 +1800,24 @@ def function_resample_2d(data_and_metadata_in: _DataAndMetadataLike, shape: Data
     return DataAndMetadata.new_data_and_metadata(data=calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=resampled_dimensional_calibrations)
 
 
-def function_warp(data_and_metadata_in: _DataAndMetadataLike, coordinates_in: typing.Sequence[
-    _DataAndMetadataLike], order: int = 1) -> DataAndMetadata.DataAndMetadata:
+def function_warp(data_and_metadata_in: _DataAndMetadataLike, coordinates_in: typing.Sequence[_DataAndMetadataLike], order: int = 1) -> DataAndMetadata.DataAndMetadata:
+    """
+        Warp or unwarp input data using an N-dimensional warp map.
+
+        The warp map is applied along N axes and broadcast over any additional
+        dimensions in the input, allowing a single warp map to be used for
+        higher-dimensional data (e.g., image sequences). For channelled data
+        such as RGB/RGBA, the warp is applied uniformly to all channels.
+        
+        scipy map_coordinates does not broadcast by default, so need to loop
+        """
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
     coordinates = [DataAndMetadata.promote_ndarray(c) for c in coordinates_in]
     coords = numpy.stack([c.data.astype(float) for c in coordinates], axis=0)
     data = data_and_metadata._data_ex
     num_frame_dims = coords.shape[0]
 
-    if data_and_metadata.is_data_rgb or data_and_metadata.is_data_rgba:
+    if data_and_metadata.is_data_rgb_type:
         # Last dimension is channels
         leading_shape = data.shape[:-num_frame_dims - 1]
         output_shape = leading_shape + coords.shape[1:]
