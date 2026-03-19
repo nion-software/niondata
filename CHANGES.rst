@@ -1,6 +1,10 @@
 Changelog (niondata)
 ====================
 
+15.9.2 (2026-03-19)
+-------------------
+- Python 3.14 compatibility updates.
+
 15.9.1 (2025-09-25)
 -------------------
 - Fix FFT calibration for odd dimensions.
