@@ -1801,16 +1801,13 @@ def function_resample_2d(data_and_metadata_in: _DataAndMetadataLike, shape: Data
 
 
 def function_warp(data_and_metadata_in: _DataAndMetadataLike, coordinates_in: typing.Sequence[_DataAndMetadataLike], order: int = 1) -> DataAndMetadata.DataAndMetadata:
-    """
-        Warp or unwarp input data using an N-dimensional warp map.
+    """Warp or unwarp input data using an N-dimensional warp map.
 
-        The warp map is applied along N axes and broadcast over any additional
-        dimensions in the input, allowing a single warp map to be used for
-        higher-dimensional data (e.g., image sequences). For channelled data
-        such as RGB/RGBA, the warp is applied uniformly to all channels.
-        
-        scipy map_coordinates does not broadcast by default, so need to loop
-        """
+    The warp map is applied along N axes and broadcast over any additional
+    dimensions in the input, allowing a single warp map to be used for
+    higher-dimensional data (e.g., image sequences). For multichannel data
+    such as RGB/RGBA, the warp is applied uniformly to all channels.
+    """
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
     coordinates = [DataAndMetadata.promote_ndarray(c) for c in coordinates_in]
     coords = numpy.stack([c.data.astype(float) for c in coordinates], axis=0)
@@ -1824,10 +1821,11 @@ def function_warp(data_and_metadata_in: _DataAndMetadataLike, coordinates_in: ty
         channels = 3 if data_and_metadata.is_data_rgb else 4
         output = numpy.zeros(tuple(output_shape) + (channels,), numpy.uint8)
 
-        for idx in numpy.ndindex(leading_shape):
+        # scipy map_coordinates does not broadcast by default, so need to loop
+        for index in numpy.ndindex(leading_shape):
             for chan in range(channels):
-                output[idx + (..., chan)] = scipy.ndimage.map_coordinates(
-                    data[idx + (..., chan)],
+                output[index + (..., chan)] = scipy.ndimage.map_coordinates(
+                    data[index + (..., chan)],
                     coords,
                     order=order)
 
@@ -1839,8 +1837,9 @@ def function_warp(data_and_metadata_in: _DataAndMetadataLike, coordinates_in: ty
         output_shape = leading_shape + coords.shape[1:]
         output = numpy.zeros(output_shape, dtype=data.dtype)
 
-        for idx in numpy.ndindex(leading_shape):
-            output[idx] = scipy.ndimage.map_coordinates(data[idx], coords, order=order)
+        # scipy map_coordinates does not broadcast by default, so need to loop
+        for index in numpy.ndindex(leading_shape):
+            output[index] = scipy.ndimage.map_coordinates(data[index], coords, order=order)
 
         return DataAndMetadata.new_data_and_metadata(
             data=output,

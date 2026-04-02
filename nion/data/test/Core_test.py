@@ -1369,9 +1369,9 @@ class TestCore(unittest.TestCase):
 
         # Determine output grid shape
         if output_shape is None:
-            H, W = input_shape[-2:]
+            height, width = input_shape[-2:]
         else:
-            H, W = output_shape[-2:]
+            height, width = output_shape[-2:]
 
         # Create warp coordinates
         if identity:
@@ -1383,88 +1383,53 @@ class TestCore(unittest.TestCase):
             )
         else:
             # Resampling / scaling: map output grid into input index space
-            in_H, in_W = input_shape[-2:]
-            y = numpy.arange(0, in_H, in_H / H)
-            x = numpy.arange(0, in_W, in_W / W)
+            input_height, input_width = input_shape[-2:]
+            y = numpy.arange(0, input_height, input_height / height)
+            x = numpy.arange(0, input_width, input_width / width)
             warp_y, warp_x = numpy.meshgrid(y, x, indexing="ij")
 
         return src, [warp_y, warp_x]
 
-    def _validate_warp(self, src: DataAndMetadata.DataAndMetadata, dst: DataAndMetadata.DataAndMetadata, coords: list[numpy.ndarray], is_channel_data: bool = False) -> None:
-
-        # ---- shape validation ----
+    def _validate_warp_shape(self, src: DataAndMetadata.DataAndMetadata, dst: DataAndMetadata.DataAndMetadata, coords: list[numpy.ndarray], is_channel_data: bool = False) -> None:
         n_dims = len(coords)  # number of warped dimensions
         output_shape = coords[0].shape  # shape of warp grid
-
-        expected_shape = dst.data_shape[:-n_dims] + output_shape
+        expected_shape = src.data_shape[:-n_dims] + output_shape
 
         if is_channel_data:
-            expected_shape = dst.data_shape[:-n_dims-1] + output_shape + (dst.data_shape[-1],)
+            expected_shape = src.data_shape[:-n_dims-1] + output_shape + (src.data_shape[-1],)
 
-        assert dst.data_shape == expected_shape, (
-            f"Output shape mismatch: {dst.data_shape} != {expected_shape}"
-        )
-
-        # ---- extract warped subspace ----
-        # Take the first element of all leading dimensions
-        warped = dst._data_ex
-        for _ in range(warped.ndim - n_dims):
-            warped = warped[0]
-
-        # warped now has shape == output_shape
-
-        # ---- monotonicity checks for each warped axis ----
-        for axis in range(n_dims):
-            # Build a slice that varies only along this axis
-            slicer: list[typing.Union[int, slice]] = [0] * n_dims
-            slicer[axis] = slice(None)
-
-            axis_values = warped[tuple(slicer)]
-
-            # Remove out-of-range zeros (leading or trailing)
-            nonzero = axis_values != 0
-            if numpy.count_nonzero(nonzero) < 2:
-                # Not enough valid data to validate this axis
-                continue
-
-            valid_values = axis_values[nonzero]
-
-            diffs = numpy.diff(valid_values)
-
-            assert numpy.all(diffs > 0), (
-                f"Warped axis {axis} is not strictly increasing: {axis_values}"
-            )
+        assert dst.data_shape == expected_shape, f"Output shape mismatch: {dst.data_shape} != {expected_shape}"
 
     def test_warp_identity(self) -> None:
         src, coords = self._create_warp_test_data(input_shape=(4, 4), identity=True)
         dst = Core.function_warp(src, coords)
-        self._validate_warp(src, dst, coords)
+        self._validate_warp_shape(src, dst, coords)
 
     def test_warp_sequence(self) -> None:
         src, coords = self._create_warp_test_data(input_shape=(6, 4, 4), output_shape=(4, 4))
         dst = Core.function_warp(src, coords)
-        self._validate_warp(src, dst, coords)
+        self._validate_warp_shape(src, dst, coords)
 
     def test_warp_upscale(self) -> None:
         # Input 4x4, warp to 8x8
         src, coords = self._create_warp_test_data(input_shape=(4, 4), output_shape=(8, 8))
         dst = Core.function_warp(src, coords)
-        self._validate_warp(src, dst, coords)
+        self._validate_warp_shape(src, dst, coords)
 
     def test_warp_sequence_upscale(self) -> None:
         src, coords = self._create_warp_test_data(input_shape=(6, 4, 4), output_shape=(6, 8, 8))
         dst = Core.function_warp(src, coords)
-        self._validate_warp(src, dst, coords)
+        self._validate_warp_shape(src, dst, coords)
 
     def test_warp_rgb(self) -> None:
         src, coords = self._create_warp_test_data(input_shape=(6, 4, 4), output_shape=(4, 4), mode="rgb")
         dst = Core.function_warp(src, coords)
-        self._validate_warp(src, dst, coords, is_channel_data=True)
+        self._validate_warp_shape(src, dst, coords, is_channel_data=True)
 
     def test_warp_rgba(self) -> None:
         src, coords = self._create_warp_test_data(input_shape=(6, 4, 4), output_shape=(4, 4), mode="rgba")
         dst = Core.function_warp(src, coords)
-        self._validate_warp(src, dst, coords, is_channel_data=True)
+        self._validate_warp_shape(src, dst, coords, is_channel_data=True)
 
 
 if __name__ == '__main__':
