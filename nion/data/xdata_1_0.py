@@ -257,10 +257,31 @@ def median_filter(data_and_metadata: _DataAndMetadataLike, size: int) -> DataAnd
 def uniform_filter(data_and_metadata: _DataAndMetadataLike, size: int) -> DataAndMetadata.DataAndMetadata:
     return Core.function_uniform_filter(data_and_metadata, size)
 
-def transpose_flip(data_and_metadata: _DataAndMetadataLike, transpose: bool=False, flip_v: bool=False, flip_h: bool=False) -> DataAndMetadata.DataAndMetadata:
-    return Core.function_transpose_flip(data_and_metadata, transpose, flip_v, flip_h)
+# windows
+
+def gaussian_window(data_shape: DataAndMetadata.Shape2dType, sigma: float) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_gaussian_window(data_shape, sigma)
+
+def hamming_window(data_shape: DataAndMetadata.Shape2dType) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_hamming_window(data_shape)
+
+def hann_window(data_shape: DataAndMetadata.Shape2dType) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_hann_window(data_shape)
+
+# scalar functions
+
+def sum_scalar(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata.ScalarAndMetadata:
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
+    return DataAndMetadata.ScalarAndMetadata.from_value(numpy.sum(data_and_metadata), data_and_metadata.intensity_calibration)
+
+def mean_scalar(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata.ScalarAndMetadata:
+    data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
+    return DataAndMetadata.ScalarAndMetadata.from_value(numpy.average(data_and_metadata), data_and_metadata.intensity_calibration)
 
 # miscellaneous
+
+def transpose_flip(data_and_metadata: _DataAndMetadataLike, transpose: bool=False, flip_v: bool=False, flip_h: bool=False) -> DataAndMetadata.DataAndMetadata:
+    return Core.function_transpose_flip(data_and_metadata, transpose, flip_v, flip_h)
 
 def histogram(data_and_metadata: _DataAndMetadataLike, bins: int) -> DataAndMetadata.DataAndMetadata:
     return Core.function_histogram(data_and_metadata, bins)
