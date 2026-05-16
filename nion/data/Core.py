@@ -908,6 +908,44 @@ def function_uniform_filter(data_and_metadata_in: _DataAndMetadataLike, size: in
     return DataAndMetadata.new_data_and_metadata(data=calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=data_and_metadata.dimensional_calibrations)
 
 
+def function_gaussian_window(data_shape: DataAndMetadata.ShapeType, sigma: float) -> DataAndMetadata.DataAndMetadata:
+    sigma = sigma if sigma > 0.0 else 1.0  # clamp sigma to avoid divide by zero
+    if len(data_shape) == 1:
+        w = data_shape[0]
+        return DataAndMetadata.new_data_and_metadata(scipy.signal.windows.gaussian(w, std=sigma))
+    elif len(data_shape) == 2:
+        # uses circularly rotated approach of generating 2D filter from 1D
+        h, w = data_shape
+        y, x = numpy.meshgrid(numpy.arange(0, h) - (h - 1) / 2, numpy.arange(0, w) - (w - 1) / 2, indexing='ij')
+        r_squared = y * y + x * x
+        return DataAndMetadata.new_data_and_metadata(numpy.exp(-0.5 * r_squared / (sigma * sigma)))
+    raise ValueError("Window input data must be 1D or 2D")
+
+
+def function_hamming_window(data_shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
+    if len(data_shape) == 1:
+        return DataAndMetadata.new_data_and_metadata(scipy.signal.windows.hamming(data_shape[0]))
+    elif len(data_shape) == 2:
+        # uses outer product approach of generating 2D filter from 1D
+        h, w = data_shape
+        w0 = numpy.reshape(scipy.signal.windows.hamming(w), (1, w))
+        w1 = numpy.reshape(scipy.signal.windows.hamming(h), (h, 1))
+        return DataAndMetadata.new_data_and_metadata(w0 * w1)
+    raise ValueError("Window input data must be 1D or 2D")
+
+
+def function_hann_window(data_shape: DataAndMetadata.ShapeType) -> DataAndMetadata.DataAndMetadata:
+    if len(data_shape) == 1:
+        return DataAndMetadata.new_data_and_metadata(scipy.signal.windows.hann(data_shape[0]))
+    elif len(data_shape) == 2:
+        # uses outer product approach of generating 2D filter from 1D
+        h, w = data_shape
+        w0 = numpy.reshape(scipy.signal.windows.hann(w), (1, w))
+        w1 = numpy.reshape(scipy.signal.windows.hann(h), (h, 1))
+        return DataAndMetadata.new_data_and_metadata(w0 * w1)
+    raise ValueError("Window input data must be 1D or 2D")
+
+
 def function_transpose_flip(data_and_metadata_in: _DataAndMetadataLike, transpose: bool = False, flip_v: bool = False, flip_h: bool = False) -> DataAndMetadata.DataAndMetadata:
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
 

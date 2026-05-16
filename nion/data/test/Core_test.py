@@ -3,7 +3,6 @@ import copy
 import io
 import logging
 import math
-import os
 import typing
 import unittest
 
@@ -1428,6 +1427,18 @@ class TestCore(unittest.TestCase):
         src, coords = self._create_warp_test_data(input_shape=(6, 4, 4), output_shape=(4, 4), mode="rgba")
         dst = Core.function_warp(src, coords)
         self._validate_warp_shape(src, dst, coords, is_channel_data=True)
+
+    def test_gaussian_window(self) -> None:
+        sigma = 8.0
+        size = 17  # use an odd size so the center is well-defined
+        reference_data = scipy.signal.windows.gaussian(size, std=sigma)
+        data_1d = Core.function_gaussian_window((size,), sigma).data
+        data_2d = Core.function_gaussian_window((size, size), sigma).data
+        for i in range(size):
+            self.assertAlmostEqual(reference_data[i], data_1d[i])
+            # check that center column and center row are close
+            self.assertAlmostEqual(reference_data[i], data_2d[i, size//2])
+            self.assertAlmostEqual(reference_data[i], data_2d[size//2, i])
 
 
 if __name__ == '__main__':
