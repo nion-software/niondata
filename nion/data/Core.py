@@ -684,7 +684,7 @@ def function_make_elliptical_mask(data_shape: DataAndMetadata.ShapeType, center:
     y: _ImageDataType
     x: _ImageDataType
     # does ogrid take float args? not sure. typing says "no" so ignore typing for now.
-    y, x = numpy.ogrid[-a:data_size.height - a, -b:data_size.width - b]  # type: ignore
+    y, x = numpy.ogrid[-a:data_size.height - a, -b:data_size.width - b]
     if rotation:
         angle_sin = math.sin(rotation)
         angle_cos = math.cos(rotation)
@@ -706,7 +706,7 @@ def function_make_rectangular_mask(data_shape: DataAndMetadata.ShapeType, center
     mask = numpy.zeros(data_shape)
     bounds = Geometry.FloatRect.from_center_and_size(center_point, size_size)
     a, b = bounds.top + bounds.height * 0.5 - 0.5, bounds.left + bounds.width * 0.5 - 0.5
-    y, x = numpy.ogrid[-a:data_shape[0] - a, -b:data_shape[1] - b]  # type: ignore
+    y, x = numpy.ogrid[-a:data_shape[0] - a, -b:data_shape[1] - b]
     if rotation == 0.0:
         mask_eq = (numpy.fabs(x) / (bounds.width / 2) <= 1) & (numpy.fabs(y) / (bounds.height / 2) <= 1)
     else:

@@ -153,7 +153,7 @@ def draw_ellipse(image: _ImageDataType, ellipse: typing.Tuple[float, float, floa
     left = max(int(ellipse[1] - ellipse[2]), 0)
     bottom = min(int(ellipse[0] + ellipse[2]) + 1, shape[0])
     right = min(int(ellipse[1] + ellipse[2]) + 1, shape[1])
-    coords = numpy.mgrid[top - ellipse[0]:bottom - ellipse[0], left - ellipse[1]:right - ellipse[1]] # type: ignore # Not working yet, see https://github.com/python/mypy/issues/2410
+    coords = numpy.mgrid[top - ellipse[0]:bottom - ellipse[0], left - ellipse[1]:right - ellipse[1]]
     radii = numpy.sqrt(numpy.sum(coords**2, axis=0))
     polar_angles = numpy.arctan2(coords[0], coords[1])
     ellipse_radii = ellipse_radius(polar_angles, *ellipse[2:])
