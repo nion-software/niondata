@@ -21,9 +21,10 @@ classifiers = [
 ]
 urls = { "Homepage" = "https://github.com/nion-software/niondata" }
 dependencies = [
-  "nionutils >=4.14.0,<5.0.0",
-  "numpy >=2.0,<3.0",
-  "scipy"
+    "nionutils >=4.14.0,<5.0.0",
+    "numpy >=2.0,<3.0",
+    "scipy",
+    "tzlocal"
 ]
 
 [tool.setuptools.packages.find]
