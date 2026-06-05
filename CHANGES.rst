@@ -1,6 +1,14 @@
 Changelog (niondata)
 ====================
 
+15.10.0 (2026-06-05)
+--------------------
+- Update typing.
+- Remove conda build support.
+- Improve warp function.
+- Add scalar sum and average functions.
+- Add window functions.
+
 15.9.2 (2026-03-19)
 -------------------
 - Python 3.14 compatibility updates.
