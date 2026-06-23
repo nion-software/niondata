@@ -413,12 +413,12 @@ class TestCore(unittest.TestCase):
         self.assertEqual(result.dimensional_calibrations[0], data_and_metadata.dimensional_calibrations[0])
 
     def test_fft_works_on_rgba_data(self) -> None:
-        random_data = numpy.random.randint(0, 256, (32, 32, 4), numpy.uint8)
+        random_data = numpy.random.randint(0, 256, (32, 32, 4), dtype=numpy.uint8)
         data_and_metadata = DataAndMetadata.new_data_and_metadata(data=random_data)
         Core.function_fft(data_and_metadata)
 
     def test_display_data_2d_not_a_view(self) -> None:
-        random_data = numpy.random.randint(0, 256, (2, 2), numpy.uint8)
+        random_data = numpy.random.randint(0, 256, (2, 2), dtype=numpy.uint8)
         data_and_metadata = DataAndMetadata.new_data_and_metadata(data=random_data)
         display_xdata = Core.function_display_data(data_and_metadata)
         assert display_xdata
@@ -427,7 +427,7 @@ class TestCore(unittest.TestCase):
         self.assertTrue(numpy.array_equal(display_xdata._data_ex, display_xdata_copy._data_ex))
 
     def test_display_rgba_with_1d_rgba(self) -> None:
-        random_data = numpy.random.randint(0, 256, (32, 4), numpy.uint8)
+        random_data = numpy.random.randint(0, 256, (32, 4), dtype=numpy.uint8)
         data_and_metadata = DataAndMetadata.new_data_and_metadata(data=random_data)
         Core.function_display_rgba(data_and_metadata)
 

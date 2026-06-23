@@ -1168,7 +1168,7 @@ def function_slice_sum(data_and_metadata_in: _DataAndMetadataLike, slice_center:
         slice_start = max(slice_start, 0)
         slice_end = slice_start + slice_width
         slice_end = min(shape[signal_index], slice_end)
-        return typing.cast(_ImageDataType, numpy.sum(data[..., slice_start:slice_end], signal_index))
+        return numpy.sum(data[..., slice_start:slice_end], signal_index)
 
     dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
@@ -1373,7 +1373,11 @@ def function_sum(data_and_metadata_in: _DataAndMetadataLike, axis: int | tuple[i
                 rgba_image[:, 3] = numpy.average(data[..., 3], axis)
                 return rgba_image
         else:
-            return typing.cast(_ImageDataType, numpy.sum(data, typing.cast(typing.Any, axis), keepdims=keepdims))
+            # this bit of gymnastics is necessary to work around a seeming type checking bug in numpy 2.5
+            if keepdims:
+                return numpy.sum(data, axis, keepdims=True)
+            else:
+                return numpy.sum(data, axis, keepdims=False)
 
     if not Image.is_data_valid(data_and_metadata.data):
         raise ValueError("Sum: invalid data")
@@ -1421,7 +1425,10 @@ def function_mean(data_and_metadata_in: _DataAndMetadataLike, axis: int | tuple[
                 rgba_image[:, 3] = numpy.average(data[..., 3], axis)
                 return rgba_image
         else:
-            return typing.cast(_ImageDataType, numpy.mean(data, axis, keepdims=keepdims))
+            if keepdims:
+                return numpy.mean(data, axis, keepdims=True)
+            else:
+                return typing.cast(_ImageDataType, numpy.mean(data, axis, keepdims=False))
 
     if not Image.is_data_valid(data_and_metadata.data):
         raise ValueError("Mean: invalid data")
@@ -1985,7 +1992,7 @@ def function_line_profile(data_and_metadata_in: _DataAndMetadataLike, vector: No
             yy, xx = get_coordinates(start_data, end_data, actual_integration_width)
             samples = scipy.ndimage.map_coordinates(data, (yy, xx), order=spline_order)
             if len(samples.shape) > 1:
-                return typing.cast(_ImageDataType, numpy.sum(samples, 0, dtype=data.dtype))
+                return numpy.sum(samples, 0, dtype=data.dtype)
             else:
                 return typing.cast(_ImageDataType, samples)
         else:
