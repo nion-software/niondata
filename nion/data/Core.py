@@ -211,7 +211,7 @@ def function_ifft(data_and_metadata_in: _DataAndMetadataLike) -> DataAndMetadata
             scaling = numpy.sqrt(data_shape[1] * data_shape[0])
             return scipy.fft.ifft2(scipy.fft.ifftshift(data_copy) * scaling)  # type: ignore
         else:
-            raise NotImplementedError()
+            raise NotImplementedError(f"Inverse FFT: unsupported data shape {data_shape}")
 
     src_dimensional_calibrations = data_and_metadata.dimensional_calibrations
 
@@ -723,7 +723,7 @@ def function_fourier_mask(data_and_metadata_in: _DataAndMetadataIndeterminateSiz
     shape = DataAndMetadata.determine_shape(data_and_metadata_c, mask_data_and_metadata_c)
 
     if shape is None:
-        raise ValueError("Fourier mask: data and ask shapes do not match or are indeterminate")
+        raise ValueError("Fourier mask: data and mask shapes do not match or are indeterminate")
 
     data_and_metadata = DataAndMetadata.promote_constant(data_and_metadata_c, shape)
     mask_data_and_metadata = DataAndMetadata.promote_constant(mask_data_and_metadata_c, shape)
