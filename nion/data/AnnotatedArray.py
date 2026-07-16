@@ -100,19 +100,6 @@ class CalibrationSet:
 
 
 @dataclasses.dataclass(frozen=True)
-class CoordinateSystemTransform:
-    """Invertible affine transform between two coordinate systems."""
-
-    source_coordinate_system_id: str
-    destination_coordinate_system_id: str
-    matrix: numpy.typing.NDArray[numpy.float64]
-
-    def __post_init__(self) -> None:
-        if self.matrix.ndim != 2 or self.matrix.shape[0] != self.matrix.shape[1]:
-            raise ValueError("matrix must be a square 2D affine transform matrix")
-
-
-@dataclasses.dataclass(frozen=True)
 class Axis:
     """A named dimension with a primary calibration and optional auxiliaries."""
 
@@ -270,7 +257,6 @@ class DataDescriptor:
 
     bound_axis_groups: list[BoundAxisGroup] = dataclasses.field(default_factory=list)
     intensity_calibrations: CalibrationSet = dataclasses.field(default_factory=CalibrationSet)
-    coordinate_system_transforms: list[CoordinateSystemTransform] = dataclasses.field(default_factory=list)
     properties: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
     timestamp: datetime.datetime = dataclasses.field(default_factory=lambda: datetime.datetime.now(tz=tzlocal.get_localzone()))
 
