@@ -1,7 +1,7 @@
 """Annotated n-dimensional arrays with calibrated, labeled axes.
 
 This module pairs a numpy array with a :class:`DataDescriptor` describing its
-axes (grouped into :class:`AxisSet`/:class:`BoundAxisSet`), per-axis and
+axes (grouped into :class:`AxisGroup`/:class:`BoundAxisGroup`), per-axis and
 intensity :class:`Calibration` mappings between indices and physical
 coordinates, and associated metadata.
 """
@@ -18,9 +18,9 @@ import tzlocal
 
 
 DEFAULT_CALIBRATION_KEY = "default"
+DEFAULT_COORDINATE_MAPPING_KEY = "default"
 
 
-@typing.runtime_checkable
 class Calibration(typing.Protocol):
     """Protocol converting between array indices and physical coordinates."""
 
@@ -100,6 +100,19 @@ class CalibrationSet:
 
 
 @dataclasses.dataclass(frozen=True)
+class CoordinateSystemTransform:
+    """Invertible affine transform between two coordinate systems."""
+
+    source_coordinate_system_id: str
+    destination_coordinate_system_id: str
+    matrix: numpy.typing.NDArray[numpy.float64]
+
+    def __post_init__(self) -> None:
+        if self.matrix.ndim != 2 or self.matrix.shape[0] != self.matrix.shape[1]:
+            raise ValueError("matrix must be a square 2D affine transform matrix")
+
+
+@dataclasses.dataclass(frozen=True)
 class Axis:
     """A named dimension with a primary calibration and optional auxiliaries."""
 
@@ -148,10 +161,9 @@ class BoundAxis:
 
 
 @dataclasses.dataclass(frozen=True)
-class AxisSet:
-    """A named, ordered group of axes (e.g. spatial or spectral)."""
+class AxisGroup:
+    """An ordered group of axes (e.g. spatial or spectral)."""
 
-    name: str
     axes: tuple[Axis, ...] = dataclasses.field(default_factory=tuple)
 
     @property
@@ -167,37 +179,58 @@ class AxisSet:
 
 
 @dataclasses.dataclass(frozen=True)
-class BoundAxisSet:
-    """An :class:`AxisSet` with sized axes, exposing a concrete shape."""
+class BoundAxisGroup:
+    """An :class:`AxisGroup` with sized axes, exposing a concrete shape."""
 
-    name: str
     bound_axes: tuple[BoundAxis, ...] = dataclasses.field(default_factory=tuple)
-    axis_set: AxisSet = dataclasses.field(init=False)
+    coordinate_system_id: str | None = None
+    coordinate_mappings: typing.Mapping[str, tuple[Calibration, ...]] = dataclasses.field(default_factory=dict)
+    primary_mapping_key: str | None = None
+    axis_group: AxisGroup = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "axis_set", AxisSet(name=self.name, axes=tuple(ba.axis for ba in self.bound_axes)))
+        object.__setattr__(self, "axis_group", AxisGroup(axes=tuple(ba.axis for ba in self.bound_axes)))
+        coordinate_mappings = dict(self.coordinate_mappings)
+        normalized_coordinate_mappings: dict[str, tuple[Calibration, ...]] = dict()
+        for key, mapping in coordinate_mappings.items():
+            normalized_mapping = tuple(mapping)
+            if len(normalized_mapping) != self.rank:
+                raise ValueError(f"coordinate mapping {key!r} rank {len(normalized_mapping)} does not match axis group rank {self.rank}")
+            normalized_coordinate_mappings[key] = normalized_mapping
+        object.__setattr__(self, "coordinate_mappings", types.MappingProxyType(normalized_coordinate_mappings))
+
+        if self.primary_mapping_key is not None and self.primary_mapping_key not in normalized_coordinate_mappings:
+            raise ValueError(f"primary_mapping_key {self.primary_mapping_key!r} is not present in coordinate_mappings")
+        if not normalized_coordinate_mappings and self.primary_mapping_key is not None:
+            raise ValueError("primary_mapping_key must be None when coordinate_mappings is empty")
 
     @staticmethod
-    def from_1d_size(name: str, size: int, *, label: str = "x", unit: str | None = None) -> BoundAxisSet:
-        """Create a 1D bound axis set with a single affine-calibrated axis."""
+    def from_1d_size(size: int, *, label: str = "x", unit: str | None = None) -> BoundAxisGroup:
+        """Create a 1D bound axis group with one default coordinate mapping."""
         calibration = CalibrationSet.from_calibration(AffineCalibration(unit=unit or ""))
-        return BoundAxisSet(
-            name=name,
+        return BoundAxisGroup(
             bound_axes=(BoundAxis(Axis(label, calibration), size),),
+            coordinate_mappings={
+                DEFAULT_COORDINATE_MAPPING_KEY: (calibration.primary,),
+            },
+            primary_mapping_key=DEFAULT_COORDINATE_MAPPING_KEY,
         )
 
     @staticmethod
-    def from_2d_size(name: str, size: tuple[int, int], *, labels: tuple[str, str] = ("x", "y"), unit: str | None = None) -> BoundAxisSet:
-        """Create a 2D bound axis set with identical affine calibration units on both axes."""
+    def from_2d_size(size: tuple[int, int], *, labels: tuple[str, str] = ("x", "y"), unit: str | None = None) -> BoundAxisGroup:
+        """Create a 2D bound axis group with one default coordinate mapping."""
         size_x, size_y = size
         x_label, y_label = labels
         calibration = CalibrationSet.from_calibration(AffineCalibration(unit=unit or ""), key=DEFAULT_CALIBRATION_KEY)
-        return BoundAxisSet(
-            name=name,
+        return BoundAxisGroup(
             bound_axes=(
                 BoundAxis(Axis(x_label, calibration), size_x),
                 BoundAxis(Axis(y_label, calibration), size_y),
             ),
+            coordinate_mappings={
+                DEFAULT_COORDINATE_MAPPING_KEY: (calibration.primary, calibration.primary),
+            },
+            primary_mapping_key=DEFAULT_COORDINATE_MAPPING_KEY,
         )
 
     @property
@@ -210,18 +243,34 @@ class BoundAxisSet:
 
     @property
     def units(self) -> list[str]:
-        return [ax.axis.unit for ax in self.bound_axes]
+        if self.primary_mapping_key is None:
+            return []
+        return [calibration.unit for calibration in self.get_coordinate_mapping()]
+
+    @property
+    def mapping_keys(self) -> tuple[str, ...]:
+        return tuple(self.coordinate_mappings.keys())
+
+    def get_coordinate_mapping(self, key: str | None = None) -> tuple[Calibration, ...]:
+        target_key = self.primary_mapping_key if key is None else key
+        if target_key is None:
+            raise KeyError("No primary coordinate mapping is designated")
+        mapping = self.coordinate_mappings.get(target_key)
+        if mapping is None:
+            raise KeyError(f"Unknown coordinate mapping {target_key!r}")
+        return mapping
 
     def get_calibration(self, axis: int, key: str | None = None) -> Calibration:
-        return self.bound_axes[axis].axis.get_calibration(key)
+        return self.get_coordinate_mapping(key)[axis]
 
 
 @dataclasses.dataclass
 class DataDescriptor:
     """Metadata for an array: axis sets, intensity calibrations, and properties."""
 
-    bound_axis_sets: list[BoundAxisSet] = dataclasses.field(default_factory=list)
+    bound_axis_groups: list[BoundAxisGroup] = dataclasses.field(default_factory=list)
     intensity_calibrations: CalibrationSet = dataclasses.field(default_factory=CalibrationSet)
+    coordinate_system_transforms: list[CoordinateSystemTransform] = dataclasses.field(default_factory=list)
     properties: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
     timestamp: datetime.datetime = dataclasses.field(default_factory=lambda: datetime.datetime.now(tz=tzlocal.get_localzone()))
 
@@ -266,18 +315,22 @@ class AnnotatedArray:
     descriptor: DataDescriptor = dataclasses.field(default_factory=DataDescriptor)
 
     def __post_init__(self) -> None:
-        total_axes = sum(bound_axis_set.rank for bound_axis_set in self.descriptor.bound_axis_sets)
-        if self.descriptor.bound_axis_sets and total_axes != self.data.ndim:
-            raise ValueError(f"Axis sets account for {total_axes} axes but array has {self.data.ndim}")
+        if not self.descriptor.bound_axis_groups:
+            raise ValueError("AnnotatedArray requires at least one axis group (bound_axis_group)")
+        if any(bound_axis_group.rank == 0 for bound_axis_group in self.descriptor.bound_axis_groups[:-1]):
+            raise ValueError("Only the final axis group may have rank 0")
+        total_axes = sum(bound_axis_group.rank for bound_axis_group in self.descriptor.bound_axis_groups)
+        if total_axes != self.data.ndim:
+            raise ValueError(f"Axis groups account for {total_axes} axes but array has {self.data.ndim}")
 
     def get_intensity_calibration(self, key: str | None = None) -> Calibration:
         return self.descriptor.get_intensity_calibration(key)
 
     def get_flat_calibrations(self, key: str | None = None) -> list[Calibration]:
-        return [bound_axis_set.get_calibration(axis=i, key=key) for bound_axis_set in self.descriptor.bound_axis_sets for i in range(bound_axis_set.rank)]
+        return [bound_axis_group.get_calibration(axis=i, key=key) for bound_axis_group in self.descriptor.bound_axis_groups for i in range(bound_axis_group.rank)]
 
 
-def zeros_annotated_array(bound_axis_sets: typing.Sequence[BoundAxisSet], dtype: numpy.typing.DTypeLike = numpy.float64) -> AnnotatedArray:
-    shape = tuple(dim for bound_axis_set in bound_axis_sets for dim in bound_axis_set.shape)
-    descriptor = DataDescriptor(bound_axis_sets=list(bound_axis_sets))
+def zeros_annotated_array(bound_axis_groups: typing.Sequence[BoundAxisGroup], dtype: numpy.typing.DTypeLike = numpy.float64) -> AnnotatedArray:
+    shape = tuple(dim for bound_axis_group in bound_axis_groups for dim in bound_axis_group.shape)
+    descriptor = DataDescriptor(bound_axis_groups=list(bound_axis_groups))
     return AnnotatedArray(data=numpy.zeros(shape, dtype=dtype), descriptor=descriptor)
