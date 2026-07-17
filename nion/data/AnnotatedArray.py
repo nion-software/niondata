@@ -71,13 +71,13 @@ class CalibrationSet:
         return tuple(self.calibrations.keys())
 
     @property
-    def primary(self) -> Calibration:
+    def primary_calibration(self) -> Calibration:
         return self.calibrations[self.primary_key]
 
-    def has(self, key: str) -> bool:
+    def has_calibration(self, key: str) -> bool:
         return key in self.calibrations
 
-    def get(self, key: str | None = None) -> Calibration:
+    def get_calibration(self, key: str | None = None) -> Calibration:
         target_key = self.primary_key if key is None else key
         calibration = self.calibrations.get(target_key)
         if calibration is None:
@@ -88,7 +88,7 @@ class CalibrationSet:
     def from_calibration(calibration: Calibration, key: str = DEFAULT_CALIBRATION_KEY) -> CalibrationSet:
         return CalibrationSet(calibrations={key: calibration}, primary_key=key)
 
-    def with_primary(self, key: str) -> CalibrationSet:
+    def with_primary_calibration(self, key: str) -> CalibrationSet:
         if key not in self.calibrations:
             raise KeyError(f"Unknown calibration {key!r}")
         return dataclasses.replace(self, primary_key=key)
@@ -102,16 +102,16 @@ class CalibrationSet:
 
 @dataclasses.dataclass(frozen=True)
 class Axis:
-    """A named dimension with a primary calibration and optional auxiliaries."""
+    """A dimension with a display label, primary calibration, and optional auxiliaries."""
 
     label: str = ""
     calibrations: CalibrationSet = dataclasses.field(default_factory=CalibrationSet)
 
     def get_calibration(self, key: str | None = None) -> Calibration:
-        return self.calibrations.get(key)
+        return self.calibrations.get_calibration(key)
 
     def with_primary_calibration(self, key: str) -> Axis:
-        return dataclasses.replace(self, calibrations=self.calibrations.with_primary(key))
+        return dataclasses.replace(self, calibrations=self.calibrations.with_primary_calibration(key))
 
     def with_calibration(self, key: str, calibration: Calibration, *, make_primary: bool = False) -> Axis:
         return dataclasses.replace(
@@ -129,7 +129,7 @@ class Axis:
 
     @property
     def unit(self) -> str:
-        return self.calibrations.primary.unit
+        return self.calibrations.primary_calibration.unit
 
     @classmethod
     def from_calibration(cls, label: str, calibration: Calibration, key: str = DEFAULT_CALIBRATION_KEY) -> Axis:
@@ -199,7 +199,7 @@ class BoundAxisGroup:
         return BoundAxisGroup(
             bound_axes=(BoundAxis(Axis(label, calibration), size),),
             coordinate_mappings={
-                DEFAULT_COORDINATE_MAPPING_KEY: (calibration.primary,),
+                DEFAULT_COORDINATE_MAPPING_KEY: (calibration.primary_calibration,),
             },
             primary_mapping_key=DEFAULT_COORDINATE_MAPPING_KEY,
         )
@@ -216,7 +216,7 @@ class BoundAxisGroup:
                 BoundAxis(Axis(y_label, calibration), size_y),
             ),
             coordinate_mappings={
-                DEFAULT_COORDINATE_MAPPING_KEY: (calibration.primary, calibration.primary),
+                DEFAULT_COORDINATE_MAPPING_KEY: (calibration.primary_calibration, calibration.primary_calibration),
             },
             primary_mapping_key=DEFAULT_COORDINATE_MAPPING_KEY,
         )
@@ -271,14 +271,14 @@ class ArrayDescriptor:
         return tuple(dimension for bound_axis_group in self.bound_axis_groups for dimension in bound_axis_group.shape)
 
     @property
-    def rank(self) -> int:
+    def ndim(self) -> int:
         return sum(bound_axis_group.rank for bound_axis_group in self.bound_axis_groups)
 
     def get_intensity_calibration(self, key: str | None = None) -> Calibration:
-        return self.intensity_calibrations.get(key)
+        return self.intensity_calibrations.get_calibration(key)
 
     def with_primary_intensity_calibration(self, key: str) -> ArrayDescriptor:
-        return dataclasses.replace(self, intensity_calibrations=self.intensity_calibrations.with_primary(key))
+        return dataclasses.replace(self, intensity_calibrations=self.intensity_calibrations.with_primary_calibration(key))
 
     def with_intensity_calibration(self, key: str, calibration: Calibration, *, make_primary: bool = False) -> ArrayDescriptor:
         return dataclasses.replace(
@@ -328,7 +328,7 @@ class ArrayMetadata:
         extensions: typing.Iterable[ExtensionRecord] = (),
     ) -> None:
         created = created or datetime.datetime.now(tz=tzlocal.get_localzone())
-        if created.tzinfo is None:
+        if created.tzinfo is None or created.utcoffset() is None:
             raise ValueError("created must be timezone-aware")
         extension_map: dict[str, ExtensionRecord] = dict()
         for extension in extensions:
@@ -367,13 +367,6 @@ class ArrayMetadata:
     def with_attributes(self, attributes: typing.Mapping[str, typing.Any]) -> ArrayMetadata:
         return ArrayMetadata(created=self.created, attributes=attributes, extensions=self.__extensions.values())
 
-    @property
-    def timezone(self) -> str | None:
-        return self.created.tzinfo.tzname(self.created) if self.created.tzinfo else "UTC"
-
-    @property
-    def timezone_offset(self) -> str | None:
-        return self.created.strftime("%z") if self.created.tzinfo else "+0000"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -385,7 +378,7 @@ class ArrayHeader:
     metadata: ArrayMetadata = dataclasses.field(default_factory=ArrayMetadata)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "dtype", numpy.dtype(self.dtype))
+        object.__setattr__(self, "dtype", numpy.dtype(typing.cast(typing.Any, self.dtype)))
 
     @property
     def shape(self) -> tuple[int, ...]:
@@ -417,7 +410,7 @@ class AnnotatedArray:
     def get_intensity_calibration(self, key: str | None = None) -> Calibration:
         return self.descriptor.get_intensity_calibration(key)
 
-    def get_flat_calibrations(self, key: str | None = None) -> list[Calibration]:
+    def get_flat_axis_calibrations(self, key: str | None = None) -> list[Calibration]:
         return [bound_axis_group.get_calibration(axis=i, key=key) for bound_axis_group in self.descriptor.bound_axis_groups for i in range(bound_axis_group.rank)]
 
 
