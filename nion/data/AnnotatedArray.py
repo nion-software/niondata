@@ -1,6 +1,6 @@
 """Annotated n-dimensional arrays with calibrated, labeled axes.
 
-This module pairs a numpy array with a structural :class:`DataDescriptor` and
+This module pairs a numpy array with a structural :class:`ArrayDescriptor` and
 contextual :class:`ArrayMetadata`. An :class:`ArrayHeader` packages those
 objects with the storage data type when the buffer is passed separately. Axes
 are grouped into :class:`AxisGroup`/:class:`BoundAxisGroup` objects with per-axis
@@ -253,7 +253,7 @@ class BoundAxisGroup:
 
 
 @dataclasses.dataclass(frozen=True)
-class DataDescriptor:
+class ArrayDescriptor:
     """Intrinsic structure and calibrations used to interpret an array."""
 
     bound_axis_groups: tuple[BoundAxisGroup, ...]
@@ -262,7 +262,7 @@ class DataDescriptor:
     def __post_init__(self) -> None:
         object.__setattr__(self, "bound_axis_groups", tuple(self.bound_axis_groups))
         if not self.bound_axis_groups:
-            raise ValueError("DataDescriptor requires at least one bound axis group")
+            raise ValueError("ArrayDescriptor requires at least one bound axis group")
         if any(bound_axis_group.rank == 0 for bound_axis_group in self.bound_axis_groups[:-1]):
             raise ValueError("Only the final axis group may have rank 0")
 
@@ -277,10 +277,10 @@ class DataDescriptor:
     def get_intensity_calibration(self, key: str | None = None) -> Calibration:
         return self.intensity_calibrations.get(key)
 
-    def with_primary_intensity_calibration(self, key: str) -> DataDescriptor:
+    def with_primary_intensity_calibration(self, key: str) -> ArrayDescriptor:
         return dataclasses.replace(self, intensity_calibrations=self.intensity_calibrations.with_primary(key))
 
-    def with_intensity_calibration(self, key: str, calibration: Calibration, *, make_primary: bool = False) -> DataDescriptor:
+    def with_intensity_calibration(self, key: str, calibration: Calibration, *, make_primary: bool = False) -> ArrayDescriptor:
         return dataclasses.replace(
             self,
             intensity_calibrations=self.intensity_calibrations.with_calibration(key, calibration, make_primary=make_primary),
@@ -296,91 +296,91 @@ class DataDescriptor:
 
 
 @dataclasses.dataclass(frozen=True)
-class StructuredExtension:
+class ExtensionRecord:
     """A versioned, encoded payload whose semantics are defined outside this module."""
 
-    type_identifier: str
+    extension_type_id: str
     schema_version: int
     payload: bytes
 
     def __post_init__(self) -> None:
-        if not self.type_identifier:
-            raise ValueError("StructuredExtension type_identifier must not be empty")
+        if not self.extension_type_id:
+            raise ValueError("ExtensionRecord extension_type_id must not be empty")
         if self.schema_version < 1:
-            raise ValueError("StructuredExtension schema_version must be positive")
+            raise ValueError("ExtensionRecord schema_version must be positive")
         if not isinstance(self.payload, bytes):
-            raise TypeError("StructuredExtension payload must be bytes")
+            raise TypeError("ExtensionRecord payload must be bytes")
 
 
 @dataclasses.dataclass(frozen=True, init=False)
 class ArrayMetadata:
     """Context carried with an array but not required to interpret its data."""
 
-    timestamp: datetime.datetime
-    free_form_metadata: typing.Mapping[str, typing.Any]
-    __structured_extensions: typing.Mapping[str, StructuredExtension] = dataclasses.field(repr=False)
+    created: datetime.datetime
+    attributes: typing.Mapping[str, typing.Any]
+    __extensions: typing.Mapping[str, ExtensionRecord] = dataclasses.field(repr=False)
 
     def __init__(
         self,
         *,
-        timestamp: datetime.datetime | None = None,
-        free_form_metadata: typing.Mapping[str, typing.Any] | None = None,
-        structured_extensions: typing.Iterable[StructuredExtension] = (),
+        created: datetime.datetime | None = None,
+        attributes: typing.Mapping[str, typing.Any] | None = None,
+        extensions: typing.Iterable[ExtensionRecord] = (),
     ) -> None:
-        timestamp = timestamp or datetime.datetime.now(tz=tzlocal.get_localzone())
-        if timestamp.tzinfo is None:
-            raise ValueError("timestamp must be timezone-aware")
-        extensions: dict[str, StructuredExtension] = dict()
-        for extension in structured_extensions:
-            if extension.type_identifier in extensions:
-                raise ValueError(f"Duplicate structured extension type {extension.type_identifier!r}")
-            extensions[extension.type_identifier] = extension
-        object.__setattr__(self, "timestamp", timestamp)
-        object.__setattr__(self, "free_form_metadata", types.MappingProxyType(dict(free_form_metadata or {})))
-        object.__setattr__(self, "_ArrayMetadata__structured_extensions", types.MappingProxyType(extensions))
+        created = created or datetime.datetime.now(tz=tzlocal.get_localzone())
+        if created.tzinfo is None:
+            raise ValueError("created must be timezone-aware")
+        extension_map: dict[str, ExtensionRecord] = dict()
+        for extension in extensions:
+            if extension.extension_type_id in extension_map:
+                raise ValueError(f"Duplicate extension type {extension.extension_type_id!r}")
+            extension_map[extension.extension_type_id] = extension
+        object.__setattr__(self, "created", created)
+        object.__setattr__(self, "attributes", types.MappingProxyType(dict(attributes or {})))
+        object.__setattr__(self, "_ArrayMetadata__extensions", types.MappingProxyType(extension_map))
 
     @property
-    def structured_extension_type_identifiers(self) -> tuple[str, ...]:
-        return tuple(self.__structured_extensions.keys())
+    def extension_type_ids(self) -> tuple[str, ...]:
+        return tuple(self.__extensions.keys())
 
-    def has_structured_extension(self, type_identifier: str) -> bool:
-        return type_identifier in self.__structured_extensions
+    def has_extension(self, extension_type_id: str) -> bool:
+        return extension_type_id in self.__extensions
 
-    def get_structured_extension(self, type_identifier: str) -> StructuredExtension:
-        extension = self.__structured_extensions.get(type_identifier)
+    def get_extension(self, extension_type_id: str) -> ExtensionRecord:
+        extension = self.__extensions.get(extension_type_id)
         if extension is None:
-            raise KeyError(f"Unknown structured extension {type_identifier!r}")
+            raise KeyError(f"Unknown extension {extension_type_id!r}")
         return extension
 
-    def with_structured_extension(self, extension: StructuredExtension) -> ArrayMetadata:
-        extensions = dict(self.__structured_extensions)
-        extensions[extension.type_identifier] = extension
-        return ArrayMetadata(timestamp=self.timestamp, free_form_metadata=self.free_form_metadata, structured_extensions=extensions.values())
+    def with_extension(self, extension: ExtensionRecord) -> ArrayMetadata:
+        extensions = dict(self.__extensions)
+        extensions[extension.extension_type_id] = extension
+        return ArrayMetadata(created=self.created, attributes=self.attributes, extensions=extensions.values())
 
-    def without_structured_extension(self, type_identifier: str) -> ArrayMetadata:
-        extensions = dict(self.__structured_extensions)
-        if type_identifier not in extensions:
-            raise KeyError(f"Unknown structured extension {type_identifier!r}")
-        del extensions[type_identifier]
-        return ArrayMetadata(timestamp=self.timestamp, free_form_metadata=self.free_form_metadata, structured_extensions=extensions.values())
+    def without_extension(self, extension_type_id: str) -> ArrayMetadata:
+        extensions = dict(self.__extensions)
+        if extension_type_id not in extensions:
+            raise KeyError(f"Unknown extension {extension_type_id!r}")
+        del extensions[extension_type_id]
+        return ArrayMetadata(created=self.created, attributes=self.attributes, extensions=extensions.values())
 
-    def with_free_form_metadata(self, free_form_metadata: typing.Mapping[str, typing.Any]) -> ArrayMetadata:
-        return ArrayMetadata(timestamp=self.timestamp, free_form_metadata=free_form_metadata, structured_extensions=self.__structured_extensions.values())
+    def with_attributes(self, attributes: typing.Mapping[str, typing.Any]) -> ArrayMetadata:
+        return ArrayMetadata(created=self.created, attributes=attributes, extensions=self.__extensions.values())
 
     @property
     def timezone(self) -> str | None:
-        return self.timestamp.tzinfo.tzname(self.timestamp) if self.timestamp.tzinfo else "UTC"
+        return self.created.tzinfo.tzname(self.created) if self.created.tzinfo else "UTC"
 
     @property
     def timezone_offset(self) -> str | None:
-        return self.timestamp.strftime("%z") if self.timestamp.tzinfo else "+0000"
+        return self.created.strftime("%z") if self.created.tzinfo else "+0000"
 
 
 @dataclasses.dataclass(frozen=True)
 class ArrayHeader:
     """Everything needed to describe an array without its underlying buffer."""
 
-    descriptor: DataDescriptor
+    descriptor: ArrayDescriptor
     dtype: numpy.typing.DTypeLike
     metadata: ArrayMetadata = dataclasses.field(default_factory=ArrayMetadata)
 
@@ -397,7 +397,7 @@ class AnnotatedArray:
     """A numpy array paired with its descriptor and contextual metadata."""
 
     data: numpy.typing.NDArray[typing.Any]
-    descriptor: DataDescriptor
+    descriptor: ArrayDescriptor
     metadata: ArrayMetadata = dataclasses.field(default_factory=ArrayMetadata)
 
     def __post_init__(self) -> None:
@@ -422,5 +422,5 @@ class AnnotatedArray:
 
 
 def zeros_annotated_array(bound_axis_groups: typing.Sequence[BoundAxisGroup], dtype: numpy.typing.DTypeLike = numpy.float64) -> AnnotatedArray:
-    descriptor = DataDescriptor(bound_axis_groups=tuple(bound_axis_groups))
+    descriptor = ArrayDescriptor(bound_axis_groups=tuple(bound_axis_groups))
     return AnnotatedArray(data=numpy.zeros(descriptor.shape, dtype=dtype), descriptor=descriptor)
