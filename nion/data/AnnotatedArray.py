@@ -1,9 +1,10 @@
 """Annotated n-dimensional arrays with calibrated, labeled axes.
 
-This module pairs a numpy array with a :class:`DataDescriptor` describing its
-axes (grouped into :class:`AxisGroup`/:class:`BoundAxisGroup`), per-axis and
-intensity :class:`Calibration` mappings between indices and physical
-coordinates, and associated metadata.
+This module pairs a numpy array with a structural :class:`DataDescriptor` and
+contextual :class:`ArrayMetadata`. An :class:`ArrayHeader` packages those
+objects with the storage data type when the buffer is passed separately. Axes
+are grouped into :class:`AxisGroup`/:class:`BoundAxisGroup` objects with per-axis
+and intensity :class:`Calibration` mappings.
 """
 
 from __future__ import annotations
@@ -251,18 +252,27 @@ class BoundAxisGroup:
         return self.get_coordinate_mapping(key)[axis]
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class DataDescriptor:
-    """Metadata for an array: axis sets, intensity calibrations, and properties."""
+    """Intrinsic structure and calibrations used to interpret an array."""
 
-    bound_axis_groups: list[BoundAxisGroup] = dataclasses.field(default_factory=list)
+    bound_axis_groups: tuple[BoundAxisGroup, ...]
     intensity_calibrations: CalibrationSet = dataclasses.field(default_factory=CalibrationSet)
-    properties: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
-    timestamp: datetime.datetime = dataclasses.field(default_factory=lambda: datetime.datetime.now(tz=tzlocal.get_localzone()))
 
     def __post_init__(self) -> None:
-        if self.timestamp.tzinfo is None:
-            raise ValueError("timestamp must be timezone-aware")
+        object.__setattr__(self, "bound_axis_groups", tuple(self.bound_axis_groups))
+        if not self.bound_axis_groups:
+            raise ValueError("DataDescriptor requires at least one bound axis group")
+        if any(bound_axis_group.rank == 0 for bound_axis_group in self.bound_axis_groups[:-1]):
+            raise ValueError("Only the final axis group may have rank 0")
+
+    @property
+    def shape(self) -> tuple[int, ...]:
+        return tuple(dimension for bound_axis_group in self.bound_axis_groups for dimension in bound_axis_group.shape)
+
+    @property
+    def rank(self) -> int:
+        return sum(bound_axis_group.rank for bound_axis_group in self.bound_axis_groups)
 
     def get_intensity_calibration(self, key: str | None = None) -> Calibration:
         return self.intensity_calibrations.get(key)
@@ -284,6 +294,79 @@ class DataDescriptor:
     def primary_intensity_calibration_key(self) -> str:
         return self.intensity_calibrations.primary_key
 
+
+@dataclasses.dataclass(frozen=True)
+class StructuredExtension:
+    """A versioned, encoded payload whose semantics are defined outside this module."""
+
+    type_identifier: str
+    schema_version: int
+    payload: bytes
+
+    def __post_init__(self) -> None:
+        if not self.type_identifier:
+            raise ValueError("StructuredExtension type_identifier must not be empty")
+        if self.schema_version < 1:
+            raise ValueError("StructuredExtension schema_version must be positive")
+        if not isinstance(self.payload, bytes):
+            raise TypeError("StructuredExtension payload must be bytes")
+
+
+@dataclasses.dataclass(frozen=True, init=False)
+class ArrayMetadata:
+    """Context carried with an array but not required to interpret its data."""
+
+    timestamp: datetime.datetime
+    free_form_metadata: typing.Mapping[str, typing.Any]
+    __structured_extensions: typing.Mapping[str, StructuredExtension] = dataclasses.field(repr=False)
+
+    def __init__(
+        self,
+        *,
+        timestamp: datetime.datetime | None = None,
+        free_form_metadata: typing.Mapping[str, typing.Any] | None = None,
+        structured_extensions: typing.Iterable[StructuredExtension] = (),
+    ) -> None:
+        timestamp = timestamp or datetime.datetime.now(tz=tzlocal.get_localzone())
+        if timestamp.tzinfo is None:
+            raise ValueError("timestamp must be timezone-aware")
+        extensions: dict[str, StructuredExtension] = dict()
+        for extension in structured_extensions:
+            if extension.type_identifier in extensions:
+                raise ValueError(f"Duplicate structured extension type {extension.type_identifier!r}")
+            extensions[extension.type_identifier] = extension
+        object.__setattr__(self, "timestamp", timestamp)
+        object.__setattr__(self, "free_form_metadata", types.MappingProxyType(dict(free_form_metadata or {})))
+        object.__setattr__(self, "_ArrayMetadata__structured_extensions", types.MappingProxyType(extensions))
+
+    @property
+    def structured_extension_type_identifiers(self) -> tuple[str, ...]:
+        return tuple(self.__structured_extensions.keys())
+
+    def has_structured_extension(self, type_identifier: str) -> bool:
+        return type_identifier in self.__structured_extensions
+
+    def get_structured_extension(self, type_identifier: str) -> StructuredExtension:
+        extension = self.__structured_extensions.get(type_identifier)
+        if extension is None:
+            raise KeyError(f"Unknown structured extension {type_identifier!r}")
+        return extension
+
+    def with_structured_extension(self, extension: StructuredExtension) -> ArrayMetadata:
+        extensions = dict(self.__structured_extensions)
+        extensions[extension.type_identifier] = extension
+        return ArrayMetadata(timestamp=self.timestamp, free_form_metadata=self.free_form_metadata, structured_extensions=extensions.values())
+
+    def without_structured_extension(self, type_identifier: str) -> ArrayMetadata:
+        extensions = dict(self.__structured_extensions)
+        if type_identifier not in extensions:
+            raise KeyError(f"Unknown structured extension {type_identifier!r}")
+        del extensions[type_identifier]
+        return ArrayMetadata(timestamp=self.timestamp, free_form_metadata=self.free_form_metadata, structured_extensions=extensions.values())
+
+    def with_free_form_metadata(self, free_form_metadata: typing.Mapping[str, typing.Any]) -> ArrayMetadata:
+        return ArrayMetadata(timestamp=self.timestamp, free_form_metadata=free_form_metadata, structured_extensions=self.__structured_extensions.values())
+
     @property
     def timezone(self) -> str | None:
         return self.timestamp.tzinfo.tzname(self.timestamp) if self.timestamp.tzinfo else "UTC"
@@ -293,21 +376,43 @@ class DataDescriptor:
         return self.timestamp.strftime("%z") if self.timestamp.tzinfo else "+0000"
 
 
-@dataclasses.dataclass
-class AnnotatedArray:
-    """A numpy array paired with a :class:`DataDescriptor` of its axes."""
+@dataclasses.dataclass(frozen=True)
+class ArrayHeader:
+    """Everything needed to describe an array without its underlying buffer."""
 
-    data: numpy.typing.NDArray[typing.Any]
-    descriptor: DataDescriptor = dataclasses.field(default_factory=DataDescriptor)
+    descriptor: DataDescriptor
+    dtype: numpy.typing.DTypeLike
+    metadata: ArrayMetadata = dataclasses.field(default_factory=ArrayMetadata)
 
     def __post_init__(self) -> None:
-        if not self.descriptor.bound_axis_groups:
-            raise ValueError("AnnotatedArray requires at least one axis group (bound_axis_group)")
-        if any(bound_axis_group.rank == 0 for bound_axis_group in self.descriptor.bound_axis_groups[:-1]):
-            raise ValueError("Only the final axis group may have rank 0")
-        total_axes = sum(bound_axis_group.rank for bound_axis_group in self.descriptor.bound_axis_groups)
-        if total_axes != self.data.ndim:
-            raise ValueError(f"Axis groups account for {total_axes} axes but array has {self.data.ndim}")
+        object.__setattr__(self, "dtype", numpy.dtype(self.dtype))
+
+    @property
+    def shape(self) -> tuple[int, ...]:
+        return self.descriptor.shape
+
+
+@dataclasses.dataclass
+class AnnotatedArray:
+    """A numpy array paired with its descriptor and contextual metadata."""
+
+    data: numpy.typing.NDArray[typing.Any]
+    descriptor: DataDescriptor
+    metadata: ArrayMetadata = dataclasses.field(default_factory=ArrayMetadata)
+
+    def __post_init__(self) -> None:
+        if self.descriptor.shape != self.data.shape:
+            raise ValueError(f"Descriptor shape {self.descriptor.shape} does not match array shape {self.data.shape}")
+
+    @property
+    def header(self) -> ArrayHeader:
+        return ArrayHeader(self.descriptor, self.data.dtype, self.metadata)
+
+    @classmethod
+    def from_header(cls, data: numpy.typing.NDArray[typing.Any], header: ArrayHeader) -> AnnotatedArray:
+        if header.dtype != data.dtype:
+            raise ValueError(f"Header dtype {header.dtype} does not match array dtype {data.dtype}")
+        return cls(data, header.descriptor, header.metadata)
 
     def get_intensity_calibration(self, key: str | None = None) -> Calibration:
         return self.descriptor.get_intensity_calibration(key)
@@ -317,6 +422,5 @@ class AnnotatedArray:
 
 
 def zeros_annotated_array(bound_axis_groups: typing.Sequence[BoundAxisGroup], dtype: numpy.typing.DTypeLike = numpy.float64) -> AnnotatedArray:
-    shape = tuple(dim for bound_axis_group in bound_axis_groups for dim in bound_axis_group.shape)
-    descriptor = DataDescriptor(bound_axis_groups=list(bound_axis_groups))
-    return AnnotatedArray(data=numpy.zeros(shape, dtype=dtype), descriptor=descriptor)
+    descriptor = DataDescriptor(bound_axis_groups=tuple(bound_axis_groups))
+    return AnnotatedArray(data=numpy.zeros(descriptor.shape, dtype=dtype), descriptor=descriptor)
