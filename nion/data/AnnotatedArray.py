@@ -102,38 +102,9 @@ class CalibrationSet:
 
 @dataclasses.dataclass(frozen=True)
 class Axis:
-    """A dimension with a display label, primary calibration, and optional auxiliaries."""
+    """A dimension label and display metadata independent of coordinate mappings."""
 
     label: str = ""
-    calibrations: CalibrationSet = dataclasses.field(default_factory=CalibrationSet)
-
-    def get_calibration(self, key: str | None = None) -> Calibration:
-        return self.calibrations.get_calibration(key)
-
-    def with_primary_calibration(self, key: str) -> Axis:
-        return dataclasses.replace(self, calibrations=self.calibrations.with_primary_calibration(key))
-
-    def with_calibration(self, key: str, calibration: Calibration, *, make_primary: bool = False) -> Axis:
-        return dataclasses.replace(
-            self,
-            calibrations=self.calibrations.with_calibration(key, calibration, make_primary=make_primary),
-        )
-
-    @property
-    def calibration_keys(self) -> tuple[str, ...]:
-        return self.calibrations.calibration_keys
-
-    @property
-    def primary_calibration_key(self) -> str:
-        return self.calibrations.primary_key
-
-    @property
-    def unit(self) -> str:
-        return self.calibrations.primary_calibration.unit
-
-    @classmethod
-    def from_calibration(cls, label: str, calibration: Calibration, key: str = DEFAULT_CALIBRATION_KEY) -> Axis:
-        return cls(label=label, calibrations=CalibrationSet(calibrations={key: calibration}, primary_key=key))
 
 
 @dataclasses.dataclass(frozen=True)
@@ -150,20 +121,13 @@ class BoundAxis:
 
 @dataclasses.dataclass(frozen=True)
 class AxisGroup:
-    """An ordered group of axes (e.g. spatial or spectral)."""
+    """An ordered group of axes (e.g. spatial or spectral) without calibrations."""
 
     axes: tuple[Axis, ...] = dataclasses.field(default_factory=tuple)
 
     @property
     def rank(self) -> int:
         return len(self.axes)
-
-    @property
-    def units(self) -> list[str]:
-        return [ax.unit for ax in self.axes]
-
-    def get_calibration(self, axis: int, key: str | None = None) -> Calibration:
-        return self.axes[axis].get_calibration(key)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -195,11 +159,11 @@ class BoundAxisGroup:
     @staticmethod
     def from_1d_size(size: int, *, label: str = "x", unit: str | None = None) -> BoundAxisGroup:
         """Create a 1D bound axis group with one default coordinate mapping."""
-        calibration = CalibrationSet.from_calibration(AffineCalibration(unit=unit or ""))
+        calibration = AffineCalibration(unit=unit or "")
         return BoundAxisGroup(
-            bound_axes=(BoundAxis(Axis(label, calibration), size),),
+            bound_axes=(BoundAxis(Axis(label), size),),
             coordinate_mappings={
-                DEFAULT_COORDINATE_MAPPING_KEY: (calibration.primary_calibration,),
+                DEFAULT_COORDINATE_MAPPING_KEY: (calibration,),
             },
             primary_mapping_key=DEFAULT_COORDINATE_MAPPING_KEY,
         )
@@ -209,14 +173,14 @@ class BoundAxisGroup:
         """Create a 2D bound axis group with one default coordinate mapping."""
         size_x, size_y = size
         x_label, y_label = labels
-        calibration = CalibrationSet.from_calibration(AffineCalibration(unit=unit or ""), key=DEFAULT_CALIBRATION_KEY)
+        calibration = AffineCalibration(unit=unit or "")
         return BoundAxisGroup(
             bound_axes=(
-                BoundAxis(Axis(x_label, calibration), size_x),
-                BoundAxis(Axis(y_label, calibration), size_y),
+                BoundAxis(Axis(x_label), size_x),
+                BoundAxis(Axis(y_label), size_y),
             ),
             coordinate_mappings={
-                DEFAULT_COORDINATE_MAPPING_KEY: (calibration.primary_calibration, calibration.primary_calibration),
+                DEFAULT_COORDINATE_MAPPING_KEY: (calibration, calibration),
             },
             primary_mapping_key=DEFAULT_COORDINATE_MAPPING_KEY,
         )
