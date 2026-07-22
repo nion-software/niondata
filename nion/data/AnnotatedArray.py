@@ -3,8 +3,8 @@
 This module pairs a numpy array with a structural :class:`ArrayDescriptor` and
 contextual :class:`ArrayMetadata`. An :class:`ArrayHeader` packages those
 objects with the storage data type when the buffer is passed separately. Axes
-are grouped into :class:`AxisGroup`/:class:`BoundAxisGroup` objects with per-axis
-and intensity :class:`Calibration` mappings.
+are grouped into :class:`Axis`/:class:`AxisGroup` objects with per-axis and
+intensity :class:`Calibration` mappings.
 """
 
 from __future__ import annotations
@@ -102,46 +102,27 @@ class CalibrationSet:
 
 @dataclasses.dataclass(frozen=True)
 class Axis:
-    """A dimension label and display metadata independent of coordinate mappings."""
+    """A dimension label, size, and coordinate metadata."""
 
     label: str = ""
-
-
-@dataclasses.dataclass(frozen=True)
-class BoundAxis:
-    """An :class:`Axis` bound to a concrete (positive) length."""
-
-    axis: Axis
-    size: int
+    size: int = 1
 
     def __post_init__(self) -> None:
         if self.size <= 0:
-            raise ValueError(f"BoundAxis size must be positive, got {self.size}")
+            raise ValueError(f"Axis size must be positive, got {self.size}")
 
 
 @dataclasses.dataclass(frozen=True)
 class AxisGroup:
-    """An ordered group of axes (e.g. spatial or spectral) without calibrations."""
+    """An ordered group of sized axes with optional coordinate mappings."""
 
     axes: tuple[Axis, ...] = dataclasses.field(default_factory=tuple)
-
-    @property
-    def rank(self) -> int:
-        return len(self.axes)
-
-
-@dataclasses.dataclass(frozen=True)
-class BoundAxisGroup:
-    """An :class:`AxisGroup` with sized axes, exposing a concrete shape."""
-
-    bound_axes: tuple[BoundAxis, ...] = dataclasses.field(default_factory=tuple)
     coordinate_system_id: str | None = None
     coordinate_mappings: typing.Mapping[str, tuple[Calibration, ...]] = dataclasses.field(default_factory=dict)
     primary_mapping_key: str | None = None
-    axis_group: AxisGroup = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "axis_group", AxisGroup(axes=tuple(ba.axis for ba in self.bound_axes)))
+        object.__setattr__(self, "axes", tuple(self.axes))
         coordinate_mappings = dict(self.coordinate_mappings)
         normalized_coordinate_mappings: dict[str, tuple[Calibration, ...]] = dict()
         for key, mapping in coordinate_mappings.items():
@@ -157,11 +138,11 @@ class BoundAxisGroup:
             raise ValueError("primary_mapping_key must be None when coordinate_mappings is empty")
 
     @staticmethod
-    def from_1d_size(size: int, *, label: str = "x", unit: str | None = None) -> BoundAxisGroup:
-        """Create a 1D bound axis group with one default coordinate mapping."""
+    def from_1d_size(size: int, *, label: str = "x", unit: str | None = None) -> AxisGroup:
+        """Create a 1D axis group with one default coordinate mapping."""
         calibration = AffineCalibration(unit=unit or "")
-        return BoundAxisGroup(
-            bound_axes=(BoundAxis(Axis(label), size),),
+        return AxisGroup(
+            axes=(Axis(label, size),),
             coordinate_mappings={
                 DEFAULT_COORDINATE_MAPPING_KEY: (calibration,),
             },
@@ -169,15 +150,15 @@ class BoundAxisGroup:
         )
 
     @staticmethod
-    def from_2d_size(size: tuple[int, int], *, labels: tuple[str, str] = ("x", "y"), unit: str | None = None) -> BoundAxisGroup:
-        """Create a 2D bound axis group with one default coordinate mapping."""
+    def from_2d_size(size: tuple[int, int], *, labels: tuple[str, str] = ("x", "y"), unit: str | None = None) -> AxisGroup:
+        """Create a 2D axis group with one default coordinate mapping."""
         size_x, size_y = size
         x_label, y_label = labels
         calibration = AffineCalibration(unit=unit or "")
-        return BoundAxisGroup(
-            bound_axes=(
-                BoundAxis(Axis(x_label), size_x),
-                BoundAxis(Axis(y_label), size_y),
+        return AxisGroup(
+            axes=(
+                Axis(x_label, size_x),
+                Axis(y_label, size_y),
             ),
             coordinate_mappings={
                 DEFAULT_COORDINATE_MAPPING_KEY: (calibration, calibration),
@@ -187,11 +168,11 @@ class BoundAxisGroup:
 
     @property
     def shape(self) -> tuple[int, ...]:
-        return tuple(bound_axis.size for bound_axis in self.bound_axes)
+        return tuple(axis.size for axis in self.axes)
 
     @property
     def rank(self) -> int:
-        return len(self.bound_axes)
+        return len(self.axes)
 
     @property
     def units(self) -> list[str]:
@@ -220,23 +201,23 @@ class BoundAxisGroup:
 class ArrayDescriptor:
     """Intrinsic structure and calibrations used to interpret an array."""
 
-    bound_axis_groups: tuple[BoundAxisGroup, ...]
+    axis_groups: tuple[AxisGroup, ...]
     intensity_calibrations: CalibrationSet = dataclasses.field(default_factory=CalibrationSet)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "bound_axis_groups", tuple(self.bound_axis_groups))
-        if not self.bound_axis_groups:
-            raise ValueError("ArrayDescriptor requires at least one bound axis group")
-        if any(bound_axis_group.rank == 0 for bound_axis_group in self.bound_axis_groups[:-1]):
+        object.__setattr__(self, "axis_groups", tuple(self.axis_groups))
+        if not self.axis_groups:
+            raise ValueError("ArrayDescriptor requires at least one axis group")
+        if any(axis_group.rank == 0 for axis_group in self.axis_groups[:-1]):
             raise ValueError("Only the final axis group may have rank 0")
 
     @property
     def shape(self) -> tuple[int, ...]:
-        return tuple(dimension for bound_axis_group in self.bound_axis_groups for dimension in bound_axis_group.shape)
+        return tuple(dimension for axis_group in self.axis_groups for dimension in axis_group.shape)
 
     @property
     def ndim(self) -> int:
-        return sum(bound_axis_group.rank for bound_axis_group in self.bound_axis_groups)
+        return sum(axis_group.rank for axis_group in self.axis_groups)
 
     def get_intensity_calibration(self, key: str | None = None) -> Calibration:
         return self.intensity_calibrations.get_calibration(key)
@@ -375,9 +356,9 @@ class AnnotatedArray:
         return self.descriptor.get_intensity_calibration(key)
 
     def get_flat_axis_calibrations(self, key: str | None = None) -> list[Calibration]:
-        return [bound_axis_group.get_calibration(axis=i, key=key) for bound_axis_group in self.descriptor.bound_axis_groups for i in range(bound_axis_group.rank)]
+        return [axis_group.get_calibration(axis=i, key=key) for axis_group in self.descriptor.axis_groups for i in range(axis_group.rank)]
 
 
-def zeros_annotated_array(bound_axis_groups: typing.Sequence[BoundAxisGroup], dtype: numpy.typing.DTypeLike = numpy.float64) -> AnnotatedArray:
-    descriptor = ArrayDescriptor(bound_axis_groups=tuple(bound_axis_groups))
+def zeros_annotated_array(axis_groups: typing.Sequence[AxisGroup], dtype: numpy.typing.DTypeLike = numpy.float64) -> AnnotatedArray:
+    descriptor = ArrayDescriptor(axis_groups=tuple(axis_groups))
     return AnnotatedArray(data=numpy.zeros(descriptor.shape, dtype=dtype), descriptor=descriptor)

@@ -20,8 +20,8 @@ class TestAnnotatedArray(unittest.TestCase):
         self.assertIs(alternate, calibrations.with_primary_calibration("alternate").primary_calibration)
 
     def test_array_descriptor_describes_shape_and_rank(self) -> None:
-        collection = AnnotatedArray.BoundAxisGroup.from_1d_size(3)
-        signal = AnnotatedArray.BoundAxisGroup.from_2d_size((4, 5))
+        collection = AnnotatedArray.AxisGroup.from_1d_size(3)
+        signal = AnnotatedArray.AxisGroup.from_2d_size((4, 5))
         descriptor = AnnotatedArray.ArrayDescriptor((collection, signal))
 
         self.assertEqual((3, 4, 5), descriptor.shape)
@@ -31,8 +31,8 @@ class TestAnnotatedArray(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "at least one"):
             AnnotatedArray.ArrayDescriptor(())
 
-        scalar_group = AnnotatedArray.BoundAxisGroup()
-        vector_group = AnnotatedArray.BoundAxisGroup.from_1d_size(3)
+        scalar_group = AnnotatedArray.AxisGroup()
+        vector_group = AnnotatedArray.AxisGroup.from_1d_size(3)
         with self.assertRaisesRegex(ValueError, "Only the final"):
             AnnotatedArray.ArrayDescriptor((scalar_group, vector_group))
 
@@ -87,7 +87,7 @@ class TestAnnotatedArray(unittest.TestCase):
         self.assertEqual(datetime.timedelta(hours=-7), metadata.created.utcoffset())
 
     def test_array_header_can_be_passed_without_data(self) -> None:
-        descriptor = AnnotatedArray.ArrayDescriptor((AnnotatedArray.BoundAxisGroup.from_2d_size((4, 5)),))
+        descriptor = AnnotatedArray.ArrayDescriptor((AnnotatedArray.AxisGroup.from_2d_size((4, 5)),))
         metadata = AnnotatedArray.ArrayMetadata(attributes={"note": "test"})
         header = AnnotatedArray.ArrayHeader(descriptor, "float32", metadata)
 
@@ -103,7 +103,7 @@ class TestAnnotatedArray(unittest.TestCase):
         self.assertIs(metadata, first.metadata)
 
     def test_annotated_array_validates_data_against_header(self) -> None:
-        descriptor = AnnotatedArray.ArrayDescriptor((AnnotatedArray.BoundAxisGroup.from_1d_size(3),))
+        descriptor = AnnotatedArray.ArrayDescriptor((AnnotatedArray.AxisGroup.from_1d_size(3),))
         header = AnnotatedArray.ArrayHeader(descriptor, numpy.float32)
 
         with self.assertRaisesRegex(ValueError, "shape"):
@@ -112,12 +112,12 @@ class TestAnnotatedArray(unittest.TestCase):
             AnnotatedArray.AnnotatedArray.from_header(numpy.zeros((3,), dtype=numpy.float64), header)
 
     def test_zeros_annotated_array_constructs_matching_header(self) -> None:
-        group = AnnotatedArray.BoundAxisGroup.from_2d_size((2, 3), unit="nm")
+        group = AnnotatedArray.AxisGroup.from_2d_size((2, 3), unit="nm")
         array = AnnotatedArray.zeros_annotated_array((group,), dtype=numpy.float32)
 
         self.assertEqual((2, 3), array.data.shape)
         self.assertEqual(numpy.dtype(numpy.float32), array.header.dtype)
-        self.assertEqual((group,), array.descriptor.bound_axis_groups)
+        self.assertEqual((group,), array.descriptor.axis_groups)
         self.assertEqual(2, len(array.get_flat_axis_calibrations()))
 
 
