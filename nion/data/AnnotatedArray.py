@@ -22,6 +22,49 @@ DEFAULT_CALIBRATION_KEY = "default"
 DEFAULT_COORDINATE_MAPPING_KEY = "default"
 
 
+class ValueType:
+    """Supported value types for array data."""
+    SCALAR = "scalar"
+    COMPLEX = "complex"
+    RGB = "rgb"
+    RGBA = "rgba"
+    VECTOR = "vector"
+
+
+def infer_value_type(dtype: numpy.dtype) -> str:
+    """Infer the value type from a numpy dtype.
+
+    Args:
+        dtype: The numpy dtype to infer from.
+
+    Returns:
+        A ValueType string (scalar, complex, rgb, rgba, or vector).
+
+    Raises:
+        ValueError: If the dtype cannot be mapped to a supported value type.
+    """
+    dtype = numpy.dtype(typing.cast(typing.Any, dtype))
+
+    # Complex types
+    if dtype.kind == 'c':
+        return ValueType.COMPLEX
+
+    # Structured/record types for RGB and RGBA
+    if dtype.names is not None:
+        if len(dtype.names) == 3 and set(dtype.names) >= {'r', 'g', 'b'}:
+            return ValueType.RGB
+        elif len(dtype.names) == 4 and set(dtype.names) >= {'r', 'g', 'b', 'a'}:
+            return ValueType.RGBA
+        # Other structured types are treated as vectors
+        return ValueType.VECTOR
+
+    # Numeric types (int, uint, float, bool)
+    if dtype.kind in ('b', 'i', 'u', 'f'):
+        return ValueType.SCALAR
+
+    raise ValueError(f"Unsupported dtype {dtype} for value type inference")
+
+
 class Calibration(typing.Protocol):
     """Protocol converting between array indices and physical coordinates."""
 
@@ -113,23 +156,33 @@ class Axis:
 
 
 @dataclasses.dataclass(frozen=True)
+class CoordinateMapping:
+    """A labeled per-axis coordinate mapping for an axis group."""
+
+    calibrations: tuple[Calibration, ...] = dataclasses.field(default_factory=tuple)
+    label: str | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "calibrations", tuple(self.calibrations))
+
+
+@dataclasses.dataclass(frozen=True)
 class AxisGroup:
     """An ordered group of sized axes with optional coordinate mappings."""
 
     axes: tuple[Axis, ...] = dataclasses.field(default_factory=tuple)
     coordinate_system_id: str | None = None
-    coordinate_mappings: typing.Mapping[str, tuple[Calibration, ...]] = dataclasses.field(default_factory=dict)
+    coordinate_mappings: typing.Mapping[str, CoordinateMapping] = dataclasses.field(default_factory=dict)
     primary_mapping_key: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "axes", tuple(self.axes))
         coordinate_mappings = dict(self.coordinate_mappings)
-        normalized_coordinate_mappings: dict[str, tuple[Calibration, ...]] = dict()
+        normalized_coordinate_mappings: dict[str, CoordinateMapping] = dict()
         for key, mapping in coordinate_mappings.items():
-            normalized_mapping = tuple(mapping)
-            if len(normalized_mapping) != self.rank:
-                raise ValueError(f"coordinate mapping {key!r} rank {len(normalized_mapping)} does not match axis group rank {self.rank}")
-            normalized_coordinate_mappings[key] = normalized_mapping
+            if len(mapping.calibrations) != self.rank:
+                raise ValueError(f"coordinate mapping {key!r} rank {len(mapping.calibrations)} does not match axis group rank {self.rank}")
+            normalized_coordinate_mappings[key] = mapping
         object.__setattr__(self, "coordinate_mappings", types.MappingProxyType(normalized_coordinate_mappings))
 
         if self.primary_mapping_key is not None and self.primary_mapping_key not in normalized_coordinate_mappings:
@@ -144,7 +197,7 @@ class AxisGroup:
         return AxisGroup(
             axes=(Axis(label, size),),
             coordinate_mappings={
-                DEFAULT_COORDINATE_MAPPING_KEY: (calibration,),
+                DEFAULT_COORDINATE_MAPPING_KEY: CoordinateMapping(calibrations=(calibration,)),
             },
             primary_mapping_key=DEFAULT_COORDINATE_MAPPING_KEY,
         )
@@ -161,7 +214,7 @@ class AxisGroup:
                 Axis(y_label, size_y),
             ),
             coordinate_mappings={
-                DEFAULT_COORDINATE_MAPPING_KEY: (calibration, calibration),
+                DEFAULT_COORDINATE_MAPPING_KEY: CoordinateMapping(calibrations=(calibration, calibration)),
             },
             primary_mapping_key=DEFAULT_COORDINATE_MAPPING_KEY,
         )
@@ -178,13 +231,13 @@ class AxisGroup:
     def units(self) -> list[str]:
         if self.primary_mapping_key is None:
             return []
-        return [calibration.unit for calibration in self.get_coordinate_mapping()]
+        return [calibration.unit for calibration in self.get_coordinate_mapping().calibrations]
 
     @property
     def mapping_keys(self) -> tuple[str, ...]:
         return tuple(self.coordinate_mappings.keys())
 
-    def get_coordinate_mapping(self, key: str | None = None) -> tuple[Calibration, ...]:
+    def get_coordinate_mapping(self, key: str | None = None) -> CoordinateMapping:
         target_key = self.primary_mapping_key if key is None else key
         if target_key is None:
             raise KeyError("No primary coordinate mapping is designated")
@@ -194,7 +247,7 @@ class AxisGroup:
         return mapping
 
     def get_calibration(self, axis: int, key: str | None = None) -> Calibration:
-        return self.get_coordinate_mapping(key)[axis]
+        return self.get_coordinate_mapping(key).calibrations[axis]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -203,6 +256,7 @@ class ArrayDescriptor:
 
     axis_groups: tuple[AxisGroup, ...]
     intensity_calibrations: CalibrationSet = dataclasses.field(default_factory=CalibrationSet)
+    value_type: str = ValueType.SCALAR
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "axis_groups", tuple(self.axis_groups))
@@ -210,6 +264,9 @@ class ArrayDescriptor:
             raise ValueError("ArrayDescriptor requires at least one axis group")
         if any(axis_group.rank == 0 for axis_group in self.axis_groups[:-1]):
             raise ValueError("Only the final axis group may have rank 0")
+        valid_types = {ValueType.SCALAR, ValueType.COMPLEX, ValueType.RGB, ValueType.RGBA, ValueType.VECTOR}
+        if self.value_type not in valid_types:
+            raise ValueError(f"value_type must be one of {valid_types}, got {self.value_type!r}")
 
     @property
     def shape(self) -> tuple[int, ...]:
@@ -238,6 +295,9 @@ class ArrayDescriptor:
     @property
     def primary_intensity_calibration_key(self) -> str:
         return self.intensity_calibrations.primary_key
+
+    def with_value_type(self, value_type: str) -> ArrayDescriptor:
+        return dataclasses.replace(self, value_type=value_type)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -341,6 +401,9 @@ class AnnotatedArray:
     def __post_init__(self) -> None:
         if self.descriptor.shape != self.data.shape:
             raise ValueError(f"Descriptor shape {self.descriptor.shape} does not match array shape {self.data.shape}")
+        inferred_value_type = infer_value_type(self.data.dtype)
+        if self.descriptor.value_type != inferred_value_type:
+            raise ValueError(f"Descriptor value_type {self.descriptor.value_type!r} does not match inferred value_type {inferred_value_type!r} from array dtype {self.data.dtype}")
 
     @property
     def header(self) -> ArrayHeader:
@@ -350,6 +413,11 @@ class AnnotatedArray:
     def from_header(cls, data: numpy.typing.NDArray[typing.Any], header: ArrayHeader) -> AnnotatedArray:
         if header.dtype != data.dtype:
             raise ValueError(f"Header dtype {header.dtype} does not match array dtype {data.dtype}")
+        if header.descriptor.shape != data.shape:
+            raise ValueError(f"Header shape {header.descriptor.shape} does not match array shape {data.shape}")
+        inferred_value_type = infer_value_type(data.dtype)
+        if header.descriptor.value_type != inferred_value_type:
+            raise ValueError(f"Header value_type {header.descriptor.value_type!r} does not match inferred value_type {inferred_value_type!r} from array dtype {data.dtype}")
         return cls(data, header.descriptor, header.metadata)
 
     def get_intensity_calibration(self, key: str | None = None) -> Calibration:
@@ -360,5 +428,18 @@ class AnnotatedArray:
 
 
 def zeros_annotated_array(axis_groups: typing.Sequence[AxisGroup], dtype: numpy.typing.DTypeLike = numpy.float64) -> AnnotatedArray:
-    descriptor = ArrayDescriptor(axis_groups=tuple(axis_groups))
-    return AnnotatedArray(data=numpy.zeros(descriptor.shape, dtype=dtype), descriptor=descriptor)
+    """Create an AnnotatedArray filled with zeros.
+
+    The value_type is inferred from the provided dtype.
+
+    Args:
+        axis_groups: Sequence of AxisGroup objects describing the array structure.
+        dtype: The numpy dtype for the array. Defaults to float64 (scalar).
+
+    Returns:
+        An AnnotatedArray with the specified structure, filled with zeros.
+    """
+    dtype_obj = numpy.dtype(typing.cast(typing.Any, dtype))
+    value_type = infer_value_type(dtype_obj)
+    descriptor = ArrayDescriptor(axis_groups=tuple(axis_groups), value_type=value_type)
+    return AnnotatedArray(data=numpy.zeros(descriptor.shape, dtype=dtype_obj), descriptor=descriptor)
