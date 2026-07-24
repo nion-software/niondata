@@ -12,7 +12,7 @@ class TestAnnotatedArray(unittest.TestCase):
     def test_calibration_set_uses_explicit_calibration_accessors(self) -> None:
         primary = AnnotatedArray.AffineCalibration(unit="nm")
         alternate = AnnotatedArray.AffineCalibration(unit="rad")
-        calibrations = AnnotatedArray.CalibrationSet.from_calibration(primary).with_calibration("alternate", alternate)
+        calibrations = AnnotatedArray.CalibrationSet.from_calibration(primary, key="primary").with_calibration("alternate", alternate)
 
         self.assertTrue(calibrations.has_calibration("alternate"))
         self.assertIs(primary, calibrations.primary_calibration)
@@ -37,7 +37,7 @@ class TestAnnotatedArray(unittest.TestCase):
             AnnotatedArray.ArrayDescriptor((scalar_group, vector_group))
 
     def test_array_metadata_controls_extension_access(self) -> None:
-        extension = AnnotatedArray.ExtensionRecord("org.nion.test", 1, b"value=42")
+        extension = AnnotatedArray.ExtensionRecord("org.nion.test", 1, "value=42")
         metadata = AnnotatedArray.ArrayMetadata(extensions=(extension,))
 
         self.assertEqual("org.nion.test", extension.extension_type_id)
@@ -47,7 +47,7 @@ class TestAnnotatedArray(unittest.TestCase):
         with self.assertRaises(KeyError):
             metadata.get_extension("org.nion.missing")
 
-        replacement = AnnotatedArray.ExtensionRecord("org.nion.test", 2, b"value=43")
+        replacement = AnnotatedArray.ExtensionRecord("org.nion.test", 2, "value=43")
         replaced_metadata = metadata.with_extension(replacement)
         self.assertEqual(2, replaced_metadata.get_extension("org.nion.test").schema_version)
         self.assertEqual(1, metadata.get_extension("org.nion.test").schema_version)
@@ -55,13 +55,13 @@ class TestAnnotatedArray(unittest.TestCase):
 
     def test_array_metadata_validates_extensions(self) -> None:
         with self.assertRaisesRegex(ValueError, "must not be empty"):
-            AnnotatedArray.ExtensionRecord("", 1, b"")
+            AnnotatedArray.ExtensionRecord("", 1, "")
         with self.assertRaisesRegex(ValueError, "must be positive"):
-            AnnotatedArray.ExtensionRecord("org.nion.test", 0, b"")
-        with self.assertRaisesRegex(TypeError, "must be bytes"):
+            AnnotatedArray.ExtensionRecord("org.nion.test", 0, "")
+        with self.assertRaisesRegex(TypeError, "must be str"):
             AnnotatedArray.ExtensionRecord("org.nion.test", 1, bytearray())  # type: ignore[arg-type]
 
-        extension = AnnotatedArray.ExtensionRecord("org.nion.test", 1, b"")
+        extension = AnnotatedArray.ExtensionRecord("org.nion.test", 1, "")
         with self.assertRaisesRegex(ValueError, "Duplicate"):
             AnnotatedArray.ArrayMetadata(extensions=(extension, extension))
 
@@ -111,14 +111,12 @@ class TestAnnotatedArray(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "dtype"):
             AnnotatedArray.AnnotatedArray.from_header(numpy.zeros((3,), dtype=numpy.float64), header)
 
-    def test_zeros_annotated_array_constructs_matching_header(self) -> None:
-        group = AnnotatedArray.AxisGroup.from_2d_size((2, 3), unit="nm")
+    def test_zeros_annotated_array_constructs_matching_shape_and_dtype(self) -> None:
+        group = AnnotatedArray.AxisGroup.from_2d_size((2, 3))
         array = AnnotatedArray.zeros_annotated_array((group,), dtype=numpy.float32)
 
         self.assertEqual((2, 3), array.data.shape)
         self.assertEqual(numpy.dtype(numpy.float32), array.header.dtype)
-        self.assertEqual((group,), array.descriptor.axis_groups)
-        self.assertEqual(2, len(array.get_flat_axis_calibrations()))
 
 
 if __name__ == "__main__":

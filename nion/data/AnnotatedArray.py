@@ -18,10 +18,6 @@ import numpy
 import tzlocal
 
 
-DEFAULT_CALIBRATION_KEY = "default"
-DEFAULT_COORDINATE_MAPPING_KEY = "default"
-
-
 class ValueType:
     """Supported value types for array data."""
     SCALAR = "scalar"
@@ -96,17 +92,17 @@ class AffineCalibration(Calibration):
 
 @dataclasses.dataclass(frozen=True)
 class CalibrationSet:
-    """Keyed calibrations with an explicit primary calibration key."""
+    """Keyed calibrations with an optional primary calibration key."""
 
-    calibrations: typing.Mapping[str, Calibration] = dataclasses.field(default_factory=lambda: {DEFAULT_CALIBRATION_KEY: AffineCalibration()})
-    primary_key: str = DEFAULT_CALIBRATION_KEY
+    calibrations: typing.Mapping[str, Calibration] = dataclasses.field(default_factory=dict)
+    primary_key: str | None = None
 
     def __post_init__(self) -> None:
         calibrations = dict(self.calibrations)
-        if not calibrations:
-            raise ValueError("calibrations must not be empty")
-        if self.primary_key not in calibrations:
+        if self.primary_key is not None and self.primary_key not in calibrations:
             raise ValueError(f"primary_key {self.primary_key!r} is not present in calibrations")
+        if not calibrations and self.primary_key is not None:
+            raise ValueError("primary_key must be None when calibrations is empty")
         object.__setattr__(self, "calibrations", types.MappingProxyType(calibrations))
 
     @property
@@ -115,6 +111,8 @@ class CalibrationSet:
 
     @property
     def primary_calibration(self) -> Calibration:
+        if self.primary_key is None:
+            raise KeyError("No primary calibration is designated")
         return self.calibrations[self.primary_key]
 
     def has_calibration(self, key: str) -> bool:
@@ -122,13 +120,15 @@ class CalibrationSet:
 
     def get_calibration(self, key: str | None = None) -> Calibration:
         target_key = self.primary_key if key is None else key
+        if target_key is None:
+            raise KeyError("No primary calibration is designated")
         calibration = self.calibrations.get(target_key)
         if calibration is None:
             raise KeyError(f"Unknown calibration {target_key!r}")
         return calibration
 
     @staticmethod
-    def from_calibration(calibration: Calibration, key: str = DEFAULT_CALIBRATION_KEY) -> CalibrationSet:
+    def from_calibration(calibration: Calibration, key: str) -> CalibrationSet:
         return CalibrationSet(calibrations={key: calibration}, primary_key=key)
 
     def with_primary_calibration(self, key: str) -> CalibrationSet:
@@ -191,32 +191,20 @@ class AxisGroup:
             raise ValueError("primary_mapping_key must be None when coordinate_mappings is empty")
 
     @staticmethod
-    def from_1d_size(size: int, *, label: str = "x", unit: str | None = None) -> AxisGroup:
-        """Create a 1D axis group with one default coordinate mapping."""
-        calibration = AffineCalibration(unit=unit or "")
-        return AxisGroup(
-            axes=(Axis(label, size),),
-            coordinate_mappings={
-                DEFAULT_COORDINATE_MAPPING_KEY: CoordinateMapping(calibrations=(calibration,)),
-            },
-            primary_mapping_key=DEFAULT_COORDINATE_MAPPING_KEY,
-        )
+    def from_1d_size(size: int, *, label: str = "x") -> AxisGroup:
+        """Create a 1D axis group with no coordinate mappings."""
+        return AxisGroup(axes=(Axis(label, size),))
 
     @staticmethod
-    def from_2d_size(size: tuple[int, int], *, labels: tuple[str, str] = ("x", "y"), unit: str | None = None) -> AxisGroup:
-        """Create a 2D axis group with one default coordinate mapping."""
+    def from_2d_size(size: tuple[int, int], *, labels: tuple[str, str] = ("x", "y")) -> AxisGroup:
+        """Create a 2D axis group with no coordinate mappings."""
         size_x, size_y = size
         x_label, y_label = labels
-        calibration = AffineCalibration(unit=unit or "")
         return AxisGroup(
             axes=(
                 Axis(x_label, size_x),
                 Axis(y_label, size_y),
             ),
-            coordinate_mappings={
-                DEFAULT_COORDINATE_MAPPING_KEY: CoordinateMapping(calibrations=(calibration, calibration)),
-            },
-            primary_mapping_key=DEFAULT_COORDINATE_MAPPING_KEY,
         )
 
     @property
@@ -236,6 +224,17 @@ class AxisGroup:
     @property
     def mapping_keys(self) -> tuple[str, ...]:
         return tuple(self.coordinate_mappings.keys())
+
+    def with_coordinate_mapping(self, key: str, coordinate_mapping: CoordinateMapping) -> AxisGroup:
+        """Replace all coordinate mappings with one mapping and make it primary."""
+        return dataclasses.replace(self, coordinate_mappings={key: coordinate_mapping}, primary_mapping_key=key)
+
+    def with_added_coordinate_mapping(self, key: str, coordinate_mapping: CoordinateMapping, *, make_primary: bool = False) -> AxisGroup:
+        """Add or replace one keyed coordinate mapping."""
+        coordinate_mappings = dict(self.coordinate_mappings)
+        coordinate_mappings[key] = coordinate_mapping
+        primary_mapping_key = key if make_primary else self.primary_mapping_key
+        return dataclasses.replace(self, coordinate_mappings=coordinate_mappings, primary_mapping_key=primary_mapping_key)
 
     def get_coordinate_mapping(self, key: str | None = None) -> CoordinateMapping:
         target_key = self.primary_mapping_key if key is None else key
@@ -293,7 +292,7 @@ class ArrayDescriptor:
         return self.intensity_calibrations.calibration_keys
 
     @property
-    def primary_intensity_calibration_key(self) -> str:
+    def primary_intensity_calibration_key(self) -> str | None:
         return self.intensity_calibrations.primary_key
 
     def with_value_type(self, value_type: str) -> ArrayDescriptor:
@@ -306,15 +305,15 @@ class ExtensionRecord:
 
     extension_type_id: str
     schema_version: int
-    payload: bytes
+    payload: str
 
     def __post_init__(self) -> None:
         if not self.extension_type_id:
             raise ValueError("ExtensionRecord extension_type_id must not be empty")
         if self.schema_version < 1:
             raise ValueError("ExtensionRecord schema_version must be positive")
-        if not isinstance(self.payload, bytes):
-            raise TypeError("ExtensionRecord payload must be bytes")
+        if not isinstance(self.payload, str):
+            raise TypeError("ExtensionRecord payload must be str")
 
 
 @dataclasses.dataclass(frozen=True, init=False)
