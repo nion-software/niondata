@@ -193,13 +193,33 @@ class AxisGroup:
             raise ValueError("primary_calibration_key must be None when coordinate_calibrations is empty")
 
     @staticmethod
-    def from_1d_size(size: int, *, label: str = "x") -> AxisGroup:
-        """Create a 1D axis group with no coordinate calibrations."""
-        return AxisGroup(axes=(Axis(label, size),))
+    def from_1d_size(
+        size: int,
+        *,
+        label: str = "x",
+        coordinate_calibrations: typing.Mapping[str, CoordinateCalibration] | None = None,
+        primary_calibration_key: str | None = None,
+    ) -> AxisGroup:
+        """Create a 1D axis group with optional coordinate calibrations."""
+        calibrations: typing.Mapping[str, CoordinateCalibration] = coordinate_calibrations or {}
+
+        return AxisGroup(
+            axes=(Axis(label, size),),
+            coordinate_calibrations=calibrations,
+            primary_calibration_key=primary_calibration_key,
+        )
 
     @staticmethod
-    def from_2d_size(size: tuple[int, int], *, labels: tuple[str, str] = ("x", "y")) -> AxisGroup:
-        """Create a 2D axis group with no coordinate calibrations."""
+    def from_2d_size(
+        size: tuple[int, int],
+        *,
+        labels: tuple[str, str] = ("x", "y"),
+        coordinate_calibrations: typing.Mapping[str, CoordinateCalibration] | None = None,
+        primary_calibration_key: str | None = None,
+    ) -> AxisGroup:
+        """Create a 2D axis group with optional coordinate calibrations."""
+        calibrations: typing.Mapping[str, CoordinateCalibration] = coordinate_calibrations or {}
+
         size_x, size_y = size
         x_label, y_label = labels
         return AxisGroup(
@@ -207,6 +227,8 @@ class AxisGroup:
                 Axis(x_label, size_x),
                 Axis(y_label, size_y),
             ),
+            coordinate_calibrations=calibrations,
+            primary_calibration_key=primary_calibration_key,
         )
 
     @property

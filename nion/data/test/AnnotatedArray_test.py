@@ -30,6 +30,27 @@ class TestAnnotatedArray(unittest.TestCase):
         self.assertEqual((3, 4, 5), descriptor.shape)
         self.assertEqual(3, descriptor.ndim)
 
+    def test_axis_group_size_factories_accept_optional_coordinate_calibrations(self) -> None:
+        single_calibration = AnnotatedArray.CoordinateCalibration(calibrations=(AnnotatedArray.AffineCalibration(unit="nm"),))
+        group_1d = AnnotatedArray.AxisGroup.from_1d_size(
+            3,
+            coordinate_calibrations={"spatial": single_calibration},
+            primary_calibration_key="spatial",
+        )
+        self.assertEqual(("spatial",), group_1d.calibration_keys)
+        self.assertEqual("spatial", group_1d.primary_calibration_key)
+
+        map_calibration = AnnotatedArray.CoordinateCalibration(
+            calibrations=(AnnotatedArray.AffineCalibration(unit="nm"), AnnotatedArray.AffineCalibration(unit="nm"))
+        )
+        group_2d = AnnotatedArray.AxisGroup.from_2d_size(
+            (2, 3),
+            coordinate_calibrations={"camera": map_calibration},
+            primary_calibration_key="camera",
+        )
+        self.assertEqual(("camera",), group_2d.calibration_keys)
+        self.assertEqual("camera", group_2d.primary_calibration_key)
+
     def test_array_descriptor_requires_valid_axis_group_layout(self) -> None:
         with self.assertRaisesRegex(ValueError, "at least one"):
             AnnotatedArray.ArrayDescriptor(())
