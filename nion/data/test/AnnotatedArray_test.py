@@ -1,7 +1,10 @@
 import datetime
+import io
+import typing
 import unittest
 import zoneinfo
 
+import h5py
 import numpy
 
 from nion.data import AnnotatedArray
@@ -117,6 +120,48 @@ class TestAnnotatedArray(unittest.TestCase):
 
         self.assertEqual((2, 3), array.data.shape)
         self.assertEqual(numpy.dtype(numpy.float32), array.header.dtype)
+
+    def test_annotated_array_is_numpy_passable(self) -> None:
+        group = AnnotatedArray.AxisGroup.from_1d_size(4)
+        array = AnnotatedArray.zeros_annotated_array((group,), dtype=numpy.float64)
+
+        # AnnotatedArray itself is directly usable with numpy functions via __array__
+        self.assertEqual(0.0, float(numpy.sum(array)))
+        as_array = numpy.asarray(array)
+        self.assertIsInstance(as_array, numpy.ndarray)
+        self.assertEqual((4,), as_array.shape)
+        self.assertEqual(numpy.dtype(numpy.float64), as_array.dtype)
+
+    def test_annotated_array_data_is_numpy_passable(self) -> None:
+        group = AnnotatedArray.AxisGroup.from_2d_size((2, 3))
+        array = AnnotatedArray.zeros_annotated_array((group,), dtype=numpy.float32)
+
+        # data satisfies ArrayProtocol including __array__, so it is directly usable with numpy
+        self.assertEqual(0.0, float(numpy.sum(array.data)))
+        result = numpy.asarray(array.data)
+        self.assertIsInstance(result, numpy.ndarray)
+        self.assertEqual((2, 3), result.shape)
+        self.assertEqual(numpy.dtype(numpy.float32), result.dtype)
+
+    def test_annotated_array_accepts_h5py_dataset_as_data(self) -> None:
+        # h5py.Dataset satisfies ArrayProtocol: it exposes .shape, .dtype, and __array__.
+        # AnnotatedArray must accept it without forcing an eager copy into memory.
+        buf = io.BytesIO()
+        with h5py.File(buf, "w") as f:
+            ds = f.create_dataset("data", data=numpy.arange(6, dtype=numpy.float32).reshape(2, 3))
+            group = AnnotatedArray.AxisGroup.from_2d_size((2, 3))
+            annotated = AnnotatedArray.AnnotatedArray(ds, AnnotatedArray.ArrayDescriptor((group,)))
+
+            # shape and dtype are read directly from the dataset without materialising it
+            self.assertEqual((2, 3), annotated.data.shape)
+            self.assertEqual(numpy.dtype(numpy.float32), annotated.data.dtype)
+
+            # numpy functions work via __array__ (materialises on demand)
+            result = numpy.asarray(annotated)
+            self.assertIsInstance(result, numpy.ndarray)
+            self.assertEqual((2, 3), result.shape)
+            numpy.testing.assert_array_equal(result, numpy.arange(6, dtype=numpy.float32).reshape(2, 3))
+
 
 
 if __name__ == "__main__":

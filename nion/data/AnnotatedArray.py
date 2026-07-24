@@ -61,6 +61,8 @@ def infer_value_type(dtype: numpy.dtype) -> str:
     raise ValueError(f"Unsupported dtype {dtype} for value type inference")
 
 
+
+
 class Calibration(typing.Protocol):
     """Protocol converting between array indices and physical coordinates."""
 
@@ -156,8 +158,8 @@ class Axis:
 
 
 @dataclasses.dataclass(frozen=True)
-class CoordinateMapping:
-    """A labeled per-axis coordinate mapping for an axis group."""
+class CoordinateCalibration:
+    """A labeled per-axis coordinate calibration bundle for an axis group."""
 
     calibrations: tuple[Calibration, ...] = dataclasses.field(default_factory=tuple)
     label: str | None = None
@@ -168,36 +170,36 @@ class CoordinateMapping:
 
 @dataclasses.dataclass(frozen=True)
 class AxisGroup:
-    """An ordered group of sized axes with optional coordinate mappings."""
+    """An ordered group of sized axes with optional coordinate calibrations."""
 
     axes: tuple[Axis, ...] = dataclasses.field(default_factory=tuple)
     coordinate_system_id: str | None = None
-    coordinate_mappings: typing.Mapping[str, CoordinateMapping] = dataclasses.field(default_factory=dict)
-    primary_mapping_key: str | None = None
+    coordinate_calibrations: typing.Mapping[str, CoordinateCalibration] = dataclasses.field(default_factory=dict)
+    primary_calibration_key: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "axes", tuple(self.axes))
-        coordinate_mappings = dict(self.coordinate_mappings)
-        normalized_coordinate_mappings: dict[str, CoordinateMapping] = dict()
-        for key, mapping in coordinate_mappings.items():
-            if len(mapping.calibrations) != self.rank:
-                raise ValueError(f"coordinate mapping {key!r} rank {len(mapping.calibrations)} does not match axis group rank {self.rank}")
-            normalized_coordinate_mappings[key] = mapping
-        object.__setattr__(self, "coordinate_mappings", types.MappingProxyType(normalized_coordinate_mappings))
+        coordinate_calibrations = dict(self.coordinate_calibrations)
+        normalized_coordinate_calibrations: dict[str, CoordinateCalibration] = dict()
+        for key, coordinate_calibration in coordinate_calibrations.items():
+            if len(coordinate_calibration.calibrations) != self.rank:
+                raise ValueError(f"coordinate calibration {key!r} rank {len(coordinate_calibration.calibrations)} does not match axis group rank {self.rank}")
+            normalized_coordinate_calibrations[key] = coordinate_calibration
+        object.__setattr__(self, "coordinate_calibrations", types.MappingProxyType(normalized_coordinate_calibrations))
 
-        if self.primary_mapping_key is not None and self.primary_mapping_key not in normalized_coordinate_mappings:
-            raise ValueError(f"primary_mapping_key {self.primary_mapping_key!r} is not present in coordinate_mappings")
-        if not normalized_coordinate_mappings and self.primary_mapping_key is not None:
-            raise ValueError("primary_mapping_key must be None when coordinate_mappings is empty")
+        if self.primary_calibration_key is not None and self.primary_calibration_key not in normalized_coordinate_calibrations:
+            raise ValueError(f"primary_calibration_key {self.primary_calibration_key!r} is not present in coordinate_calibrations")
+        if not normalized_coordinate_calibrations and self.primary_calibration_key is not None:
+            raise ValueError("primary_calibration_key must be None when coordinate_calibrations is empty")
 
     @staticmethod
     def from_1d_size(size: int, *, label: str = "x") -> AxisGroup:
-        """Create a 1D axis group with no coordinate mappings."""
+        """Create a 1D axis group with no coordinate calibrations."""
         return AxisGroup(axes=(Axis(label, size),))
 
     @staticmethod
     def from_2d_size(size: tuple[int, int], *, labels: tuple[str, str] = ("x", "y")) -> AxisGroup:
-        """Create a 2D axis group with no coordinate mappings."""
+        """Create a 2D axis group with no coordinate calibrations."""
         size_x, size_y = size
         x_label, y_label = labels
         return AxisGroup(
@@ -217,36 +219,36 @@ class AxisGroup:
 
     @property
     def units(self) -> list[str]:
-        if self.primary_mapping_key is None:
+        if self.primary_calibration_key is None:
             return []
-        return [calibration.unit for calibration in self.get_coordinate_mapping().calibrations]
+        return [calibration.unit for calibration in self.get_coordinate_calibration().calibrations]
 
     @property
-    def mapping_keys(self) -> tuple[str, ...]:
-        return tuple(self.coordinate_mappings.keys())
+    def calibration_keys(self) -> tuple[str, ...]:
+        return tuple(self.coordinate_calibrations.keys())
 
-    def with_coordinate_mapping(self, key: str, coordinate_mapping: CoordinateMapping) -> AxisGroup:
-        """Replace all coordinate mappings with one mapping and make it primary."""
-        return dataclasses.replace(self, coordinate_mappings={key: coordinate_mapping}, primary_mapping_key=key)
+    def with_coordinate_calibration(self, key: str, coordinate_calibration: CoordinateCalibration) -> AxisGroup:
+        """Replace all coordinate calibrations with one calibration and make it primary."""
+        return dataclasses.replace(self, coordinate_calibrations={key: coordinate_calibration}, primary_calibration_key=key)
 
-    def with_added_coordinate_mapping(self, key: str, coordinate_mapping: CoordinateMapping, *, make_primary: bool = False) -> AxisGroup:
-        """Add or replace one keyed coordinate mapping."""
-        coordinate_mappings = dict(self.coordinate_mappings)
-        coordinate_mappings[key] = coordinate_mapping
-        primary_mapping_key = key if make_primary else self.primary_mapping_key
-        return dataclasses.replace(self, coordinate_mappings=coordinate_mappings, primary_mapping_key=primary_mapping_key)
+    def with_added_coordinate_calibration(self, key: str, coordinate_calibration: CoordinateCalibration, *, make_primary: bool = False) -> AxisGroup:
+        """Add or replace one keyed coordinate calibration."""
+        coordinate_calibrations = dict(self.coordinate_calibrations)
+        coordinate_calibrations[key] = coordinate_calibration
+        primary_calibration_key = key if make_primary else self.primary_calibration_key
+        return dataclasses.replace(self, coordinate_calibrations=coordinate_calibrations, primary_calibration_key=primary_calibration_key)
 
-    def get_coordinate_mapping(self, key: str | None = None) -> CoordinateMapping:
-        target_key = self.primary_mapping_key if key is None else key
+    def get_coordinate_calibration(self, key: str | None = None) -> CoordinateCalibration:
+        target_key = self.primary_calibration_key if key is None else key
         if target_key is None:
-            raise KeyError("No primary coordinate mapping is designated")
-        mapping = self.coordinate_mappings.get(target_key)
-        if mapping is None:
-            raise KeyError(f"Unknown coordinate mapping {target_key!r}")
-        return mapping
+            raise KeyError("No primary coordinate calibration is designated")
+        coordinate_calibration = self.coordinate_calibrations.get(target_key)
+        if coordinate_calibration is None:
+            raise KeyError(f"Unknown coordinate calibration {target_key!r}")
+        return coordinate_calibration
 
     def get_calibration(self, axis: int, key: str | None = None) -> Calibration:
-        return self.get_coordinate_mapping(key).calibrations[axis]
+        return self.get_coordinate_calibration(key).calibrations[axis]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -389,11 +391,23 @@ class ArrayHeader:
         return self.descriptor.shape
 
 
+class ArrayProtocol(typing.Protocol):
+    """Duck-array interface required by AnnotatedArray (satisfied by numpy.ndarray, h5py.Dataset, zarr.Array, etc.)."""
+
+    @property
+    def shape(self) -> tuple[int, ...]: ...
+
+    @property
+    def dtype(self) -> numpy.dtype[typing.Any]: ...
+
+    def __array__(self, dtype: typing.Any = None, /, *, copy: bool | None = None) -> numpy.typing.NDArray[typing.Any]: ...
+
+
 @dataclasses.dataclass
 class AnnotatedArray:
     """A numpy array paired with its descriptor and contextual metadata."""
 
-    data: numpy.typing.NDArray[typing.Any]
+    data: ArrayProtocol
     descriptor: ArrayDescriptor
     metadata: ArrayMetadata = dataclasses.field(default_factory=ArrayMetadata)
 
@@ -404,12 +418,16 @@ class AnnotatedArray:
         if self.descriptor.value_type != inferred_value_type:
             raise ValueError(f"Descriptor value_type {self.descriptor.value_type!r} does not match inferred value_type {inferred_value_type!r} from array dtype {self.data.dtype}")
 
+    def __array__(self, dtype: typing.Any = None, /, *, copy: bool | None = None) -> numpy.typing.NDArray[typing.Any]:
+        """Allow AnnotatedArray to be passed directly to numpy functions."""
+        return numpy.asarray(self.data, dtype=dtype, copy=copy)
+
     @property
     def header(self) -> ArrayHeader:
         return ArrayHeader(self.descriptor, self.data.dtype, self.metadata)
 
     @classmethod
-    def from_header(cls, data: numpy.typing.NDArray[typing.Any], header: ArrayHeader) -> AnnotatedArray:
+    def from_header(cls, data: ArrayProtocol, header: ArrayHeader) -> AnnotatedArray:
         if header.dtype != data.dtype:
             raise ValueError(f"Header dtype {header.dtype} does not match array dtype {data.dtype}")
         if header.descriptor.shape != data.shape:
