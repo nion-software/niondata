@@ -300,6 +300,8 @@ class ArrayDescriptor:
         return sum(axis_group.rank for axis_group in self.axis_groups)
 
     def get_intensity_calibration(self, key: str | None = None) -> Calibration:
+        if key is None and self.intensity_calibrations.primary_key is None:
+            return AffineCalibration()
         return self.intensity_calibrations.get_calibration(key)
 
     def with_primary_intensity_calibration(self, key: str) -> ArrayDescriptor:
@@ -462,8 +464,6 @@ class AnnotatedArray:
     def get_intensity_calibration(self, key: str | None = None) -> Calibration:
         return self.descriptor.get_intensity_calibration(key)
 
-    def get_flat_axis_calibrations(self, key: str | None = None) -> list[Calibration]:
-        return [axis_group.get_calibration(axis=i, key=key) for axis_group in self.descriptor.axis_groups for i in range(axis_group.rank)]
 
 
 def zeros_annotated_array(axis_groups: typing.Sequence[AxisGroup], dtype: numpy.typing.DTypeLike = numpy.float64) -> AnnotatedArray:

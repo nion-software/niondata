@@ -30,6 +30,19 @@ class TestAnnotatedArray(unittest.TestCase):
         self.assertEqual((3, 4, 5), descriptor.shape)
         self.assertEqual(3, descriptor.ndim)
 
+    def test_array_descriptor_uses_identity_intensity_calibration_when_no_primary_is_designated(self) -> None:
+        descriptor = AnnotatedArray.ArrayDescriptor((AnnotatedArray.AxisGroup.from_1d_size(3),))
+
+        calibration = descriptor.get_intensity_calibration()
+        self.assertIsInstance(calibration, AnnotatedArray.AffineCalibration)
+        affine_calibration = typing.cast(AnnotatedArray.AffineCalibration, calibration)
+        self.assertEqual(1.0, affine_calibration.scale)
+        self.assertEqual(0.0, affine_calibration.offset)
+        self.assertEqual("", affine_calibration.unit)
+
+        with self.assertRaises(KeyError):
+            descriptor.get_intensity_calibration("missing")
+
     def test_axis_group_size_factories_accept_optional_coordinate_calibrations(self) -> None:
         single_calibration = AnnotatedArray.CoordinateCalibration(calibrations=(AnnotatedArray.AffineCalibration(unit="nm"),))
         group_1d = AnnotatedArray.AxisGroup.from_1d_size(
