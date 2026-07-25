@@ -123,6 +123,15 @@ class TestAnnotatedArray(unittest.TestCase):
         self.assertEqual("America/Los_Angeles", getattr(metadata.created.tzinfo, "key", None))
         self.assertEqual(datetime.timedelta(hours=-7), metadata.created.utcoffset())
 
+    def test_array_metadata_default_created_has_iana_timezone(self) -> None:
+        # tzlocal.get_localzone() returns a zoneinfo.ZoneInfo with a proper IANA key
+        # (e.g. "America/New_York").  A plain datetime.timezone fixed-offset object
+        # would not satisfy the isinstance check and would have no .key attribute.
+        metadata = AnnotatedArray.ArrayMetadata()
+
+        self.assertIsInstance(metadata.created.tzinfo, zoneinfo.ZoneInfo)
+        self.assertIsNotNone(metadata.created.tzinfo.key)  # type: ignore[union-attr]
+
     def test_array_header_can_be_passed_without_data(self) -> None:
         descriptor = AnnotatedArray.ArrayDescriptor((AnnotatedArray.AxisGroup.from_2d_size((4, 5)),))
         metadata = AnnotatedArray.ArrayMetadata(attributes={"note": "test"})

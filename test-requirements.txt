@@ -8,3 +8,4 @@ git+https://github.com/nion-software/nionutils.git#egg=nionutils
 numpy
 scipy
 h5py
+tzlocal
