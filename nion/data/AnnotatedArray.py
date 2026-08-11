@@ -13,9 +13,12 @@ import dataclasses
 import datetime
 import typing
 import types
-
 import numpy
 import tzlocal
+import zoneinfo
+
+from nion.data import Calibration as LegacyCalibration
+from nion.data import DataAndMetadata
 
 
 class ValueType:
@@ -482,3 +485,147 @@ def zeros_annotated_array(axis_groups: typing.Sequence[AxisGroup], dtype: numpy.
     value_type = infer_value_type(dtype_obj)
     descriptor = ArrayDescriptor(axis_groups=tuple(axis_groups), value_type=value_type)
     return AnnotatedArray(data=numpy.zeros(descriptor.shape, dtype=dtype_obj), descriptor=descriptor)
+
+
+def _make_axis_group(shape: tuple[int, ...], dimensional_calibrations: tuple[typing.Any, ...]) -> AxisGroup:
+    axes = list[Axis]()
+    coordinate_calibrations = list[Calibration]()
+    for i, size in enumerate(shape):
+        calibration = dimensional_calibrations[i] if i < len(dimensional_calibrations) else None
+        if calibration is None:
+            affine_calibration = AffineCalibration()
+        else:
+            affine_calibration = AffineCalibration(calibration.scale, calibration.offset, calibration.units)
+        axes.append(Axis(str(i), size))
+        coordinate_calibrations.append(affine_calibration)
+    return AxisGroup(
+        axes=tuple(axes),
+        coordinate_calibrations={"calibrated": CoordinateCalibration(calibrations=tuple(coordinate_calibrations))} if coordinate_calibrations else {},
+        primary_calibration_key="calibrated" if coordinate_calibrations else None,
+    )
+
+
+def _parse_timezone_offset(timezone_offset: str) -> datetime.timezone | None:
+    if len(timezone_offset) != 5 or timezone_offset[0] not in ("+", "-"):
+        return None
+    if not timezone_offset[1:].isdigit():
+        return None
+    hours = int(timezone_offset[1:3])
+    minutes = int(timezone_offset[3:5])
+    delta = datetime.timedelta(hours=hours, minutes=minutes)
+    if timezone_offset[0] == "-":
+        delta = -delta
+    return datetime.timezone(delta)
+
+
+def _legacy_timestamp_to_created(
+    timestamp: datetime.datetime,
+    timezone_name: str | None,
+    timezone_offset: str | None,
+) -> datetime.datetime:
+    utc_timestamp = timestamp if timestamp.tzinfo else timestamp.replace(tzinfo=datetime.timezone.utc)
+
+    if timezone_name:
+        try:
+            return utc_timestamp.astimezone(zoneinfo.ZoneInfo(timezone_name))
+        except Exception:
+            pass
+
+    if timezone_offset:
+        timezone = _parse_timezone_offset(timezone_offset)
+        if timezone is not None:
+            return utc_timestamp.astimezone(timezone)
+
+    return utc_timestamp.astimezone(datetime.timezone.utc)
+
+
+def from_data_and_metadata(xdata: DataAndMetadata.DataAndMetadata) -> AnnotatedArray:
+    """Convert a legacy DataAndMetadata instance into an AnnotatedArray."""
+    data = xdata.data
+    if data is None:
+        raise ValueError("DataAndMetadata input data is missing.")
+
+    data_descriptor = xdata.data_descriptor
+    dimensional_calibrations = tuple(xdata.dimensional_calibrations)
+    shape = xdata.data_shape
+
+    axis_groups = list[AxisGroup]()
+    calibration_index = 0
+    shape_index = 0
+    if data_descriptor.is_sequence:
+        axis_groups.append(_make_axis_group(shape[shape_index:shape_index + 1], dimensional_calibrations[calibration_index:calibration_index + 1]))
+        calibration_index += 1
+        shape_index += 1
+    if data_descriptor.collection_dimension_count:
+        count = data_descriptor.collection_dimension_count
+        axis_groups.append(_make_axis_group(shape[shape_index:shape_index + count], dimensional_calibrations[calibration_index:calibration_index + count]))
+        calibration_index += count
+        shape_index += count
+    datum_count = data_descriptor.datum_dimension_count
+    axis_groups.append(_make_axis_group(shape[shape_index:shape_index + datum_count], dimensional_calibrations[calibration_index:calibration_index + datum_count]))
+
+    intensity_calibration = xdata.intensity_calibration
+    descriptor = ArrayDescriptor(
+        axis_groups=tuple(axis_groups),
+        intensity_calibrations=CalibrationSet.from_calibration(
+            AffineCalibration(intensity_calibration.scale, intensity_calibration.offset, intensity_calibration.units),
+            "calibrated",
+        ),
+        value_type=infer_value_type(data.dtype),
+    )
+
+    created = _legacy_timestamp_to_created(xdata.timestamp, xdata.timezone, xdata.timezone_offset)
+    metadata = ArrayMetadata(created=created, attributes=dict(xdata.metadata))
+    return AnnotatedArray(data=data, descriptor=descriptor, metadata=metadata)
+
+
+def to_data_and_metadata(annotated_array: AnnotatedArray) -> DataAndMetadata.DataAndMetadata:
+    """Convert an AnnotatedArray into a legacy DataAndMetadata instance."""
+    axis_groups = annotated_array.descriptor.axis_groups
+    if len(axis_groups) == 1:
+        is_sequence = False
+        collection_dimension_count = 0
+        datum_dimension_count = axis_groups[0].rank
+    elif len(axis_groups) == 2:
+        is_sequence = False
+        collection_dimension_count = axis_groups[0].rank
+        datum_dimension_count = axis_groups[1].rank
+    elif len(axis_groups) == 3 and axis_groups[0].rank == 1:
+        is_sequence = True
+        collection_dimension_count = axis_groups[1].rank
+        datum_dimension_count = axis_groups[2].rank
+    else:
+        raise ValueError("AnnotatedArray axis groups are incompatible with DataAndMetadata conversion.")
+
+    dimensional_calibrations = list[LegacyCalibration.Calibration]()
+    for axis_group in axis_groups:
+        for axis_index in range(axis_group.rank):
+            calibration = axis_group.get_calibration(axis_index) if axis_group.primary_calibration_key else AffineCalibration()
+            if not isinstance(calibration, AffineCalibration):
+                raise ValueError("Only affine coordinate calibrations are supported for DataAndMetadata conversion.")
+            dimensional_calibrations.append(LegacyCalibration.Calibration(calibration.offset, calibration.scale, calibration.unit))
+
+    intensity_calibration = LegacyCalibration.Calibration()
+    if annotated_array.descriptor.primary_intensity_calibration_key:
+        calibration = annotated_array.get_intensity_calibration()
+        if not isinstance(calibration, AffineCalibration):
+            raise ValueError("Only affine intensity calibrations are supported for DataAndMetadata conversion.")
+        intensity_calibration = LegacyCalibration.Calibration(calibration.offset, calibration.scale, calibration.unit)
+
+    created = annotated_array.metadata.created
+    timezone_name = typing.cast(str | None, getattr(created.tzinfo, "key", None)) or created.tzname()
+    timestamp = created.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+    timezone_offset = created.strftime("%z")
+
+    return DataAndMetadata.new_data_and_metadata(
+        data=numpy.asarray(annotated_array.data),
+        intensity_calibration=intensity_calibration,
+        dimensional_calibrations=tuple(dimensional_calibrations),
+        metadata=dict(annotated_array.metadata.attributes),
+        data_descriptor=DataAndMetadata.DataDescriptor(is_sequence, collection_dimension_count, datum_dimension_count),
+        timestamp=timestamp,
+        timezone=timezone_name,
+        timezone_offset=timezone_offset,
+    )
+
+
