@@ -5,6 +5,9 @@ Import this package as the single entry point for annotated-array related functi
     from nion.data import annotated_array as aa
 """
 
+from .primitives import fft
+from .primitives import ifft
+
 from ._implementation import AffineCalibration
 from ._implementation import AnnotatedArray
 from ._implementation import ArrayDescriptor
@@ -37,7 +40,9 @@ __all__ = [
     "CoordinateCalibration",
     "ExtensionRecord",
     "ValueType",
+    "fft",
     "from_data_and_metadata",
+    "ifft",
     "infer_value_type",
     "to_data_and_metadata",
     "zeros_annotated_array",
