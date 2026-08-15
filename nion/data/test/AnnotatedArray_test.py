@@ -7,7 +7,7 @@ import zoneinfo
 import h5py
 import numpy
 
-from nion.data import AnnotatedArray
+from nion.data import annotated_array
 from nion.data import Calibration
 from nion.data import DataAndMetadata
 
@@ -30,9 +30,9 @@ class TestAnnotatedArray(unittest.TestCase):
     )
 
     def test_calibration_set_uses_explicit_calibration_accessors(self) -> None:
-        primary = AnnotatedArray.AffineCalibration(unit="nm")
-        alternate = AnnotatedArray.AffineCalibration(unit="rad")
-        calibrations = AnnotatedArray.CalibrationSet.from_calibration(primary, key="primary").with_calibration("alternate", alternate)
+        primary = annotated_array.AffineCalibration(unit="nm")
+        alternate = annotated_array.AffineCalibration(unit="rad")
+        calibrations = annotated_array.CalibrationSet.from_calibration(primary, key="primary").with_calibration("alternate", alternate)
 
         self.assertTrue(calibrations.has_calibration("alternate"))
         self.assertIs(primary, calibrations.primary_calibration)
@@ -40,19 +40,19 @@ class TestAnnotatedArray(unittest.TestCase):
         self.assertIs(alternate, calibrations.with_primary_calibration("alternate").primary_calibration)
 
     def test_array_descriptor_describes_shape_and_rank(self) -> None:
-        collection = AnnotatedArray.AxisGroup.from_1d_size(3)
-        signal = AnnotatedArray.AxisGroup.from_2d_size((4, 5))
-        descriptor = AnnotatedArray.ArrayDescriptor((collection, signal))
+        collection = annotated_array.AxisGroup.from_1d_size(3)
+        signal = annotated_array.AxisGroup.from_2d_size((4, 5))
+        descriptor = annotated_array.ArrayDescriptor((collection, signal))
 
         self.assertEqual((3, 4, 5), descriptor.shape)
         self.assertEqual(3, descriptor.ndim)
 
     def test_array_descriptor_uses_identity_intensity_calibration_when_no_primary_is_designated(self) -> None:
-        descriptor = AnnotatedArray.ArrayDescriptor((AnnotatedArray.AxisGroup.from_1d_size(3),))
+        descriptor = annotated_array.ArrayDescriptor((annotated_array.AxisGroup.from_1d_size(3),))
 
         calibration = descriptor.get_intensity_calibration()
-        self.assertIsInstance(calibration, AnnotatedArray.AffineCalibration)
-        affine_calibration = typing.cast(AnnotatedArray.AffineCalibration, calibration)
+        self.assertIsInstance(calibration, annotated_array.AffineCalibration)
+        affine_calibration = typing.cast(annotated_array.AffineCalibration, calibration)
         self.assertEqual(1.0, affine_calibration.scale)
         self.assertEqual(0.0, affine_calibration.offset)
         self.assertEqual("", affine_calibration.unit)
@@ -61,8 +61,8 @@ class TestAnnotatedArray(unittest.TestCase):
             descriptor.get_intensity_calibration("missing")
 
     def test_axis_group_size_factories_accept_optional_coordinate_calibrations(self) -> None:
-        single_calibration = AnnotatedArray.CoordinateCalibration(calibrations=(AnnotatedArray.AffineCalibration(unit="nm"),))
-        group_1d = AnnotatedArray.AxisGroup.from_1d_size(
+        single_calibration = annotated_array.CoordinateCalibration(calibrations=(annotated_array.AffineCalibration(unit="nm"),))
+        group_1d = annotated_array.AxisGroup.from_1d_size(
             3,
             coordinate_calibrations={"spatial": single_calibration},
             primary_calibration_key="spatial",
@@ -70,10 +70,10 @@ class TestAnnotatedArray(unittest.TestCase):
         self.assertEqual(("spatial",), group_1d.calibration_keys)
         self.assertEqual("spatial", group_1d.primary_calibration_key)
 
-        map_calibration = AnnotatedArray.CoordinateCalibration(
-            calibrations=(AnnotatedArray.AffineCalibration(unit="nm"), AnnotatedArray.AffineCalibration(unit="nm"))
+        map_calibration = annotated_array.CoordinateCalibration(
+            calibrations=(annotated_array.AffineCalibration(unit="nm"), annotated_array.AffineCalibration(unit="nm"))
         )
-        group_2d = AnnotatedArray.AxisGroup.from_2d_size(
+        group_2d = annotated_array.AxisGroup.from_2d_size(
             (2, 3),
             coordinate_calibrations={"camera": map_calibration},
             primary_calibration_key="camera",
@@ -83,16 +83,16 @@ class TestAnnotatedArray(unittest.TestCase):
 
     def test_array_descriptor_requires_valid_axis_group_layout(self) -> None:
         with self.assertRaisesRegex(ValueError, "at least one"):
-            AnnotatedArray.ArrayDescriptor(())
+            annotated_array.ArrayDescriptor(())
 
-        scalar_group = AnnotatedArray.AxisGroup()
-        vector_group = AnnotatedArray.AxisGroup.from_1d_size(3)
+        scalar_group = annotated_array.AxisGroup()
+        vector_group = annotated_array.AxisGroup.from_1d_size(3)
         with self.assertRaisesRegex(ValueError, "Only the final"):
-            AnnotatedArray.ArrayDescriptor((scalar_group, vector_group))
+            annotated_array.ArrayDescriptor((scalar_group, vector_group))
 
     def test_array_metadata_controls_extension_access(self) -> None:
-        extension = AnnotatedArray.ExtensionRecord("org.nion.test", 1, "value=42")
-        metadata = AnnotatedArray.ArrayMetadata(extensions=(extension,))
+        extension = annotated_array.ExtensionRecord("org.nion.test", 1, "value=42")
+        metadata = annotated_array.ArrayMetadata(extensions=(extension,))
 
         self.assertEqual("org.nion.test", extension.extension_type_id)
         self.assertEqual(("org.nion.test",), metadata.extension_type_ids)
@@ -101,7 +101,7 @@ class TestAnnotatedArray(unittest.TestCase):
         with self.assertRaises(KeyError):
             metadata.get_extension("org.nion.missing")
 
-        replacement = AnnotatedArray.ExtensionRecord("org.nion.test", 2, "value=43")
+        replacement = annotated_array.ExtensionRecord("org.nion.test", 2, "value=43")
         replaced_metadata = metadata.with_extension(replacement)
         self.assertEqual(2, replaced_metadata.get_extension("org.nion.test").schema_version)
         self.assertEqual(1, metadata.get_extension("org.nion.test").schema_version)
@@ -109,20 +109,20 @@ class TestAnnotatedArray(unittest.TestCase):
 
     def test_array_metadata_validates_extensions(self) -> None:
         with self.assertRaisesRegex(ValueError, "must not be empty"):
-            AnnotatedArray.ExtensionRecord("", 1, "")
+            annotated_array.ExtensionRecord("", 1, "")
         with self.assertRaisesRegex(ValueError, "must be positive"):
-            AnnotatedArray.ExtensionRecord("org.nion.test", 0, "")
+            annotated_array.ExtensionRecord("org.nion.test", 0, "")
         with self.assertRaisesRegex(TypeError, "must be str"):
-            AnnotatedArray.ExtensionRecord("org.nion.test", 1, bytearray())  # type: ignore[arg-type]
+            annotated_array.ExtensionRecord("org.nion.test", 1, bytearray())  # type: ignore[arg-type]
 
-        extension = AnnotatedArray.ExtensionRecord("org.nion.test", 1, "")
+        extension = annotated_array.ExtensionRecord("org.nion.test", 1, "")
         with self.assertRaisesRegex(ValueError, "Duplicate"):
-            AnnotatedArray.ArrayMetadata(extensions=(extension, extension))
+            annotated_array.ArrayMetadata(extensions=(extension, extension))
 
     def test_array_metadata_snapshots_attributes_and_requires_timezone(self) -> None:
         source = {"note": "original"}
         created = datetime.datetime(2026, 7, 16, tzinfo=datetime.timezone.utc)
-        metadata = AnnotatedArray.ArrayMetadata(created=created, attributes=source)
+        metadata = annotated_array.ArrayMetadata(created=created, attributes=source)
         source["note"] = "changed"
 
         self.assertEqual("original", metadata.attributes["note"])
@@ -131,11 +131,11 @@ class TestAnnotatedArray(unittest.TestCase):
         with self.assertRaises(TypeError):
             metadata.attributes["note"] = "changed"  # type: ignore[index]
         with self.assertRaisesRegex(ValueError, "timezone-aware"):
-            AnnotatedArray.ArrayMetadata(created=datetime.datetime(2026, 7, 16))
+            annotated_array.ArrayMetadata(created=datetime.datetime(2026, 7, 16))
 
     def test_array_metadata_created_retains_iana_zone_and_offset(self) -> None:
         created = datetime.datetime(2026, 7, 16, 12, tzinfo=zoneinfo.ZoneInfo("America/Los_Angeles"))
-        metadata = AnnotatedArray.ArrayMetadata(created=created)
+        metadata = annotated_array.ArrayMetadata(created=created)
 
         self.assertEqual("America/Los_Angeles", getattr(metadata.created.tzinfo, "key", None))
         self.assertEqual(datetime.timedelta(hours=-7), metadata.created.utcoffset())
@@ -144,21 +144,21 @@ class TestAnnotatedArray(unittest.TestCase):
         # tzlocal.get_localzone() returns a zoneinfo.ZoneInfo with a proper IANA key
         # (e.g. "America/New_York").  A plain datetime.timezone fixed-offset object
         # would not satisfy the isinstance check and would have no .key attribute.
-        metadata = AnnotatedArray.ArrayMetadata()
+        metadata = annotated_array.ArrayMetadata()
 
         self.assertIsInstance(metadata.created.tzinfo, zoneinfo.ZoneInfo)
         self.assertIsNotNone(metadata.created.tzinfo.key)  # type: ignore[union-attr]
 
     def test_array_header_can_be_passed_without_data(self) -> None:
-        descriptor = AnnotatedArray.ArrayDescriptor((AnnotatedArray.AxisGroup.from_2d_size((4, 5)),))
-        metadata = AnnotatedArray.ArrayMetadata(attributes={"note": "test"})
-        header = AnnotatedArray.ArrayHeader(descriptor, "float32", metadata)
+        descriptor = annotated_array.ArrayDescriptor((annotated_array.AxisGroup.from_2d_size((4, 5)),))
+        metadata = annotated_array.ArrayMetadata(attributes={"note": "test"})
+        header = annotated_array.ArrayHeader(descriptor, "float32", metadata)
 
         self.assertEqual((4, 5), header.shape)
         self.assertEqual(numpy.dtype(numpy.float32), header.dtype)
 
-        first = AnnotatedArray.AnnotatedArray.from_header(numpy.zeros(header.shape, dtype=header.dtype), header)
-        second = AnnotatedArray.AnnotatedArray.from_header(numpy.ones(header.shape, dtype=header.dtype), header)
+        first = annotated_array.AnnotatedArray.from_header(numpy.zeros(header.shape, dtype=header.dtype), header)
+        second = annotated_array.AnnotatedArray.from_header(numpy.ones(header.shape, dtype=header.dtype), header)
         self.assertEqual(header, first.header)
         self.assertIsNot(header, first.header)
         self.assertEqual(first.header, second.header)
@@ -166,24 +166,24 @@ class TestAnnotatedArray(unittest.TestCase):
         self.assertIs(metadata, first.metadata)
 
     def test_annotated_array_validates_data_against_header(self) -> None:
-        descriptor = AnnotatedArray.ArrayDescriptor((AnnotatedArray.AxisGroup.from_1d_size(3),))
-        header = AnnotatedArray.ArrayHeader(descriptor, numpy.float32)
+        descriptor = annotated_array.ArrayDescriptor((annotated_array.AxisGroup.from_1d_size(3),))
+        header = annotated_array.ArrayHeader(descriptor, numpy.float32)
 
         with self.assertRaisesRegex(ValueError, "shape"):
-            AnnotatedArray.AnnotatedArray(numpy.zeros((4,), dtype=numpy.float32), descriptor)
+            annotated_array.AnnotatedArray(numpy.zeros((4,), dtype=numpy.float32), descriptor)
         with self.assertRaisesRegex(ValueError, "dtype"):
-            AnnotatedArray.AnnotatedArray.from_header(numpy.zeros((3,), dtype=numpy.float64), header)
+            annotated_array.AnnotatedArray.from_header(numpy.zeros((3,), dtype=numpy.float64), header)
 
     def test_zeros_annotated_array_constructs_matching_shape_and_dtype(self) -> None:
-        group = AnnotatedArray.AxisGroup.from_2d_size((2, 3))
-        array = AnnotatedArray.zeros_annotated_array((group,), dtype=numpy.float32)
+        group = annotated_array.AxisGroup.from_2d_size((2, 3))
+        array = annotated_array.zeros_annotated_array((group,), dtype=numpy.float32)
 
         self.assertEqual((2, 3), array.data.shape)
         self.assertEqual(numpy.dtype(numpy.float32), array.header.dtype)
 
     def test_annotated_array_is_numpy_passable(self) -> None:
-        group = AnnotatedArray.AxisGroup.from_1d_size(4)
-        array = AnnotatedArray.zeros_annotated_array((group,), dtype=numpy.float64)
+        group = annotated_array.AxisGroup.from_1d_size(4)
+        array = annotated_array.zeros_annotated_array((group,), dtype=numpy.float64)
 
         # AnnotatedArray itself is directly usable with numpy functions via __array__
         self.assertEqual(0.0, float(numpy.sum(array)))
@@ -193,8 +193,8 @@ class TestAnnotatedArray(unittest.TestCase):
         self.assertEqual(numpy.dtype(numpy.float64), as_array.dtype)
 
     def test_annotated_array_data_is_numpy_passable(self) -> None:
-        group = AnnotatedArray.AxisGroup.from_2d_size((2, 3))
-        array = AnnotatedArray.zeros_annotated_array((group,), dtype=numpy.float32)
+        group = annotated_array.AxisGroup.from_2d_size((2, 3))
+        array = annotated_array.zeros_annotated_array((group,), dtype=numpy.float32)
 
         # data satisfies ArrayProtocol including __array__, so it is directly usable with numpy
         self.assertEqual(0.0, float(numpy.sum(array.data)))
@@ -209,8 +209,8 @@ class TestAnnotatedArray(unittest.TestCase):
         buf = io.BytesIO()
         with h5py.File(buf, "w") as f:
             ds = f.create_dataset("data", data=numpy.arange(6, dtype=numpy.float32).reshape(2, 3))
-            group = AnnotatedArray.AxisGroup.from_2d_size((2, 3))
-            annotated = AnnotatedArray.AnnotatedArray(ds, AnnotatedArray.ArrayDescriptor((group,)))
+            group = annotated_array.AxisGroup.from_2d_size((2, 3))
+            annotated = annotated_array.AnnotatedArray(ds, annotated_array.ArrayDescriptor((group,)))
 
             # shape and dtype are read directly from the dataset without materialising it
             self.assertEqual((2, 3), annotated.data.shape)
@@ -223,12 +223,12 @@ class TestAnnotatedArray(unittest.TestCase):
             numpy.testing.assert_array_equal(result, numpy.arange(6, dtype=numpy.float32).reshape(2, 3))
 
     def test_from_data_and_metadata_covers_sequence_collection_and_datum_variations(self) -> None:
-        def flatten_affine_calibrations(annotated_array: AnnotatedArray.AnnotatedArray) -> tuple[AnnotatedArray.AffineCalibration, ...]:
-            calibrations = list[AnnotatedArray.AffineCalibration]()
-            for axis_group in annotated_array.descriptor.axis_groups:
+        def flatten_affine_calibrations(array_value: annotated_array.AnnotatedArray) -> tuple[annotated_array.AffineCalibration, ...]:
+            calibrations = list[annotated_array.AffineCalibration]()
+            for axis_group in array_value.descriptor.axis_groups:
                 for axis_index in range(axis_group.rank):
-                    calibration = axis_group.get_calibration(axis_index) if axis_group.primary_calibration_key else AnnotatedArray.AffineCalibration()
-                    calibrations.append(typing.cast(AnnotatedArray.AffineCalibration, calibration))
+                    calibration = axis_group.get_calibration(axis_index) if axis_group.primary_calibration_key else annotated_array.AffineCalibration()
+                    calibrations.append(typing.cast(annotated_array.AffineCalibration, calibration))
             return tuple(calibrations)
 
         for is_sequence, collection_rank, datum_rank in self._descriptor_variants:
@@ -248,11 +248,11 @@ class TestAnnotatedArray(unittest.TestCase):
                     timezone_offset="-0700",
                 )
 
-                annotated = AnnotatedArray.from_data_and_metadata(xdata)
+                annotated = annotated_array.from_data_and_metadata(xdata)
                 expected_axis_group_ranks = (1, datum_rank) if is_sequence and collection_rank == 0 else (1, collection_rank, datum_rank) if is_sequence else (datum_rank,) if collection_rank == 0 else (collection_rank, datum_rank)
                 self.assertEqual(expected_axis_group_ranks, tuple(axis_group.rank for axis_group in annotated.descriptor.axis_groups))
                 self.assertEqual(xdata.data_shape, annotated.descriptor.shape)
-                self.assertEqual("counts", typing.cast(AnnotatedArray.AffineCalibration, annotated.get_intensity_calibration()).unit)
+                self.assertEqual("counts", typing.cast(annotated_array.AffineCalibration, annotated.get_intensity_calibration()).unit)
 
                 flattened_annotated_calibrations = flatten_affine_calibrations(annotated)
                 self.assertEqual(len(xdata.dimensional_calibrations), len(flattened_annotated_calibrations))
@@ -265,12 +265,12 @@ class TestAnnotatedArray(unittest.TestCase):
                 self.assertEqual(xdata.metadata["descriptor_variant"], annotated.metadata.attributes["descriptor_variant"])
 
     def test_to_data_and_metadata_covers_sequence_collection_and_datum_variations(self) -> None:
-        def flatten_affine_calibrations(annotated_array: AnnotatedArray.AnnotatedArray) -> tuple[AnnotatedArray.AffineCalibration, ...]:
-            calibrations = list[AnnotatedArray.AffineCalibration]()
-            for axis_group in annotated_array.descriptor.axis_groups:
+        def flatten_affine_calibrations(array_value: annotated_array.AnnotatedArray) -> tuple[annotated_array.AffineCalibration, ...]:
+            calibrations = list[annotated_array.AffineCalibration]()
+            for axis_group in array_value.descriptor.axis_groups:
                 for axis_index in range(axis_group.rank):
-                    calibration = axis_group.get_calibration(axis_index) if axis_group.primary_calibration_key else AnnotatedArray.AffineCalibration()
-                    calibrations.append(typing.cast(AnnotatedArray.AffineCalibration, calibration))
+                    calibration = axis_group.get_calibration(axis_index) if axis_group.primary_calibration_key else annotated_array.AffineCalibration()
+                    calibrations.append(typing.cast(annotated_array.AffineCalibration, calibration))
             return tuple(calibrations)
 
         for is_sequence, collection_rank, datum_rank in self._descriptor_variants:
@@ -283,42 +283,42 @@ class TestAnnotatedArray(unittest.TestCase):
                 dim_sizes = tuple(range(2, 2 + sum(expected_axis_group_ranks)))
 
                 dim_index = 0
-                axis_groups = list[AnnotatedArray.AxisGroup]()
+                axis_groups = list[annotated_array.AxisGroup]()
                 for axis_group_rank in expected_axis_group_ranks:
-                    axes = list[AnnotatedArray.Axis]()
-                    calibrations = list[AnnotatedArray.AffineCalibration]()
+                    axes = list[annotated_array.Axis]()
+                    calibrations = list[annotated_array.AffineCalibration]()
                     for _ in range(axis_group_rank):
                         size = dim_sizes[dim_index]
                         calibration_index = dim_index
-                        axes.append(AnnotatedArray.Axis(label=f"a{calibration_index}", size=size))
-                        calibrations.append(AnnotatedArray.AffineCalibration(offset=calibration_index + 0.5, scale=calibration_index + 1.25, unit=f"ua{calibration_index}"))
+                        axes.append(annotated_array.Axis(label=f"a{calibration_index}", size=size))
+                        calibrations.append(annotated_array.AffineCalibration(offset=calibration_index + 0.5, scale=calibration_index + 1.25, unit=f"ua{calibration_index}"))
                         dim_index += 1
                     axis_groups.append(
-                        AnnotatedArray.AxisGroup(
+                        annotated_array.AxisGroup(
                             axes=tuple(axes),
-                            coordinate_calibrations={"calibrated": AnnotatedArray.CoordinateCalibration(calibrations=tuple(calibrations))},
+                            coordinate_calibrations={"calibrated": annotated_array.CoordinateCalibration(calibrations=tuple(calibrations))},
                             primary_calibration_key="calibrated",
                         )
                     )
 
-                descriptor = AnnotatedArray.ArrayDescriptor(
+                descriptor = annotated_array.ArrayDescriptor(
                     axis_groups=tuple(axis_groups),
-                    intensity_calibrations=AnnotatedArray.CalibrationSet.from_calibration(
-                        AnnotatedArray.AffineCalibration(offset=4.0, scale=2.0, unit="counts"),
+                    intensity_calibrations=annotated_array.CalibrationSet.from_calibration(
+                        annotated_array.AffineCalibration(offset=4.0, scale=2.0, unit="counts"),
                         "calibrated",
                     ),
                 )
-                metadata = AnnotatedArray.ArrayMetadata(
+                metadata = annotated_array.ArrayMetadata(
                     created=datetime.datetime(2026, 7, 16, 12, tzinfo=zoneinfo.ZoneInfo("America/Los_Angeles")),
                     attributes={"descriptor_variant": f"annotated-{int(is_sequence)}-{collection_rank}-{datum_rank}"},
                 )
-                annotated = AnnotatedArray.AnnotatedArray(
+                annotated = annotated_array.AnnotatedArray(
                     data=numpy.arange(int(numpy.prod(dim_sizes)), dtype=numpy.float32).reshape(dim_sizes),
                     descriptor=descriptor,
                     metadata=metadata,
                 )
 
-                xdata = AnnotatedArray.to_data_and_metadata(annotated)
+                xdata = annotated_array.to_data_and_metadata(annotated)
                 self.assertEqual(is_sequence, xdata.is_sequence)
                 self.assertEqual(collection_rank, xdata.collection_dimension_count)
                 self.assertEqual(datum_rank, xdata.datum_dimension_count)
@@ -333,7 +333,7 @@ class TestAnnotatedArray(unittest.TestCase):
                         self.assertEqual(annotated_calibration.scale, legacy_calibration.scale)
                         self.assertEqual(annotated_calibration.unit, legacy_calibration.units)
 
-                round_tripped = AnnotatedArray.from_data_and_metadata(xdata)
+                round_tripped = annotated_array.from_data_and_metadata(xdata)
                 self.assertEqual(tuple(axis_group.rank for axis_group in annotated.descriptor.axis_groups), tuple(axis_group.rank for axis_group in round_tripped.descriptor.axis_groups))
                 self.assertEqual(annotated.descriptor.shape, round_tripped.descriptor.shape)
                 self.assertEqual(annotated.metadata.attributes["descriptor_variant"], round_tripped.metadata.attributes["descriptor_variant"])
@@ -354,18 +354,15 @@ class TestAnnotatedArray(unittest.TestCase):
             timezone_offset="-0700",
         )
 
-        annotated = AnnotatedArray.from_data_and_metadata(xdata)
+        annotated = annotated_array.from_data_and_metadata(xdata)
         self.assertEqual("America/Los_Angeles", getattr(annotated.metadata.created.tzinfo, "key", None))
         self.assertEqual(datetime.timedelta(hours=-7), annotated.metadata.created.utcoffset())
 
-        round_tripped = AnnotatedArray.to_data_and_metadata(annotated)
+        round_tripped = annotated_array.to_data_and_metadata(annotated)
         self.assertEqual(xdata.timestamp, round_tripped.timestamp)
         self.assertEqual("America/Los_Angeles", round_tripped.timezone)
         self.assertEqual("-0700", round_tripped.timezone_offset)
 
 
-
 if __name__ == "__main__":
     unittest.main()
-
-
