@@ -264,6 +264,38 @@ class TestAnnotatedArray(unittest.TestCase):
 
                 self.assertEqual(xdata.metadata["descriptor_variant"], annotated.metadata.attributes["descriptor_variant"])
 
+    def test_collapse_scalar_axis_groups_drops_rank_zero_groups(self) -> None:
+        xdata = DataAndMetadata.new_data_and_metadata(
+            data=numpy.arange(16, dtype=numpy.float32),
+            data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 0),
+        )
+        annotated = annotated_array.from_data_and_metadata(xdata)
+        self.assertEqual((1, 0), tuple(axis_group.rank for axis_group in annotated.descriptor.axis_groups))
+
+        collapsed = annotated_array.collapse_scalar_axis_groups(annotated)
+        self.assertEqual((1,), tuple(axis_group.rank for axis_group in collapsed.descriptor.axis_groups))
+        self.assertEqual(annotated.descriptor.shape, collapsed.descriptor.shape)
+
+    def test_collapse_scalar_axis_groups_keeps_single_scalar_group(self) -> None:
+        scalar_descriptor = annotated_array.ArrayDescriptor((annotated_array.AxisGroup(),))
+        scalar_array = annotated_array.AnnotatedArray(data=numpy.asarray(5.0), descriptor=scalar_descriptor)
+
+        collapsed = annotated_array.collapse_scalar_axis_groups(scalar_array)
+        self.assertEqual(1, len(collapsed.descriptor.axis_groups))
+        self.assertEqual(0, collapsed.descriptor.axis_groups[0].rank)
+
+    def test_from_data_and_metadata_optional_collapse_scalar_axis_groups(self) -> None:
+        xdata = DataAndMetadata.new_data_and_metadata(
+            data=numpy.arange(16, dtype=numpy.float32),
+            data_descriptor=DataAndMetadata.DataDescriptor(True, 0, 0),
+        )
+
+        annotated = annotated_array.from_data_and_metadata(xdata)
+        collapsed = annotated_array.from_data_and_metadata(xdata, collapse_scalar_axis_groups=True)
+
+        self.assertEqual((1, 0), tuple(axis_group.rank for axis_group in annotated.descriptor.axis_groups))
+        self.assertEqual((1,), tuple(axis_group.rank for axis_group in collapsed.descriptor.axis_groups))
+
     def test_to_data_and_metadata_covers_sequence_collection_and_datum_variations(self) -> None:
         def flatten_affine_calibrations(array_value: annotated_array.AnnotatedArray) -> tuple[annotated_array.AffineCalibration, ...]:
             calibrations = list[annotated_array.AffineCalibration]()

@@ -18,6 +18,7 @@ from ._implementation import Axis
 from ._implementation import AxisGroup
 from ._implementation import Calibration
 from ._implementation import CalibrationSet
+from ._implementation import collapse_scalar_axis_groups
 from ._implementation import CoordinateCalibration
 from ._implementation import ExtensionRecord
 from ._implementation import ValueType
@@ -37,6 +38,7 @@ __all__ = [
     "AxisGroup",
     "Calibration",
     "CalibrationSet",
+    "collapse_scalar_axis_groups",
     "CoordinateCalibration",
     "ExtensionRecord",
     "ValueType",
