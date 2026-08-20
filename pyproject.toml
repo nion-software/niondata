@@ -28,7 +28,7 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["nion", "nion.data", "nion.data.test"]
+include = ["nion", "nion.data", "nion.data.annotated_array", "nion.data.test"]
 
 [tool.setuptools.package-data]
 "nion.data" = ["py.typed"]
