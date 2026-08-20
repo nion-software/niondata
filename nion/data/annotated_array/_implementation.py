@@ -539,7 +539,35 @@ def _legacy_timestamp_to_created(
     return utc_timestamp.astimezone(datetime.timezone.utc)
 
 
-def from_data_and_metadata(xdata: DataAndMetadata.DataAndMetadata) -> AnnotatedArray:
+def _collapse_scalar_axis_groups_for_descriptor(descriptor: ArrayDescriptor) -> ArrayDescriptor:
+    non_scalar_axis_groups = tuple(axis_group for axis_group in descriptor.axis_groups if axis_group.rank > 0)
+    if len(non_scalar_axis_groups) == len(descriptor.axis_groups):
+        return descriptor
+
+    axis_groups = non_scalar_axis_groups if non_scalar_axis_groups else (AxisGroup(),)
+    return ArrayDescriptor(
+        axis_groups=axis_groups,
+        intensity_calibrations=descriptor.intensity_calibrations,
+        value_type=descriptor.value_type,
+    )
+
+
+def collapse_scalar_axis_groups(array: AnnotatedArray) -> AnnotatedArray:
+    """Return an AnnotatedArray with rank-0 axis groups removed.
+
+    If every axis group is scalar, a single scalar group is retained.
+    """
+    collapsed_descriptor = _collapse_scalar_axis_groups_for_descriptor(array.descriptor)
+    if collapsed_descriptor == array.descriptor:
+        return array
+    return AnnotatedArray(data=array.data, descriptor=collapsed_descriptor, metadata=array.metadata)
+
+
+def from_data_and_metadata(
+    xdata: DataAndMetadata.DataAndMetadata,
+    *,
+    collapse_scalar_axis_groups: bool = False,
+) -> AnnotatedArray:
     """Convert a legacy DataAndMetadata instance into an AnnotatedArray."""
     data = xdata.data
     if data is None:
@@ -576,7 +604,12 @@ def from_data_and_metadata(xdata: DataAndMetadata.DataAndMetadata) -> AnnotatedA
 
     created = _legacy_timestamp_to_created(xdata.timestamp, xdata.timezone, xdata.timezone_offset)
     metadata = ArrayMetadata(created=created, attributes=dict(xdata.metadata))
-    return AnnotatedArray(data=data, descriptor=descriptor, metadata=metadata)
+    annotated_array = AnnotatedArray(data=data, descriptor=descriptor, metadata=metadata)
+    if collapse_scalar_axis_groups:
+        collapsed_descriptor = _collapse_scalar_axis_groups_for_descriptor(annotated_array.descriptor)
+        if collapsed_descriptor != annotated_array.descriptor:
+            return AnnotatedArray(data=annotated_array.data, descriptor=collapsed_descriptor, metadata=annotated_array.metadata)
+    return annotated_array
 
 
 def to_data_and_metadata(annotated_array: AnnotatedArray) -> DataAndMetadata.DataAndMetadata:
