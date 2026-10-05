@@ -1129,31 +1129,56 @@ def function_crop_rotated(data_and_metadata_in: _DataAndMetadataLike, bounds: No
 
 
 def function_crop_interval(data_and_metadata_in: _DataAndMetadataLike, interval: NormIntervalType) -> DataAndMetadata.DataAndMetadata:
+    """Crop the datum dimension of data with a one dimensional datum to an interval.
+
+    The interval is given in fractions of the datum length and may extend past either end of the data, or lie entirely
+    outside it; the parts of the result outside the data are filled with zeros. The result always has the length of
+    the interval. The ends of the interval may be given in either order. Collection and sequence dimensions are left
+    unchanged.
+
+    Returns the cropped data with the datum calibration offset adjusted to the start of the interval.
+
+    Raises ValueError if the data is invalid or the datum is not one dimensional.
+    """
     data_and_metadata = DataAndMetadata.promote_ndarray(data_and_metadata_in)
 
-    data_shape = data_and_metadata.data_shape
+    data = data_and_metadata._data_ex
 
-    def calculate_data() -> _ImageDataType:
-        data = data_and_metadata._data_ex
-        data_shape = data_and_metadata.data_shape
-        interval_int = int(data_shape[0] * interval[0]), int(data_shape[0] * interval[1])
-        return data[interval_int[0]:interval_int[1]].copy()
-
-    dimensional_calibrations = data_and_metadata.dimensional_calibrations
-
-    if not Image.is_data_valid(data_and_metadata.data):
+    if not Image.is_data_valid(data):
         raise ValueError("Crop interval: invalid data")
 
-    interval_int = int(data_shape[0] * interval[0]), int(data_shape[0] * interval[1])
+    data_descriptor = data_and_metadata.data_descriptor
 
-    cropped_dimensional_calibrations = list()
-    dimensional_calibration = dimensional_calibrations[0]
-    cropped_calibration = Calibration.Calibration(
-        dimensional_calibration.offset + data_shape[0] * interval_int[0] * dimensional_calibration.scale,
-        dimensional_calibration.scale, dimensional_calibration.units)
-    cropped_dimensional_calibrations.append(cropped_calibration)
+    if data_descriptor.datum_dimension_count != 1:
+        raise ValueError("Crop interval: datum must be one dimensional")
 
-    return DataAndMetadata.new_data_and_metadata(data=calculate_data(), intensity_calibration=data_and_metadata.intensity_calibration, dimensional_calibrations=cropped_dimensional_calibrations)
+    datum_index = data_descriptor.datum_dimension_indexes[0]
+    datum_length = data.shape[datum_index]
+
+    # rounding both ends lets adjacent intervals tile without gaps or overlaps.
+    start = round(datum_length * min(interval))
+    end = round(datum_length * max(interval))
+
+    new_shape = list(data.shape)
+    new_shape[datum_index] = end - start
+    new_data: _ImageDataType = numpy.zeros(new_shape, dtype=data.dtype)
+
+    # copy the part of the interval which overlaps the data, if any.
+    source_start = max(start, 0)
+    source_end = min(end, datum_length)
+    if source_end > source_start:
+        source_slices = [slice(None)] * data.ndim
+        source_slices[datum_index] = slice(source_start, source_end)
+        destination_slices = [slice(None)] * data.ndim
+        destination_slices[datum_index] = slice(source_start - start, source_end - start)
+        new_data[tuple(destination_slices)] = data[tuple(source_slices)]
+
+    cropped_dimensional_calibrations = list(data_and_metadata.dimensional_calibrations)
+    datum_calibration = cropped_dimensional_calibrations[datum_index]
+    cropped_dimensional_calibrations[datum_index] = Calibration.Calibration(datum_calibration.offset + start * datum_calibration.scale, datum_calibration.scale, datum_calibration.units)
+
+    return DataAndMetadata.new_data_and_metadata(data=new_data, intensity_calibration=data_and_metadata.intensity_calibration,
+                                                 dimensional_calibrations=cropped_dimensional_calibrations, data_descriptor=data_descriptor)
 
 
 def function_slice_sum(data_and_metadata_in: _DataAndMetadataLike, slice_center: int, slice_width: int) -> DataAndMetadata.DataAndMetadata:

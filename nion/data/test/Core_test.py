@@ -918,6 +918,74 @@ class TestCore(unittest.TestCase):
         result = Core.function_crop_rotated(xdata, ((0.5, 0.5), (1 / 49, 115 / 163)), -0.8096358402621856)
         self.assertEqual((1, 115), result.data_shape)
 
+    def test_crop_interval_inside_data_preserves_calibrated_positions(self) -> None:
+        xdata = DataAndMetadata.new_data_and_metadata(data=numpy.arange(1, 101, dtype=numpy.float32), intensity_calibration=Calibration.Calibration(units="counts"),
+                                                      dimensional_calibrations=[Calibration.Calibration(10, 2, "eV")])
+        result = Core.function_crop_interval(xdata, (0.25, 0.75))
+        self.assertEqual((50,), result.data_shape)
+        self.assertTrue(numpy.array_equal(numpy.arange(26, 76), result.data))
+        self.assertEqual(Calibration.Calibration(60, 2, "eV"), result.dimensional_calibrations[0])
+        self.assertEqual(xdata.intensity_calibration, result.intensity_calibration)
+
+    def test_crop_interval_overlapping_start_pads_with_zeros(self) -> None:
+        xdata = DataAndMetadata.new_data_and_metadata(data=numpy.arange(1, 101, dtype=numpy.float32), dimensional_calibrations=[Calibration.Calibration(10, 2, "eV")])
+        result = Core.function_crop_interval(xdata, (-0.1, 0.5))
+        self.assertEqual((60,), result.data_shape)
+        self.assertTrue(numpy.array_equal(numpy.zeros(10), result.data[:10]))
+        self.assertTrue(numpy.array_equal(numpy.arange(1, 51), result.data[10:]))
+        self.assertEqual(Calibration.Calibration(-10, 2, "eV"), result.dimensional_calibrations[0])
+
+    def test_crop_interval_overlapping_end_pads_with_zeros(self) -> None:
+        xdata = DataAndMetadata.new_data_and_metadata(data=numpy.arange(1, 101, dtype=numpy.float32), dimensional_calibrations=[Calibration.Calibration(10, 2, "eV")])
+        result = Core.function_crop_interval(xdata, (0.8, 1.2))
+        self.assertEqual((40,), result.data_shape)
+        self.assertTrue(numpy.array_equal(numpy.arange(81, 101), result.data[:20]))
+        self.assertTrue(numpy.array_equal(numpy.zeros(20), result.data[20:]))
+        self.assertEqual(Calibration.Calibration(170, 2, "eV"), result.dimensional_calibrations[0])
+
+    def test_crop_interval_containing_data_pads_both_ends(self) -> None:
+        xdata = DataAndMetadata.new_data_and_metadata(data=numpy.arange(1, 101, dtype=numpy.float32), dimensional_calibrations=[Calibration.Calibration(10, 2, "eV")])
+        result = Core.function_crop_interval(xdata, (-0.5, 1.5))
+        self.assertEqual((200,), result.data_shape)
+        self.assertTrue(numpy.array_equal(numpy.zeros(50), result.data[:50]))
+        self.assertTrue(numpy.array_equal(numpy.arange(1, 101), result.data[50:150]))
+        self.assertTrue(numpy.array_equal(numpy.zeros(50), result.data[150:]))
+        self.assertEqual(Calibration.Calibration(-90, 2, "eV"), result.dimensional_calibrations[0])
+
+    def test_crop_interval_entirely_outside_data_is_zeros(self) -> None:
+        xdata = DataAndMetadata.new_data_and_metadata(data=numpy.arange(1, 101, dtype=numpy.float32), dimensional_calibrations=[Calibration.Calibration(10, 2, "eV")])
+        result = Core.function_crop_interval(xdata, (-0.5, -0.2))
+        self.assertEqual((30,), result.data_shape)
+        self.assertTrue(numpy.array_equal(numpy.zeros(30), result.data))
+        self.assertEqual(Calibration.Calibration(-90, 2, "eV"), result.dimensional_calibrations[0])
+        result = Core.function_crop_interval(xdata, (1.2, 1.5))
+        self.assertEqual((30,), result.data_shape)
+        self.assertTrue(numpy.array_equal(numpy.zeros(30), result.data))
+        self.assertEqual(Calibration.Calibration(250, 2, "eV"), result.dimensional_calibrations[0])
+
+    def test_crop_interval_with_reversed_ends_matches_ordered_interval(self) -> None:
+        xdata = DataAndMetadata.new_data_and_metadata(data=numpy.arange(1, 101, dtype=numpy.float32), dimensional_calibrations=[Calibration.Calibration(10, 2, "eV")])
+        ordered_result = Core.function_crop_interval(xdata, (-0.1, 0.5))
+        reversed_result = Core.function_crop_interval(xdata, (0.5, -0.1))
+        self.assertTrue(numpy.array_equal(ordered_result.data, reversed_result.data))
+        self.assertEqual(ordered_result.dimensional_calibrations, reversed_result.dimensional_calibrations)
+
+    def test_crop_interval_on_collection_crops_datum_dimension(self) -> None:
+        data = numpy.tile(numpy.arange(1, 101, dtype=numpy.float32), (4, 1))
+        dimensional_calibrations = [Calibration.Calibration(5, 3, "nm"), Calibration.Calibration(10, 2, "eV")]
+        xdata = DataAndMetadata.new_data_and_metadata(data=data, dimensional_calibrations=dimensional_calibrations, data_descriptor=DataAndMetadata.DataDescriptor(False, 1, 1))
+        result = Core.function_crop_interval(xdata, (0.9, 1.1))
+        self.assertEqual((4, 20), result.data_shape)
+        self.assertEqual(xdata.data_descriptor, result.data_descriptor)
+        self.assertTrue(numpy.array_equal(numpy.tile(numpy.arange(91, 101), (4, 1)), result.data[:, :10]))
+        self.assertTrue(numpy.array_equal(numpy.zeros((4, 10)), result.data[:, 10:]))
+        self.assertEqual(Calibration.Calibration(5, 3, "nm"), result.dimensional_calibrations[0])
+        self.assertEqual(Calibration.Calibration(190, 2, "eV"), result.dimensional_calibrations[1])
+
+    def test_crop_interval_rejects_two_dimensional_datum(self) -> None:
+        xdata = DataAndMetadata.new_data_and_metadata(data=numpy.ones((16, 16), numpy.float32))
+        with self.assertRaises(ValueError):
+            Core.function_crop_interval(xdata, (0.25, 0.75))
     def test_redimension_basic_functionality(self) -> None:
         data: numpy.typing.NDArray[numpy.int32] = numpy.ones((100, 100), dtype=numpy.int32)
         xdata = DataAndMetadata.new_data_and_metadata(data=data)
