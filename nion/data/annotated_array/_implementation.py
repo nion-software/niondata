@@ -563,15 +563,57 @@ def collapse_scalar_axis_groups(array: AnnotatedArray) -> AnnotatedArray:
     return AnnotatedArray(data=array.data, descriptor=collapsed_descriptor, metadata=array.metadata)
 
 
+# Legacy RGB and RGBA data stores its channels on a trailing uint8 axis in blue, green, red, alpha order. These dtypes
+# have the same memory layout, so one is a view of the other.
+_LEGACY_RGB_DTYPE = numpy.dtype([("b", numpy.uint8), ("g", numpy.uint8), ("r", numpy.uint8)])
+_LEGACY_RGBA_DTYPE = numpy.dtype([("b", numpy.uint8), ("g", numpy.uint8), ("r", numpy.uint8), ("a", numpy.uint8)])
+
+
+def _legacy_rgb_to_structured(data: numpy.typing.NDArray[typing.Any]) -> numpy.typing.NDArray[typing.Any]:
+    """Return legacy RGB or RGBA data of shape (..., 3) or (..., 4) as a structured array of shape (...).
+
+    The result is a view of the data unless the channel axis is not contiguous, which a view cannot describe.
+    """
+    structured_dtype = _LEGACY_RGBA_DTYPE if data.shape[-1] == 4 else _LEGACY_RGB_DTYPE
+    if data.strides[-1] != data.itemsize:
+        data = numpy.ascontiguousarray(data)
+    return data.view(structured_dtype)[..., 0]
+
+
+def _structured_rgb_to_legacy(data: numpy.typing.NDArray[typing.Any], value_type: str) -> numpy.typing.NDArray[typing.Any]:
+    """Return RGB or RGBA structured data of shape (...) as legacy uint8 data of shape (..., 3) or (..., 4).
+
+    The result is a view of the data when its fields are uint8 in blue, green, red, alpha order, and a copy otherwise.
+
+    Raises:
+        ValueError: If a field is not uint8, since legacy RGB data is uint8.
+    """
+    legacy_dtype = _LEGACY_RGBA_DTYPE if value_type == ValueType.RGBA else _LEGACY_RGB_DTYPE
+    if data.dtype != legacy_dtype:
+        assert legacy_dtype.names is not None
+        if any(data.dtype[name] != numpy.dtype(numpy.uint8) for name in legacy_dtype.names):
+            raise ValueError(f"Only uint8 {value_type} data is supported for DataAndMetadata conversion, got {data.dtype}.")
+        reordered_data = numpy.empty(data.shape, legacy_dtype)
+        for name in legacy_dtype.names:
+            reordered_data[name] = data[name]
+        data = reordered_data
+    return data[..., numpy.newaxis].view(numpy.uint8)
+
+
 def from_data_and_metadata(
     xdata: DataAndMetadata.DataAndMetadata,
     *,
     collapse_scalar_axis_groups: bool = False,
 ) -> AnnotatedArray:
-    """Convert a legacy DataAndMetadata instance into an AnnotatedArray."""
+    """Convert a legacy DataAndMetadata instance into an AnnotatedArray.
+
+    Legacy RGB and RGBA data becomes the RGB or RGBA value type, as a view of the legacy data where possible.
+    """
     data = xdata.data
     if data is None:
         raise ValueError("DataAndMetadata input data is missing.")
+    if xdata.is_data_rgb_type:
+        data = _legacy_rgb_to_structured(numpy.asarray(data))
 
     data_descriptor = xdata.data_descriptor
     dimensional_calibrations = tuple(xdata.dimensional_calibrations)
@@ -613,7 +655,18 @@ def from_data_and_metadata(
 
 
 def to_data_and_metadata(annotated_array: AnnotatedArray) -> DataAndMetadata.DataAndMetadata:
-    """Convert an AnnotatedArray into a legacy DataAndMetadata instance."""
+    """Convert an AnnotatedArray into a legacy DataAndMetadata instance.
+
+    The RGB and RGBA value types become legacy uint8 data with a trailing blue, green, red (and alpha) channel axis.
+
+    Raises:
+        ValueError: If the axis groups, calibrations or value type have no legacy equivalent.
+    """
+    data = numpy.asarray(annotated_array.data)
+    value_type = annotated_array.descriptor.value_type
+    if value_type in (ValueType.RGB, ValueType.RGBA):
+        data = _structured_rgb_to_legacy(data, value_type)
+
     axis_groups = annotated_array.descriptor.axis_groups
     if len(axis_groups) == 1:
         is_sequence = False
@@ -651,7 +704,7 @@ def to_data_and_metadata(annotated_array: AnnotatedArray) -> DataAndMetadata.Dat
     timezone_offset = created.strftime("%z")
 
     return DataAndMetadata.new_data_and_metadata(
-        data=numpy.asarray(annotated_array.data),
+        data=data,
         intensity_calibration=intensity_calibration,
         dimensional_calibrations=tuple(dimensional_calibrations),
         metadata=dict(annotated_array.metadata.attributes),
