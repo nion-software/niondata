@@ -371,6 +371,58 @@ class TestAnnotatedArray(unittest.TestCase):
                 self.assertEqual(annotated.metadata.attributes["descriptor_variant"], round_tripped.metadata.attributes["descriptor_variant"])
                 numpy.testing.assert_array_equal(numpy.asarray(annotated.data), numpy.asarray(round_tripped.data))
 
+    def test_legacy_rgb_and_rgba_data_round_trips_through_annotated_array_without_copy(self) -> None:
+        for channel_count, value_type in ((3, annotated_array.ValueType.RGB), (4, annotated_array.ValueType.RGBA)):
+            with self.subTest(value_type=value_type):
+                # a collection of three 5x7 images, with every channel of every pixel different.
+                data = (numpy.arange(3 * 5 * 7 * channel_count) % 251).astype(numpy.uint8).reshape(3, 5, 7, channel_count)
+                xdata = DataAndMetadata.new_data_and_metadata(
+                    data=data,
+                    dimensional_calibrations=(
+                        Calibration.Calibration(offset=1.0, scale=2.0, units="s"),
+                        Calibration.Calibration(offset=0.0, scale=0.5, units="nm"),
+                        Calibration.Calibration(offset=0.0, scale=0.25, units="nm"),
+                    ),
+                    data_descriptor=DataAndMetadata.DataDescriptor(False, 1, 2),
+                )
+
+                annotated = annotated_array.from_data_and_metadata(xdata)
+                self.assertEqual(value_type, annotated.descriptor.value_type)
+                self.assertEqual((3, 5, 7), annotated.descriptor.shape)
+                self.assertTrue(numpy.shares_memory(annotated.data, data))
+                structured_data = numpy.asarray(annotated.data)
+                numpy.testing.assert_array_equal(data[..., 0], structured_data["b"])
+                numpy.testing.assert_array_equal(data[..., 1], structured_data["g"])
+                numpy.testing.assert_array_equal(data[..., 2], structured_data["r"])
+                if channel_count == 4:
+                    numpy.testing.assert_array_equal(data[..., 3], structured_data["a"])
+
+                round_tripped = annotated_array.to_data_and_metadata(annotated)
+                self.assertEqual(data.shape, round_tripped.data.shape)
+                self.assertEqual(numpy.uint8, round_tripped.data.dtype)
+                self.assertEqual(xdata.data_descriptor, round_tripped.data_descriptor)
+                self.assertTrue(numpy.shares_memory(round_tripped.data, data))
+                numpy.testing.assert_array_equal(data, round_tripped.data)
+
+    def test_to_data_and_metadata_gives_legacy_channel_order_for_rgb_fields_in_any_order(self) -> None:
+        structured_data = numpy.zeros((5, 7), numpy.dtype([("r", numpy.uint8), ("g", numpy.uint8), ("b", numpy.uint8)]))
+        structured_data["r"] = 200
+        structured_data["g"] = 100
+        structured_data["b"] = 50
+        axis_group = annotated_array.AxisGroup(axes=(annotated_array.Axis(label="y", size=5), annotated_array.Axis(label="x", size=7)))
+        annotated = annotated_array.AnnotatedArray(data=structured_data, descriptor=annotated_array.ArrayDescriptor(axis_groups=(axis_group,), value_type=annotated_array.ValueType.RGB))
+        xdata = annotated_array.to_data_and_metadata(annotated)
+        self.assertEqual((5, 7, 3), xdata.data.shape)
+        self.assertEqual(numpy.uint8, xdata.data.dtype)
+        self.assertTrue(numpy.all(xdata.data[..., 0] == 50))
+        self.assertTrue(numpy.all(xdata.data[..., 1] == 100))
+        self.assertTrue(numpy.all(xdata.data[..., 2] == 200))
+
+    def test_from_data_and_metadata_accepts_rgb_data_whose_channel_axis_is_not_contiguous(self) -> None:
+        data = (numpy.arange(5 * 7 * 3) % 251).astype(numpy.uint8).reshape(5, 7, 3)[..., ::-1]
+        annotated = annotated_array.from_data_and_metadata(DataAndMetadata.new_data_and_metadata(data=data))
+        numpy.testing.assert_array_equal(data, annotated_array.to_data_and_metadata(annotated).data)
+
     def test_data_and_metadata_timezone_round_trip_through_annotated_array(self) -> None:
         xdata = DataAndMetadata.new_data_and_metadata(
             data=numpy.arange(6, dtype=numpy.float32).reshape(2, 3),
