@@ -33,7 +33,8 @@ def function_rgb_channel(data_and_metadata_in: _DataAndMetadataLike, channel: in
 
     if Image.is_shape_and_dtype_rgb(data.shape, data.dtype):
         if channel == 3:
-            channel_data = numpy.ones(data.shape, int)
+            # RGB data has no alpha, so it is opaque, with the shape of one channel.
+            channel_data = numpy.full(data.shape[:-1], 255, int)
         else:
             channel_data = data[..., channel].astype(int)
     elif Image.is_shape_and_dtype_rgba(data.shape, data.dtype):
