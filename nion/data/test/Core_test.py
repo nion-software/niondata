@@ -16,6 +16,7 @@ import scipy.ndimage
 from nion.data import Calibration
 from nion.data import Core
 from nion.data import DataAndMetadata
+from nion.data import RGB
 from nion.data.DataAndMetadata import _ImageDataType
 from nion.utils import Geometry
 
@@ -416,6 +417,29 @@ class TestCore(unittest.TestCase):
         random_data = numpy.random.randint(0, 256, (32, 32, 4), dtype=numpy.uint8)
         data_and_metadata = DataAndMetadata.new_data_and_metadata(data=random_data)
         Core.function_fft(data_and_metadata)
+
+    def test_rgb_alpha_channel_is_opaque_with_the_shape_of_one_channel(self) -> None:
+        for shape in ((6, 10, 3), (10, 3)):
+            with self.subTest(shape=shape):
+                random_data = numpy.random.randint(0, 256, shape, dtype=numpy.uint8)
+                dimensional_calibrations = [Calibration.Calibration(1.0 + index, 2.0 + index, "u" + str(index)) for index in range(len(shape) - 1)]
+                intensity_calibration = Calibration.Calibration(0.5, 3.0, "e")
+                data_and_metadata = DataAndMetadata.new_data_and_metadata(data=random_data, dimensional_calibrations=dimensional_calibrations,
+                                                                          intensity_calibration=intensity_calibration)
+                alpha = RGB.function_rgb_channel(data_and_metadata, 3)
+                self.assertEqual(shape[:-1], alpha.data_shape)
+                self.assertTrue(numpy.array_equal(numpy.full(shape[:-1], 255), alpha._data_ex))
+                self.assertEqual(numpy.dtype(int), alpha.data_dtype)
+                self.assertEqual(dimensional_calibrations, list(alpha.dimensional_calibrations))
+                self.assertEqual(intensity_calibration, alpha.intensity_calibration)
+                self.assertTrue(numpy.array_equal(random_data[..., 0], RGB.function_rgb_channel(data_and_metadata, 0)._data_ex))
+
+    def test_rgba_alpha_channel_is_its_alpha_channel(self) -> None:
+        random_data = numpy.random.randint(0, 256, (6, 10, 4), dtype=numpy.uint8)
+        data_and_metadata = DataAndMetadata.new_data_and_metadata(data=random_data)
+        alpha = RGB.function_rgb_channel(data_and_metadata, 3)
+        self.assertEqual((6, 10), alpha.data_shape)
+        self.assertTrue(numpy.array_equal(random_data[..., 3], alpha._data_ex))
 
     def test_display_data_2d_not_a_view(self) -> None:
         random_data = numpy.random.randint(0, 256, (2, 2), dtype=numpy.uint8)
