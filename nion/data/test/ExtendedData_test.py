@@ -136,6 +136,11 @@ class TestExtendedData(unittest.TestCase):
         xdata.data_descriptor.is_sequence = True
         self.assertFalse(xdata.data_descriptor.is_sequence)
 
+    def test_data_metadata_data_descriptor_is_a_copy(self) -> None:
+        data_metadata = DataAndMetadata.DataMetadata(data_shape=(2, 1, 4, 4), data_dtype=numpy.float32, data_descriptor=DataAndMetadata.DataDescriptor(False, 2, 2))
+        data_metadata.data_descriptor.collection_dimension_count = 1
+        self.assertEqual(DataAndMetadata.DataDescriptor(False, 2, 2), data_metadata.data_descriptor)
+
     def test_convert_to_array(self) -> None:
         # should not print a deprecation warning, fixed with numpy 2.0 updates
         data: numpy.typing.NDArray[numpy.int32] = numpy.ones((100, 100), dtype=numpy.int32)
