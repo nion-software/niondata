@@ -119,7 +119,8 @@ class DataMetadata:
     a string representing hours different from UTC, e.g. +0300 or -0700. Daylight savings can be calculated using the timezone
     string for a given timestamp.
 
-    Values passed to init and set methods are copied before storing. Returned values are return directly and not copied.
+    Values passed to init and set methods are copied before storing. The data descriptor, intensity calibration, and metadata are
+    copied when returned; other returned values are returned directly and not copied.
     """
 
     def __init__(self,
@@ -158,7 +159,7 @@ class DataMetadata:
         assert timezone is None or timezone
         assert timezone_offset is None or timezone_offset
 
-        self.__data_descriptor = data_descriptor
+        self.__data_descriptor = copy.deepcopy(data_descriptor)
 
         self.__intensity_calibration: Calibration.Calibration = copy.deepcopy(intensity_calibration) if intensity_calibration else Calibration.Calibration()
         if dimensional_calibrations is None:
@@ -180,7 +181,7 @@ class DataMetadata:
             return False
         if self.data_shape_and_dtype != other.data_shape_and_dtype:
             return False
-        if self.data_descriptor != other.data_descriptor:
+        if self.__data_descriptor != other.data_descriptor:
             return False
         if self.intensity_calibration != other.intensity_calibration:
             return False
@@ -203,7 +204,7 @@ class DataMetadata:
             dimensional_calibrations=self.dimensional_calibrations,
             metadata=self.__metadata,
             timestamp=self.timestamp,
-            data_descriptor=self.data_descriptor,
+            data_descriptor=self.__data_descriptor,
             timezone=self.timezone,
             timezone_offset=self.timezone_offset)
 
@@ -223,7 +224,7 @@ class DataMetadata:
 
     @property
     def data_descriptor(self) -> DataDescriptor:
-        return self.__data_descriptor
+        return copy.deepcopy(self.__data_descriptor)
 
     @property
     def intensity_calibration(self) -> Calibration.Calibration:
@@ -260,27 +261,27 @@ class DataMetadata:
 
     @property
     def is_sequence(self) -> bool:
-        return self.data_descriptor.is_sequence
+        return self.__data_descriptor.is_sequence
 
     @property
     def is_collection(self) -> bool:
-        return self.data_descriptor.is_collection
+        return self.__data_descriptor.is_collection
 
     @property
     def is_navigable(self) -> bool:
-        return self.data_descriptor.is_navigable
+        return self.__data_descriptor.is_navigable
 
     @property
     def collection_dimension_count(self) -> int:
-        return self.data_descriptor.collection_dimension_count
+        return self.__data_descriptor.collection_dimension_count
 
     @property
     def navigation_dimension_count(self) -> int:
-        return self.data_descriptor.navigation_dimension_count
+        return self.__data_descriptor.navigation_dimension_count
 
     @property
     def datum_dimension_count(self) -> int:
-        return self.data_descriptor.datum_dimension_count
+        return self.__data_descriptor.datum_dimension_count
 
     @property
     def max_sequence_index(self) -> int:
@@ -290,22 +291,22 @@ class DataMetadata:
     @property
     def sequence_dimension_shape(self) -> ShapeType:
         dimensional_shape = self.dimensional_shape
-        return tuple(dimensional_shape[self.data_descriptor.sequence_dimension_index_slice]) if dimensional_shape else tuple()
+        return tuple(dimensional_shape[self.__data_descriptor.sequence_dimension_index_slice]) if dimensional_shape else tuple()
 
     @property
     def collection_dimension_shape(self) -> ShapeType:
         dimensional_shape = self.dimensional_shape
-        return tuple(dimensional_shape[self.data_descriptor.collection_dimension_index_slice]) if dimensional_shape else tuple()
+        return tuple(dimensional_shape[self.__data_descriptor.collection_dimension_index_slice]) if dimensional_shape else tuple()
 
     @property
     def navigation_dimension_shape(self) -> ShapeType:
         dimensional_shape = self.dimensional_shape
-        return tuple(dimensional_shape[self.data_descriptor.navigation_dimension_index_slice]) if dimensional_shape else tuple()
+        return tuple(dimensional_shape[self.__data_descriptor.navigation_dimension_index_slice]) if dimensional_shape else tuple()
 
     @property
     def datum_dimension_shape(self) -> ShapeType:
         dimensional_shape = self.dimensional_shape
-        return tuple(dimensional_shape[self.data_descriptor.datum_dimension_index_slice]) if dimensional_shape else tuple()
+        return tuple(dimensional_shape[self.__data_descriptor.datum_dimension_index_slice]) if dimensional_shape else tuple()
 
     @property
     def sequence_dimension_index(self) -> typing.Optional[int]:
@@ -317,7 +318,7 @@ class DataMetadata:
 
     @property
     def collection_dimension_indexes(self) -> typing.Sequence[int]:
-        return self.data_descriptor.collection_dimension_indexes
+        return self.__data_descriptor.collection_dimension_indexes
 
     @property
     def collection_dimension_slice(self) -> slice:
@@ -325,7 +326,7 @@ class DataMetadata:
 
     @property
     def navigation_dimension_indexes(self) -> typing.Sequence[int]:
-        return self.data_descriptor.navigation_dimension_indexes
+        return self.__data_descriptor.navigation_dimension_indexes
 
     @property
     def navigation_dimension_slice(self) -> slice:
@@ -333,7 +334,7 @@ class DataMetadata:
 
     @property
     def datum_dimension_indexes(self) -> typing.Sequence[int]:
-        return self.data_descriptor.datum_dimension_indexes
+        return self.__data_descriptor.datum_dimension_indexes
 
     @property
     def datum_dimension_slice(self) -> slice:
@@ -344,23 +345,23 @@ class DataMetadata:
 
     @property
     def sequence_dimensional_calibration(self) -> typing.Optional[Calibration.Calibration]:
-        return self.dimensional_calibrations[self.data_descriptor.sequence_dimension_index_slice.start] if self.is_sequence else None
+        return self.dimensional_calibrations[self.__data_descriptor.sequence_dimension_index_slice.start] if self.is_sequence else None
 
     @property
     def sequence_dimensional_calibrations(self) -> CalibrationListType:
-        return self.dimensional_calibrations[self.data_descriptor.sequence_dimension_index_slice] if self.is_sequence else list()
+        return self.dimensional_calibrations[self.__data_descriptor.sequence_dimension_index_slice] if self.is_sequence else list()
 
     @property
     def collection_dimensional_calibrations(self) -> CalibrationListType:
-        return self.dimensional_calibrations[self.data_descriptor.collection_dimension_index_slice]
+        return self.dimensional_calibrations[self.__data_descriptor.collection_dimension_index_slice]
 
     @property
     def navigation_dimensional_calibrations(self) -> CalibrationListType:
-        return self.dimensional_calibrations[self.data_descriptor.navigation_dimension_index_slice]
+        return self.dimensional_calibrations[self.__data_descriptor.navigation_dimension_index_slice]
 
     @property
     def datum_dimensional_calibrations(self) -> CalibrationListType:
-        return self.dimensional_calibrations[self.data_descriptor.datum_dimension_index_slice]
+        return self.dimensional_calibrations[self.__data_descriptor.datum_dimension_index_slice]
 
     def get_intensity_calibration(self) -> Calibration.Calibration:
         return self.intensity_calibration
@@ -648,7 +649,7 @@ class DataAndMetadata:
 
     @property
     def data_descriptor(self) -> DataDescriptor:
-        return copy.deepcopy(self.__data_metadata.data_descriptor)
+        return self.__data_metadata.data_descriptor
 
     @property
     def is_sequence(self) -> bool:
